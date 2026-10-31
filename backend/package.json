@@ -16,7 +16,8 @@
     "prisma:validate": "prisma validate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:migrate:status": "prisma migrate status"
+    "prisma:migrate:status": "prisma migrate status",
+    "bootstrap:admin": "npm run prisma:generate && tsx src/scripts/bootstrap-admin.ts"
   },
   "dependencies": {
     "@nestjs/common": "12.3.2",

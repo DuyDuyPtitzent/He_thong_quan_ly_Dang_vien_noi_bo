@@ -4,7 +4,7 @@
 
 ### Hiện có
 
-Frontend React/TypeScript/Vite nằm trong `frontend/src/`, gồm `app`, `core`, `layouts`, `shared`, `features`; có router tập trung, Axios client, TanStack Query, UI shadcn-style và feature mẫu Dashboard/Settings. Backend nằm trong `backend/`, dùng NestJS + Prisma 7 + PostgreSQL; có cấu hình môi trường, Prisma service, request logging, exception filter, endpoint `/api/v1/suc-khoe` và migration đã tạo 20 bảng. Chưa có dữ liệu PTIT, API nghiệp vụ, đăng nhập thật hoặc RBAC thực thi phía server.
+Frontend React/TypeScript/Vite nằm trong `frontend/src/`, gồm `app`, `core`, `layouts`, `shared`, `features`; có router tập trung, Axios client, TanStack Query, UI shadcn-style và feature mẫu Dashboard/Settings. Backend nằm trong `backend/`, dùng NestJS + Prisma 7 + PostgreSQL; có cấu hình môi trường, Prisma service, request logging, exception filter, endpoint `/api/v1/suc-khoe`, migration đã tạo 20 bảng và module xác thực tại `backend/src/modules/auth/`. Xác thực hỗ trợ đăng nhập, xem phiên, đổi mật khẩu và đăng xuất bằng cookie phiên; chưa có quy trình bootstrap tài khoản đầu tiên. Chưa có dữ liệu PTIT, API nghiệp vụ hoặc RBAC thực thi.
 
 ### Mục tiêu đã duyệt
 
@@ -33,6 +33,8 @@ Giữ các tầng hiện có:
 
 Không để `shared`, `core` hoặc `layouts` phụ thuộc feature. Component trình bày không gọi API trực tiếp. Dùng Axios client và TanStack Query hiện có; chỉ mở rộng khi có nhu cầu cụ thể.
 
+`frontend/src/core/auth/auth.api.ts` là adapter gọi API xác thực; dữ liệu phiên không chứa Role/Permission. Axios gửi cookie phiên bằng `withCredentials`; trạng thái đăng nhập, provider và route guard UI chưa được triển khai.
+
 ### Máy chủ mục tiêu
 
 ```text
@@ -41,7 +43,8 @@ backend/src/
   common/                # cấu hình dùng chung, lọc lỗi, logging
   infrastructure/        # Prisma và tích hợp hạ tầng
   modules/
-    accounts/            # tài khoản và xác thực
+    auth/                 # xác thực tài khoản hiện có
+    accounts/             # quản trị tài khoản, chưa triển khai
     organizations/       # cây tổ chức và lịch sử
     authorization/       # vai trò, quyền, phân công, phạm vi
     audit/                # kiểm toán nghiệp vụ
@@ -82,12 +85,17 @@ Máy chủ cho phép khi tài khoản hợp lệ, phân công còn hiệu lực,
 ## API và hợp đồng
 
 - REST JSON, prefix `/api/v1`.
+- Frontend Axios dùng `VITE_API_BASE_URL=/api/v1`. Vite dev proxy `/api/v1/*` tới `BACKEND_PROXY_TARGET` (mặc định `http://127.0.0.1:3001`); triển khai cần reverse proxy cùng prefix hoặc đặt URL API phù hợp với môi trường.
 - Đường dẫn và khóa JSON do dự án định nghĩa dùng tiếng Việt không dấu; ví dụ `/api/v1/to-chuc/{id}/lich-su`, `maDonVi`, `ngayHieuLucTu`.
 - Mã nghiệp vụ dùng tiếng Việt không dấu, ví dụ `TO_CHUC.XEM`, `KHONG_DU_QUYEN`.
 - Danh sách có phân trang; response/lỗi theo schema thống nhất và có `maTuongQuan`.
+- Lỗi Backend `{ maLoi, thongBao, maTuongQuan }` được Axios chuẩn hóa thành thông báo, mã HTTP, mã lỗi và mã tương quan cho giao diện.
 - Không trả stack trace, SQL, token, credential hoặc dữ liệu cá nhân ngoài phạm vi.
 - Máy chủ kiểm tra quyền + phạm vi cho từng yêu cầu và từng đối tượng; không tin đơn vị hoặc quyền do giao diện gửi.
 - Giai đoạn đầu dùng tài khoản nội bộ do quản trị viên quản lý. Phiên trình duyệt đề xuất cookie `HttpOnly`, `Secure`, `SameSite` và CSRF protection; SSO PTIT là tích hợp tương lai.
+- Các endpoint xác thực hiện có: `POST /api/v1/xac-thuc/dang-nhap`, `GET /api/v1/xac-thuc/phien-hien-tai`, `POST /api/v1/xac-thuc/doi-mat-khau`, `POST /api/v1/xac-thuc/dang-xuat`. Cookie dùng `HttpOnly`, `SameSite=Strict`, bật `Secure` ngoài `PHAT_TRIEN`; thao tác thay đổi kiểm tra `Origin` theo `URL_GIAO_DIEN_DUOC_PHEP`. Token phiên ngẫu nhiên chỉ lưu dạng SHA-256 trong CSDL; mật khẩu dùng scrypt. Thời hạn phiên, ngưỡng đăng nhập sai và thời gian khóa cấu hình qua môi trường.
+- `XacThucGuard` chỉ xác nhận tài khoản/phiên đang hoạt động, không thực hiện Permission hoặc Scope. API nghiệp vụ và guard quyền chưa triển khai cho tới khi ma trận Permission + Scope được duyệt. Không có đăng ký công khai, endpoint HTTP tạo tài khoản hay tài khoản mặc định; tài khoản đầu tiên được khởi tạo bằng CLI thủ công.
+- Tài khoản đầu tiên được tạo thủ công bằng `npm run bootstrap:admin` trong thư mục `backend/`. Lệnh yêu cầu terminal tương tác để nhập mật khẩu kín, kiểm tra bảng tài khoản còn rỗng trong transaction có khóa bảng để ngăn hai lần khởi tạo đồng thời, ghi audit sự kiện bootstrap và đặt `doiMatKhauLanDau=true`. Lệnh chỉ tạo account; không gán Role/Permission. Không chạy lệnh này sau khi đã có tài khoản.
 
 ## Nhật ký và dữ liệu cá nhân
 

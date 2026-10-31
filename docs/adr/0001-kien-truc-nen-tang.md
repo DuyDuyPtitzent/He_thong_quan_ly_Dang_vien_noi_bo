@@ -24,7 +24,8 @@ Repository có giao diện React/TypeScript/Vite trong `frontend/` và Backend N
 - Không phát triển bảng/mô-đun cấp ủy, chi ủy hoặc cơ cấu cấp ủy riêng trong giai đoạn này.
 - Một Đảng ủy gốc; Chi bộ trực thuộc Đảng ủy; Tổ trực thuộc Chi bộ; Chi bộ có thể không có Tổ hoặc có nhiều Tổ.
 - Không hard-code tên đơn vị hoặc số lượng; không tự sinh Tổ theo số Đảng viên.
-- Lưu lịch sử tên đơn vị và quan hệ cha–con. Ngừng hoạt động thay vì xóa vật lý dữ liệu đã được tham chiếu.
+- Lưu lịch sử tên đơn vị và quan hệ cha–con. Đơn vị tạo nhầm được sửa loại nếu mọi quan hệ/lịch sử vẫn hợp lệ. Cho phép xóa hẳn sau khi xử lý tham chiếu; FK dùng RESTRICT, không cascade xóa lịch sử.
+- Mốc hiệu lực quan hệ tổ chức và sinh hoạt hỗ trợ ngày hoặc ngày giờ, lưu `timestamptz` theo giờ Việt Nam. Khoảng dùng `[bắt đầu, kết thúc)`; ngày kết thúc nhập theo lịch bao gồm hết ngày đó.
 
 ### 3. Tài khoản, hồ sơ, chức vụ và nhiệm kỳ
 

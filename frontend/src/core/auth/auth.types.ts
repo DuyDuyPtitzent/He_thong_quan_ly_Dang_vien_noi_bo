@@ -1,14 +1,15 @@
-export type User = {
-  id: string
-  name: string
-  email: string
-  avatarUrl?: string
-  permissions: string[]
+export type TaiKhoanPhien = {
+  maTaiKhoan: string
+  tenDangNhap: string
+  doiMatKhauLanDau: boolean
 }
-export interface AuthProvider {
-  getCurrentUser(): Promise<User | null>
-  login(input: { email: string; password: string }): Promise<User>
-  logout(): Promise<void>
+
+export type PhienHienTai = {
+  taiKhoan: TaiKhoanPhien
 }
-export const canAccess = (user: User | null, permission?: string) =>
-  !permission || Boolean(user?.permissions.includes(permission))
+
+export type KetQuaDangNhap = {
+  taiKhoan: TaiKhoanPhien
+  hetHanLuc: string
+  maTuongQuan: string
+}

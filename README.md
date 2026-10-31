@@ -2,7 +2,7 @@
 
 Ứng dụng phục vụ công tác quản lý nội bộ PTIT miền Bắc. Kiến trúc mục tiêu kết hợp giao diện React hiện có với máy chủ NestJS theo mô hình nguyên khối chia mô-đun, Prisma và PostgreSQL.
 
-> **Trạng thái:** Frontend Base và Backend nền đã tách trong `frontend/` và `backend/`. Database phát triển đã có schema nền 20 bảng; chưa có dữ liệu PTIT, API nghiệp vụ, xác thực hay RBAC thực thi.
+> **Trạng thái:** Frontend Base và Backend nền đã tách trong `frontend/` và `backend/`. Database phát triển đã có schema nền 20 bảng. Backend có API xác thực tài khoản nội bộ; chưa có bootstrap tài khoản đầu tiên, dữ liệu PTIT, API nghiệp vụ hoặc RBAC thực thi.
 
 ## Công nghệ
 
@@ -18,7 +18,9 @@ Thư mục và tên file mã nguồn dùng tiếng Anh theo convention React/Typ
 
 ## Chạy máy chủ nền hiện tại
 
-Máy chủ nền nằm trong `backend/`; migration tạo 20 bảng CSDL đã áp dụng cho database phát triển. API tổ chức/phân quyền, xác thực và dữ liệu PTIT chưa triển khai.
+Máy chủ nền nằm trong `backend/`; migration tạo 20 bảng CSDL đã áp dụng cho database phát triển. API xác thực hiện có tại `/api/v1/xac-thuc`; API tổ chức/phân quyền và dữ liệu PTIT chưa triển khai. Không có tài khoản mặc định; tài khoản đầu tiên phải được tạo thủ công bằng quy trình bootstrap bên dưới.
+
+Sau khi cấu hình `.env` và áp dụng migration, tạo tài khoản đầu tiên bằng lệnh tương tác `npm.cmd --prefix backend run bootstrap:admin` từ thư mục gốc (hoặc `npm.cmd run bootstrap:admin` bên trong `backend/`). Lệnh yêu cầu terminal tương tác, không hiển thị mật khẩu khi nhập và từ chối nếu đã có bất kỳ tài khoản nào. Tài khoản phải đổi mật khẩu ở lần đăng nhập đầu tiên. Lệnh chỉ tạo tài khoản; không tự gán Role/Permission.
 
 Yêu cầu Node.js 20.19+ hoặc 22.12+ hoặc 24.0+, npm và Docker Desktop đang chạy.
 
@@ -38,11 +40,13 @@ Các lệnh máy chủ khác: `npm.cmd --prefix backend run build`, `test`, `typ
 
 Yêu cầu Node.js 20.19+ hoặc 22.12+ và npm.
 
-```bash
+```powershell
 npm.cmd --prefix frontend install
-# Tạo frontend/.env.local từ frontend/.env.example và điền cấu hình phù hợp
+if (!(Test-Path frontend/.env.local)) { Copy-Item frontend/.env.example frontend/.env.local }
 npm.cmd --prefix frontend run dev
 ```
+
+Frontend dùng API prefix `/api/v1`. Trong môi trường phát triển, Vite proxy các request `/api/v1/*` tới Backend tại `http://127.0.0.1:3001`; có thể đổi đích proxy bằng `BACKEND_PROXY_TARGET` trong `frontend/.env.local`. Khi cả hai máy chủ đang chạy, kiểm tra kết nối tại `http://127.0.0.1:5173/api/v1/suc-khoe`. Môi trường triển khai cần cấu hình reverse proxy cùng prefix `/api/v1` tới Backend.
 
 Các lệnh hiện có: `npm.cmd --prefix frontend run build`, `lint`, `typecheck`, `test`, `test:e2e`.
 

@@ -53,8 +53,26 @@ Cập nhật lần cuối: 2026-10-30
 - Backend code layout hiện dùng `src/common/`, `src/infrastructure/database/`, `src/modules/health/`, `test/`; file theo convention NestJS/TypeScript bằng tiếng Anh. Migration đã áp dụng giữ nguyên tên lịch sử `nen_tang`; không đổi migration đã áp dụng.
 - Khi bắt đầu phiên sau: đọc file này, `AGENTS.md`, sau đó chỉ đọc file liên quan trong `frontend/` hoặc `backend/`.
 
+## Cap nhat CSDL ngay-gio va quy tac sua/xoa don vi — 2026-11-01
+- Da ap dung migration `20261101000000_hieu_luc_ngay_gio_va_sua_loai_don_vi` vao database phat trien. Moc hieu luc quan he don vi va sinh hoat dung `timestamptz(6)`; khoang `[bat dau, ket thuc)`. Ngay ket thuc theo lich bao gom het ngay theo gio Viet Nam; moc ngay-gio dung thoi diem nhap.
+- Don vi tao nham duoc sua loai neu quan he va lich su van hop le. Co the xoa han sau khi xu ly tham chieu; FK RESTRICT, khong cascade xoa lich su.
+- Kiem tra: `prisma:validate`, `prisma:generate`, `typecheck`, `build`, `prisma:migrate:status`; schema bao up to date. SQL migration duoc chay trong transaction rollback truoc khi deploy. Khong chay test suite.
+- Hop dong API to chuc da duoc duyet, chua trien khai; xem `docs/THIET_KE_API_TO_CHUC.md`. Module to chuc chi duoc mo sau khi co xac thuc va RBAC Permission + Scope phia Backend.
+- Buoc tiep: trinh thu tu dependency xac thuc/RBAC truoc API ghi du lieu; chua co co che bootstrap quan tri dau tien, danh sach Permission va danh muc trang thai don vi duoc chot.
 
-## Cap nhat dong bo ngon ngu CSDL — 2026-10-31
-- Prisma models, enums, fields va quan he da chuyen sang tieng Viet khong dau; ten bang/cot PostgreSQL va tat ca @map/@@map duoc giu nguyen, khong tao migration doi schema vat ly.
-- Kiem tra: ackend chay prisma:validate, prisma:generate, 	ypecheck, uild; khong chay test.
-- Quy uoc: ten thu muc/file nguon van tieng Anh; dinh danh Prisma/CSDL/API/JSON do du an dinh nghia dung tieng Viet khong dau.
+## Ket noi ky thuat Frontend-Backend — 2026-11-01
+- Axios base URL va frontend env mau dung `/api/v1`; Vite dev proxy prefix nay toi `BACKEND_PROXY_TARGET`, mac dinh `http://127.0.0.1:3001`.
+- Axios normalize loi NestJS `maLoi`/`thongBao`/`maTuongQuan`; README va architecture ghi cach chay/kiem tra endpoint suc khoe qua `http://127.0.0.1:5173/api/v1/suc-khoe`.
+- Da chay `npm.cmd --prefix frontend run typecheck` va `build`; deu dat. Build con canh bao chunk JS lon hon 500 kB. Chua chay test suite; chua them auth, RBAC hoac API nghiep vu. Trien khai production can reverse proxy `/api/v1` toi Backend.
+
+## Xac thuc tai khoan tach khoi Permission/Scope — 2026-11-01
+- Da them module NestJS `backend/src/modules/auth/` voi dang nhap, xem phien hien tai, doi mat khau va dang xuat. Session token ngau nhien luu dang SHA-256; mat khau bam scrypt; cookie HttpOnly/SameSite Strict, Secure ngoai moi truong PHAT_TRIEN; thao tac thay doi kiem tra Origin.
+- Da them adapter frontend `frontend/src/core/auth/auth.api.ts`, kieu du lieu phien tai `auth.types.ts`, va Axios `withCredentials`. Phien chi co thong tin tai khoan, khong co Role/Permission. Chua co man hinh/login provider/route guard UI, bootstrap tai khoan dau tien, RBAC hoac API nghiep vu.
+- Cau hinh auth: `URL_GIAO_DIEN_DUOC_PHEP`, `THOI_HAN_PHIEN_DANG_NHAP_GIO` (mac dinh 8), `SO_LAN_DANG_NHAP_THAT_BAI_TOI_DA` (5), `THOI_GIAN_KHOA_DANG_NHAP_PHUT` (15). Trang thai hoat dong hien doi chieu voi `DANG_HOAT_DONG`; can xac nhan danh muc trang thai tai khoan khi chot quy trinh bootstrap.
+- Chua co tai khoan/mac dinh admin. De co the dang nhap can phe duyet va trien khai bootstrap quan tri vien an toan. API nghiep vu tiep tuc cho den khi Permission va Scope duoc duyet.
+- Kiem tra: backend `npm.cmd run typecheck` va `npm.cmd run build` dat; frontend `npm.cmd run typecheck` va `npm.cmd run build` dat. Frontend build van co canh bao bundle 542 kB. `git diff --check` dat (Git chi canh bao chuyen LF/CRLF). Khong chay test suite; chua kiem tra dang nhap end-to-end vi chua co tai khoan duoc bootstrap.
+
+## Bootstrap tai khoan dau tien — 2026-11-01
+- Nguoi dung da duyet quy trinh bootstrap thu cong tren moi truong trien khai. Da them `npm run bootstrap:admin` va script `backend/src/scripts/bootstrap-admin.ts`.
+- Script chi tao tai khoan neu bang rong, dung PostgreSQL table lock trong transaction de tranh dua tranh, nhap mat khau tren terminal raw mode khong echo, bat buoc mat khau 12-128 ky tu va nhap xac nhan, bam scrypt, dat `doiMatKhauLanDau=true`, ghi audit khong chua mat khau. Khong cap Role/Permission.
+- Lan chay dau tien loi Prisma P2010 do query advisory lock tra ve kieu `void`; transaction rollback, da truy van dem tai khoan an toan va xac nhan 0 tai khoan. Da thay bang SQL `LOCK TABLE` va xac minh truy van lock/count thanh cong, khong tao du lieu.

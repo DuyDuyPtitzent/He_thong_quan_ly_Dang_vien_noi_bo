@@ -107,7 +107,7 @@ Các trường trên phản ánh nhãn trong ảnh: mã sinh viên, trạng thá
 
 ### 3.6. `lich_su_don_vi_dang_vien` — sinh hoạt và chuyển đơn vị
 
-Dùng bảng đã đề xuất ở thiết kế nền: `ma_lich_su UUID PK`, `ma_ho_so UUID FK`, `ma_chi_bo UUID FK`, `ma_to UUID FK NULL`, `ngay_hieu_luc_tu date`, `ngay_hieu_luc_den date NULL`, `ly_do_chuyen text NULL`, `nguoi_ghi_nhan UUID FK`, `ngay_tao timestamptz`.
+Dùng bảng đã đề xuất ở thiết kế nền: `ma_lich_su UUID PK`, `ma_ho_so UUID FK`, `ma_chi_bo UUID FK`, `ma_to UUID FK NULL`, `ngay_hieu_luc_tu timestamptz`, `ngay_hieu_luc_den timestamptz NULL`, `ly_do_chuyen text NULL`, `nguoi_ghi_nhan UUID FK`, `ngay_tao timestamptz`. Khoảng hiệu lực dùng `[bắt đầu, kết thúc)` theo giờ Việt Nam; ngày kết thúc nhập theo lịch bao gồm hết ngày đó.
 
 Index `(ma_ho_so, ngay_hieu_luc_tu)` và unique có điều kiện cho dòng hiện hành theo hồ sơ. Tổ phải thuộc đúng Chi bộ. Chuyển đơn vị đóng dòng hiện tại và tạo dòng mới trong một transaction.
 

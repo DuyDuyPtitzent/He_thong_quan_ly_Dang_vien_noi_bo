@@ -1,6 +1,6 @@
 # Tổng hợp thiết kế CSDL — Hệ thống Quản lý Đảng viên PTIT
 
-**Trạng thái:** Đã tạo Prisma schema và áp dụng migration `20261031000000_create_core_data_model` cùng migration `20261031010000_protect_audit_log` cho database phát triển. Nhật ký kiểm toán có trigger chặn UPDATE/DELETE. Tài liệu này là data dictionary tương ứng. Database chưa có dữ liệu PTIT; các danh mục/nghiệp vụ còn chờ chốt không được seed tự suy đoán.
+**Trạng thái:** Đã tạo Prisma schema và áp dụng migration nền, bảo vệ audit, cùng `20261101000000_hieu_luc_ngay_gio_va_sua_loai_don_vi` cho database phát triển. Nhật ký kiểm toán có trigger chặn UPDATE/DELETE. Tài liệu này là data dictionary tương ứng. Database chưa có dữ liệu PTIT; các danh mục/nghiệp vụ còn chờ chốt không được seed tự suy đoán.
 
 ## 1. Phạm vi và quy ước
 
@@ -11,7 +11,7 @@
 - PK dùng UUID. FK tham chiếu UUID. Thời điểm dùng `timestamptz`; ngày nghiệp vụ dùng `date`; trường mô tả dài dùng `text`; các mã/nhãn có giới hạn dùng `varchar(n)`.
 - Các enum nghiệp vụ chưa có danh mục được xác nhận thì ghi `enum (giá trị cần chốt)`; không tạo danh sách Chi bộ, Tổ, chức vụ hay trạng thái sinh viên thực tế.
 - Các bảng có thể thay đổi đều có `ngay_tao timestamptz NOT NULL` và `ngay_cap_nhat timestamptz NOT NULL` trừ bảng lịch sử/audit chỉ ghi thêm, được ghi riêng.
-- Xóa vật lý bị từ chối khi bản ghi đã được tham chiếu bởi lịch sử, assignment hoặc audit; dùng trạng thái/ngày kết thúc.
+- Xóa hẳn được phép sau khi xử lý các bản ghi đang tham chiếu. FK `RESTRICT` ngăn xóa khi còn phụ thuộc; không tự động cascade xóa lịch sử.
 
 ## 2. Sơ đồ quan hệ tổng thể
 
@@ -84,7 +84,7 @@ Quyết định đã duyệt: đăng nhập nội bộ, quản trị viên quả
 
 `ma_don_vi UUID PK`; `ma_dinh_danh varchar(50) NULL UNIQUE`; `loai_don_vi enum NOT NULL` (`DANG_UY`, `CHI_BO`, `TO`); `trang_thai enum NOT NULL`; `ngay_tao`, `ngay_cap_nhat timestamptz NOT NULL`.
 
-**Quy tắc:** một Đảng ủy gốc; quan hệ hợp lệ Đảng ủy → Chi bộ → Tổ tùy chọn; Chi bộ có 0..n Tổ. Không hard-code tên/số lượng. Tối đa một Đảng ủy gốc đang hoạt động. Không xóa đơn vị đã tham chiếu.
+**Quy tắc:** một Đảng ủy gốc; quan hệ hợp lệ Đảng ủy → Chi bộ → Tổ tùy chọn; Chi bộ có 0..n Tổ. Không hard-code tên/số lượng. Tối đa một Đảng ủy gốc đang hoạt động. Đơn vị tạo nhầm được sửa loại nếu các quan hệ và lịch sử sau khi sửa vẫn hợp lệ. Có thể xóa hẳn đơn vị sau khi xử lý tham chiếu; khóa ngoại chặn xóa khi còn dữ liệu liên quan, không tự xóa dây chuyền.
 
 **Index/ràng buộc:** UNIQUE nullable `ma_dinh_danh`; index `(loai_don_vi, trang_thai)`. Tính đúng của một nút gốc được kiểm soát khi khởi tạo/cập nhật.
 
@@ -96,9 +96,9 @@ Quyết định đã duyệt: đăng nhập nội bộ, quản trị viên quả
 
 #### 5. `lich_su_quan_he_don_vi`
 
-`ma_lich_su_quan_he UUID PK`; `ma_don_vi_cha UUID FK → don_vi_to_chuc NOT NULL`; `ma_don_vi_con UUID FK → don_vi_to_chuc NOT NULL`; `ngay_hieu_luc_tu date NOT NULL`; `ngay_hieu_luc_den date NULL`; `nguoi_ghi_nhan UUID FK NULL`; `ngay_tao timestamptz NOT NULL`.
+`ma_lich_su_quan_he UUID PK`; `ma_don_vi_cha UUID FK → don_vi_to_chuc NOT NULL`; `ma_don_vi_con UUID FK → don_vi_to_chuc NOT NULL`; `ngay_hieu_luc_tu timestamptz NOT NULL`; `ngay_hieu_luc_den timestamptz NULL`; `nguoi_ghi_nhan UUID FK NULL`; `ngay_tao timestamptz NOT NULL`.
 
-**Index/ràng buộc:** index `(ma_don_vi_cha, ngay_hieu_luc_tu)`; index `(ma_don_vi_con, ngay_hieu_luc_tu)`; UNIQUE có điều kiện `ma_don_vi_con` khi còn hiện hành; CHECK cha != con và ngày hợp lệ. Các quan hệ cha-con của cùng đơn vị con không được chồng lấn thời gian. Chu trình, loại cha-con và độ sâu tối đa 3 tầng kiểm tra trong dịch vụ và transaction.
+**Index/ràng buộc:** index `(ma_don_vi_cha, ngay_hieu_luc_tu)`; index `(ma_don_vi_con, ngay_hieu_luc_tu)`; UNIQUE có điều kiện `ma_don_vi_con` khi còn hiện hành; CHECK cha != con và thời gian hợp lệ. Khoảng hiệu lực dùng dạng `[bắt đầu, kết thúc)`; ngày kết thúc nhập theo lịch được tính hết ngày đó theo giờ `Asia/Ho_Chi_Minh`, còn ngày giờ kết thúc có hiệu lực đến đúng thời điểm đã nhập. Quan hệ của cùng đơn vị con không được chồng lấn. Sai tầng được CSDL kiểm tra; chu trình và độ sâu tối đa 3 tầng cần dịch vụ/transaction kiểm tra.
 
 ### C. Hồ sơ đảng viên và sinh viên
 
@@ -167,9 +167,9 @@ Index `(ma_ho_so, ngay_su_kien)`. Loại sự kiện/trường chi tiết cần 
 
 #### 11. `lich_su_don_vi_dang_vien`
 
-`ma_lich_su UUID PK`; `ma_ho_so UUID FK NOT NULL`; `ma_chi_bo UUID FK → don_vi_to_chuc NOT NULL`; `ma_to UUID FK → don_vi_to_chuc NULL`; `ngay_hieu_luc_tu date NOT NULL`; `ngay_hieu_luc_den date NULL`; `ly_do_chuyen text NULL`; `nguoi_ghi_nhan UUID FK`; `ngay_tao timestamptz NOT NULL`.
+`ma_lich_su UUID PK`; `ma_ho_so UUID FK NOT NULL`; `ma_chi_bo UUID FK → don_vi_to_chuc NOT NULL`; `ma_to UUID FK → don_vi_to_chuc NULL`; `ngay_hieu_luc_tu timestamptz NOT NULL`; `ngay_hieu_luc_den timestamptz NULL`; `ly_do_chuyen text NULL`; `nguoi_ghi_nhan UUID FK`; `ngay_tao timestamptz NOT NULL`.
 
-**Index/ràng buộc:** index `(ma_ho_so, ngay_hieu_luc_tu)`; UNIQUE có điều kiện `ma_ho_so` khi ngày kết thúc NULL (tối đa một dòng hiện hành); index `(ma_chi_bo, ngay_hieu_luc_tu)`; CHECK ngày hợp lệ. Không cho phép khoảng sinh hoạt của cùng hồ sơ chồng lấn. Tổ phải là con của chính Chi bộ trong cùng khoảng hiệu lực. Chuyển đơn vị đóng dòng cũ + tạo dòng mới trong một transaction có khóa/kiểm tra đồng thời phù hợp; chỉ commit nếu không có khoảng thời gian xung đột. Không nhập hồi tố/ngày tương lai theo mặc định đã duyệt.
+**Index/ràng buộc:** index `(ma_ho_so, ngay_hieu_luc_tu)`; UNIQUE có điều kiện `ma_ho_so` khi ngày kết thúc NULL (tối đa một dòng hiện hành); index `(ma_chi_bo, ngay_hieu_luc_tu)`; CHECK thời gian hợp lệ. Khoảng hiệu lực dùng `[bắt đầu, kết thúc)` và quy đổi ngày kết thúc theo `Asia/Ho_Chi_Minh` đến nửa đêm ngày liền sau để tính hết ngày đã chọn. Không cho phép khoảng sinh hoạt của cùng hồ sơ chồng lấn. Tổ phải là con của chính Chi bộ trong cùng khoảng hiệu lực. Chuyển đơn vị đóng dòng cũ + tạo dòng mới trong một transaction có khóa/kiểm tra đồng thời phù hợp; chỉ commit nếu không có khoảng thời gian xung đột. Không nhập hồi tố/ngày tương lai theo mặc định đã duyệt.
 
 ### D. Chức vụ và nhiệm kỳ
 
@@ -246,7 +246,7 @@ Khi xác minh hồ sơ trùng, audit chỉ ghi các ID hồ sơ liên quan, lo�
 - Sinh viên: một hồ sơ có tối đa một phần mở rộng sinh viên; mã sinh viên duy nhất; Chi bộ khóa lấy từ liên kết sinh hoạt hiện hành (ví dụ hiển thị `D25`), không nhân bản FK trong bảng sinh viên.
 - Chức vụ: một hồ sơ có thể có nhiều assignment đồng thời; nhiệm kỳ được gắn tùy chọn; không có giới hạn chưa được duyệt.
 - RBAC: mỗi Role có nhiều Permission qua ma trận; tài khoản có nhiều Role Assignment; mỗi assignment tự chứa scope, không trộn Permission/Scope từ assignment khác; mặc định từ chối.
-- Xóa: FK lịch sử, phân quyền và audit dùng RESTRICT; kết thúc hiệu lực/đổi trạng thái thay cho xóa vật lý.
+- Xóa đơn vị: cho phép xóa hẳn nếu đã xử lý các bản ghi đang tham chiếu; FK dùng RESTRICT và không cascade xóa lịch sử. Sửa loại đơn vị được phép nếu các quan hệ cha-con và lịch sử sinh hoạt sau khi sửa vẫn hợp lệ.
 
 ## 4.1. Ma trận điều chỉnh và mức độ
 

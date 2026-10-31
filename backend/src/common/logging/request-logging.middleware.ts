@@ -12,6 +12,7 @@ export class GhiLogYeuCauMiddleware implements NestMiddleware {
     const maGuiLen = yeuCau.headers['x-correlation-id']
     const maTuongQuan =
       typeof maGuiLen === 'string' && mauMaTuongQuan.test(maGuiLen) ? maGuiLen : randomUUID()
+    yeuCau.headers['x-correlation-id'] = maTuongQuan
     const batDau = performance.now()
 
     phanHoi.setHeader('X-Correlation-Id', maTuongQuan)
