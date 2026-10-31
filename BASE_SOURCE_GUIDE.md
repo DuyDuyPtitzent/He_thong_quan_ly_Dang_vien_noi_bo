@@ -10,7 +10,7 @@ Repository: https://github.com/DuyDuyPtitzent/He_thong_quan_ly_Dang_vien_noi_bo
 
 ## 2. Công nghệ đã khai báo
 
-| Nhóm | Công nghệ | Phiên bản khai báo trong `package.json` |
+| Nhóm | Công nghệ | Phiên bản khai báo trong `frontend/package.json` |
 | --- | --- | --- |
 | Frontend | React / React DOM | `^19.3.1` |
 | Ngôn ngữ | TypeScript | `~5.9.3` |
@@ -32,7 +32,7 @@ Các phiên bản trên là **version ranges khai báo**, không khẳng định
 ## 3. Kiến trúc hiện tại
 
 ```text
-src/
+frontend/src/
   app/providers/              # Providers dùng chung
   app/router/router.tsx        # Route và title metadata
   app/styles/globals.css      # Theme tokens, CSS
@@ -67,28 +67,28 @@ docs/architecture.md          # Ghi chú kiến trúc
 Yêu cầu theo README: Node.js `20.19+` hoặc `22.12+` và npm.
 
 ```bash
-npm install
-# Tạo .env.local dựa trên .env.example, điều chỉnh giá trị phù hợp
-npm run dev
-npm run typecheck
-npm run lint
+npm.cmd --prefix frontend install
+# Tạo frontend/.env.local dựa trên frontend/.env.example, điều chỉnh giá trị phù hợp
+npm.cmd --prefix frontend run dev
+npm.cmd --prefix frontend run typecheck
+npm.cmd --prefix frontend run lint
 npm test
-npm run build
-npm run test:e2e
+npm.cmd --prefix frontend run build
+npm.cmd --prefix frontend run test:e2e
 ```
 
-Các script khác: `npm run test:watch`, `npm run format`, `npm run preview`. Chưa xác minh kết quả chạy lệnh trong môi trường này.
+Các script khác: `npm.cmd --prefix frontend run test:watch`, `format`, `preview`. Đây là snapshot Base, hãy đối chiếu mã nguồn hiện tại trước khi dùng.
 
 ## 6. Sử dụng làm nền tảng dự án mới
 
 1. Tạo repo mới từ template hoặc copy source, giữ nguyên license/attribution nếu có.
 2. Thay `VITE_APP_NAME` và `VITE_API_BASE_URL` trong cấu hình môi trường; không commit secret.
-3. Thay dấu hiệu logo mẫu trong `AppSidebar`, theme token trong `src/app/styles/globals.css`.
-4. Tạo `src/features/<ten-module>/` chứa page, components, hooks, schema, service, tests khi cần.
-5. Đăng ký route + `handle.title` trong `src/app/router/router.tsx`.
-6. Thêm menu trong `src/core/config/navigation.config.ts`; không hardcode menu trong Sidebar.
+3. Thay dấu hiệu logo mẫu trong `AppSidebar`, theme token trong `frontend/src/app/styles/globals.css`.
+4. Tạo `frontend/src/features/<ten-module>/` chứa page, components, hooks, schema, service, tests khi cần.
+5. Đăng ký route + `handle.title` trong `frontend/src/app/router/router.tsx`.
+6. Thêm menu trong `frontend/src/core/config/navigation.config.ts`; không hardcode menu trong Sidebar.
 7. Dùng shared components hoặc shadcn/ui trước khi tạo component mới; giữ business logic bên trong feature.
-8. Kết nối HTTP qua `src/core/api/client.ts`, quản lý dữ liệu server với TanStack Query.
+8. Kết nối HTTP qua `frontend/src/core/api/client.ts`, quản lý dữ liệu server với TanStack Query.
 9. Chạy lint, typecheck, tests và build trước khi bàn giao.
 
 ## 7. Trạng thái và giới hạn cần nhớ
@@ -130,7 +130,7 @@ Quy tắc **được phép tiến hóa khi dự án lớn hơn**. Khi cần thay
 
 Khi nhận nhiệm vụ mới:
 
-1. Đọc tài liệu này, `README.md`, `docs/architecture.md`, `package.json` và các file liên quan **trước khi chỉnh sửa**.
+1. Đọc tài liệu này, `README.md`, `docs/architecture.md`, `frontend/package.json` và các file liên quan **trước khi chỉnh sửa**.
 2. Phân biệt tính năng đã tồn tại và kế hoạch; không tự giả định component hay API đã được triển khai.
 3. Giữ thay đổi trong feature liên quan nếu có thể; chỉ sửa core/shared/layout khi thật cần thiết.
 4. Ưu tiên tái sử dụng shadcn/ui và các shared components; hỏi trước khi thêm UI library khác.

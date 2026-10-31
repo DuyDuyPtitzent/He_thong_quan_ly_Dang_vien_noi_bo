@@ -1,31 +1,38 @@
 # Bối cảnh nhanh cho AI
 
-## Sản phẩm và trạng thái
+## Trạng thái thực tế
 
-Repository hiện tại là React Admin Starter dùng làm nền frontend cho hệ thống quản lý Đảng viên. Đây chưa phải ứng dụng nghiệp vụ hoàn chỉnh: chưa thấy backend/database nghiệp vụ; `AuthProvider` là hợp đồng tích hợp, không phải xác thực production. Các trang Dashboard/Settings hiện là nền mẫu. Kiểm tra code trước khi khẳng định trạng thái có thay đổi.
+Repository tách riêng `frontend/` (React/Vite) và `backend/` (NestJS/Prisma/PostgreSQL). Database phát triển đã áp dụng Prisma migration tạo 20 bảng theo `docs/THIET_KE_CSDL_TONG_THE.md`; có cấu hình, logging request, exception filter và endpoint sức khỏe. Chưa có dữ liệu PTIT, API nghiệp vụ, đăng nhập thật hay RBAC thực thi. Không mô tả mục tiêu chưa triển khai là đã hoàn thành.
 
-## Kiến trúc hiện có
+## Quyết định đã duyệt
 
-- React 19, TypeScript strict, Vite, Tailwind 4, shadcn-style components, React Router, TanStack Query, Axios, React Hook Form và Zod.
-- `src/app/`: providers, router, styles; `src/core/`: API client, auth contract, app/navigation config; `src/layouts/`: khung quản trị; `src/shared/`: UI và tiện ích; `src/features/`: nghiệp vụ theo feature.
-- Thêm trang: feature riêng → đăng ký route/title tại router → đăng ký menu tại navigation config. Dữ liệu server dùng service của feature + shared Axios client + query hook.
-- Nguồn tham khảo chi tiết: `docs/architecture.md`, `README.md`, `BASE_SOURCE_GUIDE.md`.
+- Sản phẩm quản lý nội bộ PTIT miền Bắc.
+- Máy chủ mục tiêu: NestJS + Prisma + PostgreSQL, ứng dụng nguyên khối chia mô-đun.
+- Cây tổ chức thống nhất, tối đa ba tầng: Đảng ủy → Chi bộ → Tổ tùy chọn. Không có mô-đun cấp ủy/chi ủy.
+- Quản lý chức vụ, nhiệm kỳ, phân công và lịch sử; không hard-code tên đơn vị/chức vụ thực tế.
+- Phân quyền theo vai trò: mỗi vai trò có nhiều quyền trong ma trận; phân công gắn vai trò với tài khoản, phạm vi tổ chức và thời hạn. Một tài khoản có thể có nhiều phân công đồng thời. Máy chủ kiểm tra quyền + phạm vi; giao diện chỉ hỗ trợ trải nghiệm.
+- Phạm vi: `CA_NHAN`, `CAY_DON_VI`, `DON_VI_CHI_DINH`, `TOAN_HE_THONG`. Không mặc định mọi quyền đều được kế thừa.
+- Tài khoản người dùng và hồ sơ Đảng viên là hai thực thể; liên kết tùy chọn một-một.
+- Giai đoạn đầu dùng tài khoản nội bộ do quản trị viên quản lý; không tự đăng ký. SSO nhà trường là khả năng tích hợp bổ sung sau nếu PTIT cấp quyền/điều kiện.
+- Ưu tiên phiên bản tối thiểu: quản lý tổ chức và phân quyền, sau đó hồ sơ Đảng viên cơ bản.
+- Đường dẫn giao diện lập trình, tên trường dữ liệu JSON, tên bảng/cột và mã nghiệp vụ do dự án định nghĩa dùng tiếng Việt không dấu. Giao diện và tài liệu dùng tiếng Việt có dấu. Tên chuẩn thư viện/giao thức giữ nguyên.
+- Tên thư mục và file mã nguồn dùng tiếng Anh theo quy ước phổ biến của TypeScript/NestJS; xem `AGENTS.md` và `docs/architecture.md`.
+- Tên model, enum, trường và quan hệ Prisma phải là tiếng Việt không dấu (model/enum PascalCase, trường/quan hệ camelCase) để đồng bộ với tên CSDL; giữ tên file/thư mục mã nguồn bằng tiếng Anh.
+- Giai đoạn thiết kế A–F và roadmap đã được duyệt. Các mặc định về đăng nhập, khởi tạo quản trị, hiệu lực thay đổi, backup và audit được ghi trong ADR.
 
-## Định hướng sản phẩm đã có trong kế hoạch nguồn
+## Hướng dẫn khôi phục ngữ cảnh
 
-Kế hoạch tại `U:\Dang_Uy_PTIT\Quan_ly_Dang_vien\KE_HOACH_QUY_HOACH_DANG_VIEN.md` đề xuất sản phẩm độc lập, dữ liệu/database riêng, phục vụ một Học viện. Định hướng tổ chức: Đảng ủy Học viện → cấp ủy → chi bộ → tổ Đảng → Đảng viên. Tách đơn vị tổ chức, phân công vai trò và quyền nghiệp vụ; scope dữ liệu đi theo đơn vị được giao. Trợ lý/chức trách nên là phân công cấu hình được, không mặc định hard-code theo chức danh.
+1. Đọc `AGENTS.md` và `docs/SESSION_HANDOFF.md`.
+2. Đọc ADR `docs/adr/0001-kien-truc-nen-tang.md` khi thay đổi kiến trúc, mô hình dữ liệu, auth hoặc phân quyền.
+3. Đọc `docs/THIET_KE_CSDL_TONG_THE.md` để tra bảng/trường/khóa tổng thể và `docs/THIET_KE_HO_SO_DANG_VIEN.md` cho chi tiết tab hồ sơ; mục chờ duyệt không được tự triển khai.
+4. Chỉ đọc code liên quan yêu cầu; xác nhận trạng thái bằng repository, không suy từ roadmap.
+5. Khi xây frontend, ưu tiên `frontend/src/` và component hiện có. Dữ liệu server qua Axios client và TanStack Query; nghiệp vụ UI nằm trong feature.
+6. Không đưa dữ liệu PTIT thật vào seed/test. Không coi menu guard là kiểm soát bảo mật.
 
-Lộ trình đề xuất trong tài liệu nguồn:
+## Việc cần chốt trước khi triển khai nghiệp vụ
 
-1. Chốt repo/sản phẩm độc lập và cấu hình môi trường.
-2. Lập bản đồ source, phụ thuộc và phần nào giữ/bỏ/thay trước khi sửa lớn.
-3. Chốt mô hình tổ chức, ma trận quyền/scope, hồ sơ và MVP.
-4. Xây nền xác thực, tổ chức, tài khoản và kiểm tra scope phía server.
-5. MVP: hồ sơ Đảng viên, sinh hoạt chi bộ, audit, tệp có phân quyền và báo cáo cơ bản.
-6. Thí điểm, xác nhận nghiệp vụ rồi mới mở rộng kết nạp/chuyển sinh hoạt/đánh giá và workflow.
-
-Đây là đề xuất nghiệp vụ, chưa phải quyết định đã duyệt hay chức năng đã xây. Nền hiện tại chỉ frontend; backend, mô hình dữ liệu và bảo mật cần thiết kế riêng. Không bê nguyên mô hình multi-tenant, vai trò/quyền, workflow hay dữ liệu Đoàn viên từ repository nguồn.
-
-## Cách mở rộng tài liệu
-
-Khi một feature được triển khai, ghi trạng thái và điểm tiếp tục trong `docs/SESSION_HANDOFF.md`. Nếu có quyết định kiến trúc dài hạn, ghi vào `docs/architecture.md` hoặc ADR riêng theo phạm vi; không chép toàn bộ kế hoạch vào `AGENTS.md`.
+- Chốt quy trình an toàn để khởi tạo tài khoản quản trị đầu tiên; chưa xác định cá nhân cụ thể.
+- SSO được hoãn tới khi nhà trường cung cấp phương thức và quyền tích hợp; không chặn thiết kế tài khoản nội bộ.
+- Danh mục quyền ban đầu cần được rà soát theo chức năng; vai trò chứa nhiều quyền theo ma trận, không mặc định theo chức danh.
+- Rà soát trường hồ sơ cơ bản với đơn vị nghiệp vụ trước giai đoạn hồ sơ; không tự thêm trường nhạy cảm.
+- Xác nhận người được cấp phạm vi `TOAN_HE_THONG`, chính sách sao lưu với hạ tầng và thời hạn lưu nhật ký kiểm toán.

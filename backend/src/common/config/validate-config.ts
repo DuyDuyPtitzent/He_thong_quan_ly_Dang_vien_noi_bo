@@ -1,0 +1,27 @@
+import Joi from 'joi'
+
+const mauCauHinh = Joi.object({
+  MOI_TRUONG: Joi.string().valid('PHAT_TRIEN', 'KIEM_THU', 'VAN_HANH').default('PHAT_TRIEN'),
+  DIA_CHI_MAY_CHU: Joi.string().min(1).default('127.0.0.1'),
+  CONG_MAY_CHU: Joi.number().integer().min(1).max(65_535).default(3001),
+  KET_NOI_CO_SO_DU_LIEU: Joi.string()
+    .uri({ scheme: ['postgres', 'postgresql'] })
+    .required(),
+}).unknown(true)
+
+export function kiemTraCauHinh(bienMoiTruong: Record<string, unknown>) {
+  const { error, value } = mauCauHinh.validate(bienMoiTruong, {
+    abortEarly: false,
+    convert: true,
+  })
+
+  if (error) {
+    const tenBien = error.details
+      .map((muc) => muc.path.join('.'))
+      .filter(Boolean)
+      .join(', ')
+    throw new Error(`Cấu hình môi trường không hợp lệ: ${tenBien || 'kiểm tra lại các giá trị'}.`)
+  }
+
+  return value as Record<string, unknown>
+}

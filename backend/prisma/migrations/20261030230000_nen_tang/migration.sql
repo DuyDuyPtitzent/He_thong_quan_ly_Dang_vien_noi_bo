@@ -1,0 +1,1 @@
+-- Migration co so. Chua tao bang nghiep vu; migration tiep theo se la Organization/User schema da duyet.
