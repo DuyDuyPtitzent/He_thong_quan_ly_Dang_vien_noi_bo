@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     resolve: { alias: { '@': path.resolve(__dirname, './src') } },
     server: {
+      host: '127.0.0.1',
       proxy: {
         '/api/v1': {
           target: env.BACKEND_PROXY_TARGET || 'http://127.0.0.1:3001',

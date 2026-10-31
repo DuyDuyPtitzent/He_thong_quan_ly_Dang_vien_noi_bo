@@ -1,5 +1,6 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common'
@@ -23,9 +24,9 @@ export type ThongTinYeuCau = {
 @Injectable()
 export class XacThucService {
   constructor(
-    private readonly prisma: DichVuPrisma,
-    private readonly bamMatKhau: BamMatKhauService,
-    private readonly cauHinh: ConfigService,
+    @Inject(DichVuPrisma) private readonly prisma: DichVuPrisma,
+    @Inject(BamMatKhauService) private readonly bamMatKhau: BamMatKhauService,
+    @Inject(ConfigService) private readonly cauHinh: ConfigService,
   ) {}
 
   async dangNhap(dto: DangNhapDto, thongTin: ThongTinYeuCau) {
@@ -195,7 +196,10 @@ export class XacThucService {
   }
 
   kiemTraNguonYeuCau(nguon: string | undefined) {
-    const nguonDuocPhep = this.cauHinh.getOrThrow<string>('URL_GIAO_DIEN_DUOC_PHEP')
+    const nguonDuocPhep = this.cauHinh.get<string>(
+      'URL_GIAO_DIEN_DUOC_PHEP',
+      'http://127.0.0.1:5173',
+    )
     try {
       if (!nguon || new URL(nguon).origin !== new URL(nguonDuocPhep).origin) {
         throw new Error('Nguồn yêu cầu không được phép')

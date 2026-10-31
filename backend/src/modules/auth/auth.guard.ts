@@ -1,11 +1,11 @@
-import { CanActivate, Injectable, UnauthorizedException } from '@nestjs/common'
+import { CanActivate, Inject, Injectable, UnauthorizedException } from '@nestjs/common'
 import type { Request } from 'express'
 import { XacThucService } from './auth.service'
 import type { YeuCauDaXacThuc } from './auth.types'
 
 @Injectable()
 export class XacThucGuard implements CanActivate {
-  constructor(private readonly xacThuc: XacThucService) {}
+  constructor(@Inject(XacThucService) private readonly xacThuc: XacThucService) {}
 
   async canActivate(nguCanh: { switchToHttp: () => { getRequest: () => Request } }) {
     const yeuCau = nguCanh.switchToHttp().getRequest() as YeuCauDaXacThuc

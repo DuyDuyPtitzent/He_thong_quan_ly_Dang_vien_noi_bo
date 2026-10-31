@@ -2,7 +2,7 @@
 
 Ứng dụng phục vụ công tác quản lý nội bộ PTIT miền Bắc. Kiến trúc mục tiêu kết hợp giao diện React hiện có với máy chủ NestJS theo mô hình nguyên khối chia mô-đun, Prisma và PostgreSQL.
 
-> **Trạng thái:** Frontend Base và Backend nền đã tách trong `frontend/` và `backend/`. Database phát triển đã có schema nền 20 bảng. Backend có API xác thực tài khoản nội bộ; chưa có bootstrap tài khoản đầu tiên, dữ liệu PTIT, API nghiệp vụ hoặc RBAC thực thi.
+> **Trạng thái:** Frontend Base và Backend nền đã tách trong `frontend/` và `backend/`. Database phát triển đã có schema nền 20 bảng. Frontend có luồng đăng nhập và đổi mật khẩu lần đầu; Backend có API xác thực và quy trình bootstrap tài khoản thủ công. Chưa có dữ liệu PTIT, API nghiệp vụ hoặc RBAC thực thi.
 
 ## Công nghệ
 
@@ -18,7 +18,7 @@ Thư mục và tên file mã nguồn dùng tiếng Anh theo convention React/Typ
 
 ## Chạy máy chủ nền hiện tại
 
-Máy chủ nền nằm trong `backend/`; migration tạo 20 bảng CSDL đã áp dụng cho database phát triển. API xác thực hiện có tại `/api/v1/xac-thuc`; API tổ chức/phân quyền và dữ liệu PTIT chưa triển khai. Không có tài khoản mặc định; tài khoản đầu tiên phải được tạo thủ công bằng quy trình bootstrap bên dưới.
+Máy chủ nền nằm trong `backend/`; migration tạo 20 bảng CSDL đã áp dụng cho database phát triển. API xác thực hiện có tại `/api/v1/xac-thuc`; API tổ chức/phân quyền và dữ liệu PTIT chưa triển khai. Không có tài khoản mặc định; tài khoản đầu tiên phải được tạo thủ công bằng quy trình bootstrap bên dưới. Khi đăng nhập lần đầu, giao diện yêu cầu đổi mật khẩu trước khi vào khu vực bên trong.
 
 Sau khi cấu hình `.env` và áp dụng migration, tạo tài khoản đầu tiên bằng lệnh tương tác `npm.cmd --prefix backend run bootstrap:admin` từ thư mục gốc (hoặc `npm.cmd run bootstrap:admin` bên trong `backend/`). Lệnh yêu cầu terminal tương tác, không hiển thị mật khẩu khi nhập và từ chối nếu đã có bất kỳ tài khoản nào. Tài khoản phải đổi mật khẩu ở lần đăng nhập đầu tiên. Lệnh chỉ tạo tài khoản; không tự gán Role/Permission.
 

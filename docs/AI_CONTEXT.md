@@ -2,7 +2,7 @@
 
 ## Trạng thái thực tế
 
-Repository tách riêng `frontend/` (React/Vite) và `backend/` (NestJS/Prisma/PostgreSQL). Database phát triển đã áp dụng Prisma migration tạo 20 bảng theo `docs/THIET_KE_CSDL_TONG_THE.md`; có cấu hình, logging request, exception filter, endpoint sức khỏe và API xác thực tài khoản nội bộ (đăng nhập, xem phiên, đổi mật khẩu, đăng xuất). Chưa có quy trình khởi tạo tài khoản đầu tiên, dữ liệu PTIT, API nghiệp vụ hoặc RBAC thực thi. Không mô tả mục tiêu chưa triển khai là đã hoàn thành.
+Repository tách riêng `frontend/` (React/Vite) và `backend/` (NestJS/Prisma/PostgreSQL). Database phát triển đã áp dụng Prisma migration tạo 20 bảng theo `docs/THIET_KE_CSDL_TONG_THE.md`; có cấu hình, logging request, exception filter, endpoint sức khỏe, API xác thực và bootstrap tài khoản đầu tiên bằng CLI thủ công. Frontend có màn hình đăng nhập, khôi phục phiên và buộc đổi mật khẩu lần đầu. Chưa có dữ liệu PTIT, API nghiệp vụ hoặc RBAC thực thi. Không mô tả mục tiêu chưa triển khai là đã hoàn thành.
 
 ## Quyết định đã duyệt
 

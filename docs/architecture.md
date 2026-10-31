@@ -4,7 +4,7 @@
 
 ### Hiện có
 
-Frontend React/TypeScript/Vite nằm trong `frontend/src/`, gồm `app`, `core`, `layouts`, `shared`, `features`; có router tập trung, Axios client, TanStack Query, UI shadcn-style và feature mẫu Dashboard/Settings. Backend nằm trong `backend/`, dùng NestJS + Prisma 7 + PostgreSQL; có cấu hình môi trường, Prisma service, request logging, exception filter, endpoint `/api/v1/suc-khoe`, migration đã tạo 20 bảng và module xác thực tại `backend/src/modules/auth/`. Xác thực hỗ trợ đăng nhập, xem phiên, đổi mật khẩu và đăng xuất bằng cookie phiên; chưa có quy trình bootstrap tài khoản đầu tiên. Chưa có dữ liệu PTIT, API nghiệp vụ hoặc RBAC thực thi.
+Frontend React/TypeScript/Vite nằm trong `frontend/src/`, gồm `app`, `core`, `layouts`, `shared`, `features`; có router tập trung, Axios client, TanStack Query, UI shadcn-style và feature mẫu Dashboard/Settings. Có feature đăng nhập, khôi phục phiên, bảo vệ route và đổi mật khẩu lần đầu tại `frontend/src/features/auth/`. Backend nằm trong `backend/`, dùng NestJS + Prisma 7 + PostgreSQL; có cấu hình môi trường, Prisma service, request logging, exception filter, endpoint `/api/v1/suc-khoe`, migration đã tạo 20 bảng và module xác thực tại `backend/src/modules/auth/`. Xác thực hỗ trợ đăng nhập, xem phiên, đổi mật khẩu và đăng xuất bằng cookie phiên. Có quy trình bootstrap tài khoản đầu tiên bằng CLI thủ công. Chưa có dữ liệu PTIT, API nghiệp vụ hoặc RBAC thực thi.
 
 ### Mục tiêu đã duyệt
 
@@ -33,7 +33,9 @@ Giữ các tầng hiện có:
 
 Không để `shared`, `core` hoặc `layouts` phụ thuộc feature. Component trình bày không gọi API trực tiếp. Dùng Axios client và TanStack Query hiện có; chỉ mở rộng khi có nhu cầu cụ thể.
 
-`frontend/src/core/auth/auth.api.ts` là adapter gọi API xác thực; dữ liệu phiên không chứa Role/Permission. Axios gửi cookie phiên bằng `withCredentials`; trạng thái đăng nhập, provider và route guard UI chưa được triển khai.
+`frontend/src/core/auth/auth.api.ts` là adapter gọi API xác thực; dữ liệu phiên không chứa Role/Permission. `AuthProvider` dùng TanStack Query để khôi phục phiên; `RequireAuth` chỉ bảo vệ trạng thái đăng nhập và buộc đổi mật khẩu lần đầu, không kiểm tra quyền nghiệp vụ. Axios gửi cookie phiên bằng `withCredentials`.
+
+Màu giao diện được quản lý tập trung bằng CSS variables semantic tại `frontend/src/app/styles/globals.css`, gồm light/dark theme và token cho sidebar. Feature/layout chỉ dùng token semantic qua UI primitives/Tailwind; không hard-code màu hoặc định nghĩa palette riêng trong module nếu chưa được duyệt.
 
 ### Máy chủ mục tiêu
 

@@ -46,7 +46,14 @@ export class BoLocLoiHttp implements ExceptionFilter {
     const maTuongQuan = phanHoi.getHeader('X-Correlation-Id')
 
     if (maTrangThaiHttp >= 500) {
-      this.logger.error(JSON.stringify({ maLoi, maTuongQuan, loaiNgoaiLe: this.loaiNgoaiLe(ngoaiLe) }))
+      this.logger.error(
+        JSON.stringify({
+          maLoi,
+          maTuongQuan,
+          loaiNgoaiLe: this.loaiNgoaiLe(ngoaiLe),
+          viTriLoi: this.viTriLoi(ngoaiLe),
+        }),
+      )
     }
 
     phanHoi.status(maTrangThaiHttp).json({ maLoi, thongBao, maTuongQuan })
@@ -54,5 +61,13 @@ export class BoLocLoiHttp implements ExceptionFilter {
 
   private loaiNgoaiLe(ngoaiLe: unknown) {
     return ngoaiLe instanceof Error ? ngoaiLe.constructor.name : 'NgoaiLeKhongXacDinh'
+  }
+
+  private viTriLoi(ngoaiLe: unknown) {
+    if (!(ngoaiLe instanceof TypeError) || !ngoaiLe.stack) return undefined
+    return ngoaiLe.stack
+      .split('\n')
+      .slice(1, 4)
+      .map((dong) => dong.trim())
   }
 }
