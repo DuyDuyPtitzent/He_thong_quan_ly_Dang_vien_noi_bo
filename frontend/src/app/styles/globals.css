@@ -1,11 +1,11 @@
 @import 'tailwindcss';
 @custom-variant dark (&:is(.dark *));
 :root {
-  --brand-red: #760009;
-  --brand-red-strong: #991b1b;
-  --brand-gold: #904d00;
-  --outline: #8d706d;
-  --outline-variant: #e1bfbb;
+  --brand-red: #b5121b;
+  --brand-red-strong: #8f0711;
+  --brand-gold: #8a641c;
+  --outline: #737985;
+  --outline-variant: #d8dbe2;
   --background: #ffffff;
   --foreground: #131b2e;
   --card: oklch(1 0 0);
@@ -18,6 +18,8 @@
   --secondary: var(--brand-gold);
   --secondary-foreground: #ffffff;
   --secondary-container: #fe932c;
+  --success: #15803d;
+  --success-foreground: #ffffff;
   --muted: #fafafa;
   --muted-foreground: #59413e;
   --accent: #fffbeb;
@@ -26,7 +28,7 @@
   --error-container: #ffdad6;
   --on-error-container: #93000a;
   --border: var(--outline-variant);
-  --input: #e5e7eb;
+  --input: #dec8c5;
   --ring: var(--brand-red);
   --radius: 0.625rem;
   --sidebar: #ffffff;
@@ -41,7 +43,7 @@
 .dark {
   --brand-red: #ffb4ac;
   --brand-red-strong: #ffaaa1;
-  --brand-gold: #ffb77d;
+  --brand-gold: #e3bd70;
   --outline: #c8a5a1;
   --outline-variant: #59413e;
   --background: oklch(0.17 0.014 30);
@@ -56,6 +58,8 @@
   --secondary: #ffb77d;
   --secondary-foreground: #2f1500;
   --secondary-container: #663500;
+  --success: #166534;
+  --success-foreground: #ffffff;
   --muted: #283044;
   --muted-foreground: #c8a5a1;
   --accent: #663500;
@@ -88,6 +92,8 @@
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary-container: var(--secondary-container);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);

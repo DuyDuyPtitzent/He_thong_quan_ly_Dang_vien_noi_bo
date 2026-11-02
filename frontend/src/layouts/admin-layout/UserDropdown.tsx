@@ -1,4 +1,4 @@
-import { LogOut, Settings, UserRound } from 'lucide-react'
+import { KeyRound, LogOut, Settings, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/core/auth/auth-context'
@@ -46,6 +46,10 @@ export function UserDropdown() {
         <DropdownMenuItem onSelect={() => navigate('/settings/profile')}>
           <UserRound />
           Tài khoản
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate('/settings/security/change-password')}>
+          <KeyRound />
+          Đổi mật khẩu
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => navigate('/settings')}>
           <Settings />

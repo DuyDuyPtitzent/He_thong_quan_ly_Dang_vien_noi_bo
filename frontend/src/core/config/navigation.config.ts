@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, type LucideIcon } from 'lucide-react'
+import { Building2, LayoutDashboard, Network, Settings, ShieldCheck, type LucideIcon } from 'lucide-react'
 export type NavigationItem = {
   id: string
   title: string
@@ -13,6 +13,17 @@ export const navigationConfig: { title: string; items: NavigationItem[] }[] = [
     title: 'Không gian làm việc',
     items: [
       { id: 'dashboard', title: 'Tổng quan', path: '/', icon: LayoutDashboard },
+      { id: 'organizations', title: 'Cơ cấu tổ chức', path: '/to-chuc', icon: Building2 },
+      {
+        id: 'authorization',
+        title: 'Quản trị phân quyền',
+        path: '/quan-tri-phan-quyen/vai-tro',
+        icon: ShieldCheck,
+        children: [
+          { id: 'authorization-roles', title: 'Vai trò và ma trận', path: '/quan-tri-phan-quyen/vai-tro', icon: ShieldCheck },
+          { id: 'authorization-assignments', title: 'Phân công vai trò', path: '/quan-tri-phan-quyen/phan-cong', icon: Network },
+        ],
+      },
       {
         id: 'settings',
         title: 'Cài đặt',

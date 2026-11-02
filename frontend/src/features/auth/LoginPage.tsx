@@ -128,7 +128,7 @@ export function LoginPage() {
           </section>
 
           <section className="w-full xl:col-span-6" aria-labelledby="login-title">
-            <Card className="mx-auto w-full max-w-[440px] gap-0 rounded-2xl border-outline-variant/30 bg-card/95 p-4 shadow-xl backdrop-blur-2xl sm:p-5">
+            <Card className="mx-auto w-full max-w-[440px] gap-0 rounded-2xl border-0 bg-card/95 p-4 shadow-xl backdrop-blur-2xl sm:p-5">
               <CardHeader className="space-y-2 px-0 pt-0 text-center">
                 <CardTitle
                   id="login-title"
