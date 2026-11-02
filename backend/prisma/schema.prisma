@@ -72,6 +72,7 @@ model TaiKhoanNguoiDung {
 model PhienDangNhap {
   ma             String       @id @default(uuid()) @db.Uuid @map("ma_phien")
   maTaiKhoan      String       @db.Uuid @map("ma_tai_khoan")
+  maPhanCongVaiTroDangHoatDong String? @db.Uuid @map("ma_phan_cong_vai_tro_dang_hoat_dong")
   maLamMoiBam String     @db.Text @map("ma_lam_moi_bam")
   ngayTao      DateTime     @default(now()) @db.Timestamptz(6) @map("ngay_tao")
   hetHanLuc      DateTime     @db.Timestamptz(6) @map("het_han_luc")
@@ -79,6 +80,7 @@ model PhienDangNhap {
   diaChiIp      String?      @db.Inet @map("dia_chi_ip")
   thietBi      String?      @db.Text @map("thiet_bi")
   taiKhoan        TaiKhoanNguoiDung  @relation(fields: [maTaiKhoan], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+  phanCongVaiTroDangHoatDong PhanCongVaiTro? @relation("PhienTheoPhanCongDangHoatDong", fields: [maPhanCongVaiTroDangHoatDong], references: [ma], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([maTaiKhoan, hetHanLuc], map: "ix_phien_tai_khoan_het_han")
   @@index([maTaiKhoan, thuHoiLuc], map: "ix_phien_tai_khoan_thu_hoi")
@@ -110,8 +112,9 @@ model LichSuTenDonVi {
   ma             String           @id @default(uuid()) @db.Uuid @map("ma_lich_su_ten")
   maDonVi String           @db.Uuid @map("ma_don_vi")
   ten           String           @db.VarChar(200) @map("ten_don_vi")
-  ngayHieuLucTu      DateTime         @db.Date @map("ngay_hieu_luc_tu")
-  ngayHieuLucDen        DateTime?        @db.Date @map("ngay_hieu_luc_den")
+  ngayHieuLucTu      DateTime         @db.Timestamptz(6) @map("ngay_hieu_luc_tu")
+  ngayHieuLucDen        DateTime?        @db.Timestamptz(6) @map("ngay_hieu_luc_den")
+  nguonBanGhi String @default("CAN_XAC_MINH") @db.VarChar(30) @map("nguon_ban_ghi")
   maNguoiGhiNhan   String?          @db.Uuid @map("nguoi_ghi_nhan")
   ngayTao      DateTime         @default(now()) @db.Timestamptz(6) @map("ngay_tao")
   donVi   DonViToChuc @relation(fields: [maDonVi], references: [ma], onDelete: Restrict, onUpdate: Cascade)
@@ -127,6 +130,7 @@ model LichSuQuanHeDonVi {
   maDonViCon      String           @db.Uuid @map("ma_don_vi_con")
   ngayHieuLucTu    DateTime         @db.Timestamptz(6) @map("ngay_hieu_luc_tu")
   ngayHieuLucDen      DateTime?        @db.Timestamptz(6) @map("ngay_hieu_luc_den")
+  nguonBanGhi String @default("CAN_XAC_MINH") @db.VarChar(30) @map("nguon_ban_ghi")
   maNguoiGhiNhan String?          @db.Uuid @map("nguoi_ghi_nhan")
   ngayTao    DateTime         @default(now()) @db.Timestamptz(6) @map("ngay_tao")
   donViCha       DonViToChuc @relation("DonViChaQuanHe", fields: [maDonViCha], references: [ma], onDelete: Restrict, onUpdate: Cascade)
@@ -372,6 +376,7 @@ model PhanCongVaiTro {
   nguoiCap      TaiKhoanNguoiDung?     @relation("NguoiCapVaiTro", fields: [maNguoiCap], references: [ma], onDelete: Restrict, onUpdate: Cascade)
   nguoiThuHoi      TaiKhoanNguoiDung?     @relation("NguoiThuHoiVaiTro", fields: [maNguoiThuHoi], references: [ma], onDelete: Restrict, onUpdate: Cascade)
   phamViDonViChiDinh  PhamViDonVi[]
+  phienDangHoatDong PhienDangNhap[] @relation("PhienTheoPhanCongDangHoatDong")
 
   @@index([maTaiKhoan, ngayHieuLucTu, ngayHieuLucDen], map: "ix_phan_cong_vai_tro_tai_khoan_thoi_gian")
   @@index([maVaiTro], map: "ix_phan_cong_vai_tro_vai_tro")
