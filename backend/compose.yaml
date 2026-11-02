@@ -2,7 +2,7 @@ services:
   database:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: ${TEN_CO_SO_DU_LIEU:-quan_ly_dang_vien_dev}
+      POSTGRES_DB: ${TEN_CO_SO_DU_LIEU:-quan_ly_dang_vien}
       POSTGRES_USER: ${TAI_KHOAN_CO_SO_DU_LIEU:-ptit_dev}
       POSTGRES_PASSWORD: ${MAT_KHAU_CO_SO_DU_LIEU:?Khai bao MAT_KHAU_CO_SO_DU_LIEU trong backend/.env}
     ports:

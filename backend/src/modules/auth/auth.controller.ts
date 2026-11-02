@@ -5,13 +5,14 @@ import {
   Headers,
   HttpCode,
   Inject,
+  Patch,
   Post,
   Req,
   Res,
   UseGuards,
 } from '@nestjs/common'
 import type { Request, Response } from 'express'
-import { DangNhapDto, DoiMatKhauDto } from './auth.dto'
+import { CapNhatThongTinTaiKhoanCuaToiDto, DangNhapDto, DoiMatKhauDto } from './auth.dto'
 import { XacThucGuard } from './auth.guard'
 import { XacThucService, type ThongTinYeuCau } from './auth.service'
 import type { YeuCauDaXacThuc } from './auth.types'
@@ -55,6 +56,26 @@ export class XacThucController {
         doiMatKhauLanDau: yeuCau.taiKhoanDaXacThuc.doiMatKhauLanDau,
       },
     }
+  }
+
+  @Get('tai-khoan-cua-toi')
+  @UseGuards(XacThucGuard)
+  taiKhoanCuaToi(@Req() yeuCau: YeuCauDaXacThuc) {
+    return this.xacThuc.thongTinTaiKhoanCuaToi(yeuCau.taiKhoanDaXacThuc.maTaiKhoan)
+  }
+
+  @Patch('tai-khoan-cua-toi')
+  @HttpCode(200)
+  @UseGuards(XacThucGuard)
+  async capNhatTaiKhoanCuaToi(
+    @Body() dto: CapNhatThongTinTaiKhoanCuaToiDto,
+    @Req() yeuCau: YeuCauDaXacThuc,
+    @Headers('origin') nguon: string | undefined,
+  ) {
+    this.xacThuc.kiemTraNguonYeuCau(nguon)
+    const thongTin = this.layThongTinYeuCau(yeuCau)
+    const taiKhoan = await this.xacThuc.capNhatThongTinTaiKhoanCuaToi(yeuCau.taiKhoanDaXacThuc.maTaiKhoan, dto, thongTin)
+    return { taiKhoan, maTuongQuan: thongTin.maTuongQuan }
   }
 
   @Post('doi-mat-khau')

@@ -4,7 +4,7 @@
 
 ### Hiện có
 
-Frontend React/TypeScript/Vite nằm trong `frontend/src/`, gồm `app`, `core`, `layouts`, `shared`, `features`; có router tập trung, Axios client, TanStack Query, UI shadcn-style và feature mẫu Dashboard/Settings. Có feature đăng nhập, khôi phục phiên, bảo vệ route và đổi mật khẩu lần đầu tại `frontend/src/features/auth/`. Backend nằm trong `backend/`, dùng NestJS + Prisma 7 + PostgreSQL; có cấu hình môi trường, Prisma service, request logging, exception filter, endpoint `/api/v1/suc-khoe`, migration đã tạo 20 bảng và module xác thực tại `backend/src/modules/auth/`. Xác thực hỗ trợ đăng nhập, xem phiên, đổi mật khẩu và đăng xuất bằng cookie phiên. Có quy trình bootstrap tài khoản đầu tiên bằng CLI thủ công. Chưa có dữ liệu PTIT, API nghiệp vụ hoặc RBAC thực thi.
+Frontend React/TypeScript/Vite nằm trong `frontend/src/`, gồm `app`, `core`, `layouts`, `shared`, `features`; có router tập trung, Axios client, TanStack Query và UI shadcn-style. Có feature đăng nhập/đổi mật khẩu và quản trị phân quyền (danh mục Permission, Role/ma trận, Assignment). Backend nằm trong `backend/`, dùng NestJS + Prisma 7 + PostgreSQL; có cấu hình môi trường, Prisma service, request logging, exception filter, endpoint `/api/v1/suc-khoe`, xác thực, Permission/Assignment/Scope và API cây tổ chức. Danh mục 71 Permission được đồng bộ; Role/Assignment nghiệp vụ không được seed và chưa có dữ liệu PTIT. Giao diện phân quyền không thay thế kiểm tra Permission + Scope tại Backend.
 
 ### Mục tiêu đã duyệt
 
@@ -47,13 +47,13 @@ backend/src/
   modules/
     auth/                 # xác thực tài khoản hiện có
     accounts/             # quản trị tài khoản, chưa triển khai
-    organizations/       # cây tổ chức và lịch sử
-    authorization/       # vai trò, quyền, phân công, phạm vi
+    organizations/       # cây tổ chức và lịch sử (API đã triển khai)
+    authorization/       # Permission/Scope và API quản lý Role/Assignment
     audit/                # kiểm toán nghiệp vụ
     party-members/        # triển khai sau MVP tổ chức/phân quyền
 ```
 
-Các module nghiệp vụ trong sơ đồ là cấu trúc mục tiêu, chưa được tạo. Backend hiện có nền lắp ghép, hạ tầng và module sức khỏe. Bộ điều khiển xử lý HTTP và dữ liệu vào/ra; dịch vụ điều phối nghiệp vụ và transaction; quy tắc thuần kiểm tra điều kiện; Prisma truy cập cơ sở dữ liệu. Mô-đun không truy cập trực tiếp bảng nội bộ của mô-đun khác; dùng dịch vụ/hợp đồng nội bộ công khai. Chỉ thêm tầng/lớp khi có nhu cầu thực tế.
+Các module `auth`, `authorization`, `organizations`, `health` đã được tạo; `accounts`, `audit` và `party-members` trong sơ đồ vẫn là mục tiêu chưa triển khai. Bộ điều khiển xử lý HTTP và dữ liệu vào/ra; dịch vụ điều phối nghiệp vụ và transaction; quy tắc thuần kiểm tra điều kiện; Prisma truy cập cơ sở dữ liệu. Mô-đun không truy cập trực tiếp bảng nội bộ của mô-đun khác; dùng dịch vụ/hợp đồng nội bộ công khai. Chỉ thêm tầng/lớp khi có nhu cầu thực tế.
 
 ## Domain và database mục tiêu
 
@@ -95,8 +95,8 @@ Máy chủ cho phép khi tài khoản hợp lệ, phân công còn hiệu lực,
 - Không trả stack trace, SQL, token, credential hoặc dữ liệu cá nhân ngoài phạm vi.
 - Máy chủ kiểm tra quyền + phạm vi cho từng yêu cầu và từng đối tượng; không tin đơn vị hoặc quyền do giao diện gửi.
 - Giai đoạn đầu dùng tài khoản nội bộ do quản trị viên quản lý. Phiên trình duyệt đề xuất cookie `HttpOnly`, `Secure`, `SameSite` và CSRF protection; SSO PTIT là tích hợp tương lai.
-- Các endpoint xác thực hiện có: `POST /api/v1/xac-thuc/dang-nhap`, `GET /api/v1/xac-thuc/phien-hien-tai`, `POST /api/v1/xac-thuc/doi-mat-khau`, `POST /api/v1/xac-thuc/dang-xuat`. Cookie dùng `HttpOnly`, `SameSite=Strict`, bật `Secure` ngoài `PHAT_TRIEN`; thao tác thay đổi kiểm tra `Origin` theo `URL_GIAO_DIEN_DUOC_PHEP`. Token phiên ngẫu nhiên chỉ lưu dạng SHA-256 trong CSDL; mật khẩu dùng scrypt. Thời hạn phiên, ngưỡng đăng nhập sai và thời gian khóa cấu hình qua môi trường.
-- `XacThucGuard` chỉ xác nhận tài khoản/phiên đang hoạt động, không thực hiện Permission hoặc Scope. API nghiệp vụ và guard quyền chưa triển khai cho tới khi ma trận Permission + Scope được duyệt. Không có đăng ký công khai, endpoint HTTP tạo tài khoản hay tài khoản mặc định; tài khoản đầu tiên được khởi tạo bằng CLI thủ công.
+- Các endpoint xác thực hiện có: `POST /api/v1/xac-thuc/dang-nhap`, `GET /api/v1/xac-thuc/phien-hien-tai`, `GET/PATCH /api/v1/xac-thuc/tai-khoan-cua-toi`, `POST /api/v1/xac-thuc/doi-mat-khau`, `POST /api/v1/xac-thuc/dang-xuat`. Tài khoản chỉ tự sửa email; không tự khóa/xóa. Cookie dùng `HttpOnly`, `SameSite=Strict`, bật `Secure` ngoài `PHAT_TRIEN`; thao tác thay đổi kiểm tra `Origin` theo `URL_GIAO_DIEN_DUOC_PHEP`. Token phiên ngẫu nhiên chỉ lưu dạng SHA-256 trong CSDL; mật khẩu dùng scrypt. Thời hạn phiên, ngưỡng đăng nhập sai và thời gian khóa cấu hình qua môi trường.
+- `XacThucGuard` chỉ xác nhận tài khoản/phiên; `@RequirePermission` gắn guard kiểm tra Permission + Assignment + Scope. API tổ chức và API quản trị Role/Assignment áp dụng các Permission trong ma trận; cấp Assignment thường bị giới hạn trong quyền/Scope của người cấp. Role `QUAN_TRI_VIEN_TOAN_HE_THONG` dùng Scope `TOAN_HE_THONG`, Assignment không mặc định hết hạn; cấp/thu hồi qua CLI vận hành allowlist có mã phê duyệt, audit và bảo vệ quản trị viên hợp lệ cuối cùng. API thường không cấp/thu hồi Role cao nhất. Chi tiết ở `docs/THIET_KE_MA_TRAN_QUYEN.md` và `docs/THIET_KE_API_PHAN_QUYEN.md`. Không có đăng ký công khai, endpoint HTTP tạo tài khoản hay tài khoản mặc định.
 - Tài khoản đầu tiên được tạo thủ công bằng `npm run bootstrap:admin` trong thư mục `backend/`. Lệnh yêu cầu terminal tương tác để nhập mật khẩu kín, kiểm tra bảng tài khoản còn rỗng trong transaction có khóa bảng để ngăn hai lần khởi tạo đồng thời, ghi audit sự kiện bootstrap và đặt `doiMatKhauLanDau=true`. Lệnh chỉ tạo account; không gán Role/Permission. Không chạy lệnh này sau khi đã có tài khoản.
 
 ## Nhật ký và dữ liệu cá nhân

@@ -1,4 +1,4 @@
-import { IsString, Length } from 'class-validator'
+import { IsEmail, IsOptional, IsString, Length, MaxLength } from 'class-validator'
 
 export class DangNhapDto {
   @IsString()
@@ -18,4 +18,11 @@ export class DoiMatKhauDto {
   @IsString()
   @Length(12, 128)
   matKhauMoi!: string
+}
+
+export class CapNhatThongTinTaiKhoanCuaToiDto {
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(254)
+  email?: string | null
 }

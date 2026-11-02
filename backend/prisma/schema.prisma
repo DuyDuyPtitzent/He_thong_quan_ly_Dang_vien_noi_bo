@@ -89,7 +89,7 @@ model DonViToChuc {
   ma                    String                       @id @default(uuid()) @db.Uuid @map("ma_don_vi")
   maDinhDanh                  String?                      @unique(map: "uq_don_vi_ma_dinh_danh") @db.VarChar(50) @map("ma_dinh_danh")
   loaiDonVi             LoaiDonVi             @map("loai_don_vi")
-  trangThai                String                       @db.VarChar(30) @map("trang_thai")
+  trangThai                String                       @default("DANG_HOAT_DONG") @db.VarChar(30) @map("trang_thai")
   ngayTao             DateTime                     @default(now()) @db.Timestamptz(6) @map("ngay_tao")
   ngayCapNhat             DateTime                     @default(now()) @updatedAt @db.Timestamptz(6) @map("ngay_cap_nhat")
   tenDonVi                 LichSuTenDonVi[]
@@ -342,11 +342,11 @@ model Quyen {
 model VaiTroQuyen {
   maVaiTro       String       @db.Uuid @map("ma_vai_tro")
   maQuyen String       @db.Uuid @map("ma_quyen")
-  maNguoiGhiNhan String       @db.Uuid @map("nguoi_ghi_nhan")
+  maNguoiGhiNhan String?      @db.Uuid @map("nguoi_ghi_nhan")
   ngayTao    DateTime     @default(now()) @db.Timestamptz(6) @map("ngay_tao")
   vaiTro         VaiTro         @relation(fields: [maVaiTro], references: [ma], onDelete: Restrict, onUpdate: Cascade)
   quyen   Quyen   @relation(fields: [maQuyen], references: [ma], onDelete: Restrict, onUpdate: Cascade)
-  nguoiGhiNhan   TaiKhoanNguoiDung @relation("NguoiGhiVaiTroQuyen", fields: [maNguoiGhiNhan], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+  nguoiGhiNhan   TaiKhoanNguoiDung? @relation("NguoiGhiVaiTroQuyen", fields: [maNguoiGhiNhan], references: [ma], onDelete: Restrict, onUpdate: Cascade)
 
   @@id([maVaiTro, maQuyen], map: "pk_vai_tro_quyen")
   @@index([maQuyen], map: "ix_vai_tro_quyen_quyen")
@@ -361,7 +361,7 @@ model PhanCongVaiTro {
   maDonViGoc    String?          @db.Uuid @map("ma_don_vi_goc")
   ngayHieuLucTu      DateTime         @db.Timestamptz(6) @map("ngay_hieu_luc_tu")
   ngayHieuLucDen        DateTime?        @db.Timestamptz(6) @map("ngay_hieu_luc_den")
-  maNguoiCap    String           @db.Uuid @map("nguoi_cap")
+  maNguoiCap    String?          @db.Uuid @map("nguoi_cap")
   maNguoiThuHoi    String?          @db.Uuid @map("nguoi_thu_hoi")
   thuHoiLuc      DateTime?        @db.Timestamptz(6) @map("ngay_thu_hoi")
   lyDo         String?          @db.Text @map("ly_do")
@@ -369,7 +369,7 @@ model PhanCongVaiTro {
   taiKhoan        TaiKhoanNguoiDung      @relation("TaiKhoanDuocGanVaiTro", fields: [maTaiKhoan], references: [ma], onDelete: Restrict, onUpdate: Cascade)
   vaiTro           VaiTro             @relation(fields: [maVaiTro], references: [ma], onDelete: Restrict, onUpdate: Cascade)
   donViGoc      DonViToChuc? @relation("DonViGocPhamViVaiTro", fields: [maDonViGoc], references: [ma], onDelete: Restrict, onUpdate: Cascade)
-  nguoiCap      TaiKhoanNguoiDung      @relation("NguoiCapVaiTro", fields: [maNguoiCap], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+  nguoiCap      TaiKhoanNguoiDung?     @relation("NguoiCapVaiTro", fields: [maNguoiCap], references: [ma], onDelete: Restrict, onUpdate: Cascade)
   nguoiThuHoi      TaiKhoanNguoiDung?     @relation("NguoiThuHoiVaiTro", fields: [maNguoiThuHoi], references: [ma], onDelete: Restrict, onUpdate: Cascade)
   phamViDonViChiDinh  PhamViDonVi[]
 

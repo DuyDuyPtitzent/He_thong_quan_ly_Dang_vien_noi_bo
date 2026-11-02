@@ -1,14 +1,16 @@
 import {
   ForbiddenException,
+  ConflictException,
   Inject,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { DichVuPrisma } from '../../infrastructure/database/prisma.service'
-import type { Prisma } from '../../infrastructure/database/generated/prisma/client'
-import { DangNhapDto, DoiMatKhauDto } from './auth.dto'
+import { Prisma } from '../../infrastructure/database/generated/prisma/client'
+import { CapNhatThongTinTaiKhoanCuaToiDto, DangNhapDto, DoiMatKhauDto } from './auth.dto'
 import { BamMatKhauService } from './password-hasher'
 
 const tenCookiePhien = 'phien_dang_nhap'
@@ -195,6 +197,39 @@ export class XacThucService {
     })
   }
 
+  async thongTinTaiKhoanCuaToi(maTaiKhoan: string) {
+    const account = await this.prisma.taiKhoanNguoiDung.findUnique({
+      where: { ma: maTaiKhoan },
+      select: { ma: true, tenDangNhap: true, email: true, trangThai: true, doiMatKhauLanDau: true },
+    })
+    if (!account) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_TAI_KHOAN', thongBao: 'Không tìm thấy tài khoản.' })
+    return account
+  }
+
+  async capNhatThongTinTaiKhoanCuaToi(maTaiKhoan: string, dto: CapNhatThongTinTaiKhoanCuaToiDto, thongTin: ThongTinYeuCau) {
+    try {
+      return await this.prisma.$transaction(async (giaoDich) => {
+        const before = await giaoDich.taiKhoanNguoiDung.findUnique({ where: { ma: maTaiKhoan }, select: { ma: true, email: true } })
+        if (!before) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_TAI_KHOAN', thongBao: 'Không tìm thấy tài khoản.' })
+        const after = await giaoDich.taiKhoanNguoiDung.update({
+          where: { ma: maTaiKhoan }, data: { email: dto.email },
+          select: { ma: true, tenDangNhap: true, email: true, trangThai: true, doiMatKhauLanDau: true },
+        })
+        await this.ghiAudit(giaoDich, {
+          maNguoiThucHien: maTaiKhoan, maDoiTuong: maTaiKhoan, hanhDong: 'TAI_KHOAN_TU_CAP_NHAT_THONG_TIN',
+          ketQua: 'THANH_CONG', maTuongQuan: thongTin.maTuongQuan, diaChiIp: thongTin.diaChiIp,
+          duLieuTruoc: { emailDaThietLap: Boolean(before.email) }, duLieuSau: { emailDaThietLap: Boolean(after.email) },
+        })
+        return after
+      })
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException({ maLoi: 'EMAIL_DA_DUOC_SU_DUNG', thongBao: 'Email đã được liên kết với tài khoản khác.' })
+      }
+      throw error
+    }
+  }
+
   kiemTraNguonYeuCau(nguon: string | undefined) {
     const nguonDuocPhep = this.cauHinh.get<string>(
       'URL_GIAO_DIEN_DUOC_PHEP',
@@ -284,8 +319,8 @@ export class XacThucService {
       maTuongQuan: string
       diaChiIp: string | null
       lyDo?: string
-      duLieuTruoc?: { doiMatKhauLanDau: boolean }
-      duLieuSau?: { doiMatKhauLanDau: boolean }
+      duLieuTruoc?: { doiMatKhauLanDau?: boolean; emailDaThietLap?: boolean }
+      duLieuSau?: { doiMatKhauLanDau?: boolean; emailDaThietLap?: boolean }
     },
   ) {
     await giaoDich.nhatKyKiemToan.create({
