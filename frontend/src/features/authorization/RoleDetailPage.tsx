@@ -11,6 +11,7 @@ import { Checkbox } from '@/shared/components/ui/checkbox'
 import { Badge } from '@/shared/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/shared/components/ui/resizable'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/shared/components/ui/alert-dialog'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
@@ -26,6 +27,7 @@ export function RoleDetailPage() {
   const { maVaiTro = '' } = useParams()
   const navigate = useNavigate()
   const client = useQueryClient()
+  const [isSmallScreen, setIsSmallScreen] = useState(() => window.matchMedia('(max-width: 1023px)').matches)
   const [selected, setSelected] = useState<string[]>([])
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -35,6 +37,13 @@ export function RoleDetailPage() {
   const [activeGroup, setActiveGroup] = useState('')
   const [editOpen, setEditOpen] = useState(false)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1023px)')
+    const updateLayout = () => setIsSmallScreen(media.matches)
+    updateLayout()
+    media.addEventListener('change', updateLayout)
+    return () => media.removeEventListener('change', updateLayout)
+  }, [])
   const roles = useQuery({ queryKey: ['authorization', 'roles'], queryFn: authorizationApi.roles })
   const permissions = useQuery({ queryKey: ['authorization', 'permissions'], queryFn: authorizationApi.permissions })
   const role = roles.data?.find((item) => item.ma === maVaiTro)
@@ -134,8 +143,10 @@ export function RoleDetailPage() {
             </div>
           </CardHeader>
           <CardContent className="min-w-0 pt-0">
-            <Tabs value={activeGroup || firstGroup} onValueChange={setActiveGroup} orientation="vertical" className="grid min-w-0 gap-4 md:grid-cols-[220px_minmax(0,1fr)] md:gap-5">
-              <TabsList variant="line" aria-label="Nhóm quyền" className="h-auto w-full flex-col items-stretch justify-start gap-1 border-r px-0 md:max-h-[520px] md:overflow-y-auto">
+            <Tabs value={activeGroup || firstGroup} onValueChange={setActiveGroup} orientation="vertical" className="min-w-0">
+              <ResizablePanelGroup orientation={isSmallScreen ? 'vertical' : 'horizontal'} resizeTargetMinimumSize={{ coarse: 32, fine: 24 }} className={`min-w-0 rounded-md border ${isSmallScreen ? 'h-[950px] min-h-[760px]' : 'h-[640px] min-h-[520px]'}`}>
+              <ResizablePanel defaultSize={`${isSmallScreen ? 28 : 25}%`} minSize={`${isSmallScreen ? 20 : 18}%`} maxSize={`${isSmallScreen ? 42 : 38}%`} className="min-h-0 min-w-0">
+              <TabsList variant="line" aria-label="Nhóm quyền" className={`h-full w-full flex-col items-stretch justify-start gap-1 overflow-y-auto p-2 ${isSmallScreen ? '' : 'border-r'}`}>
                 {groups.map((group) => {
                   const count = group.permissions.filter((item) => selected.includes(item.ma)).length
                   return <TabsTrigger key={group.maNhom} value={group.maNhom} className="h-auto w-full flex-none justify-between gap-2 px-3 py-2.5 text-left">
@@ -143,7 +154,10 @@ export function RoleDetailPage() {
                   </TabsTrigger>
                 })}
               </TabsList>
-              {groups.map((group) => <TabsContent key={group.maNhom} value={group.maNhom} className="mt-0 min-w-0">
+              </ResizablePanel>
+              <ResizableHandle withHandle className={isSmallScreen ? 'z-10 h-1 w-full cursor-row-resize touch-none select-none hover:bg-primary/40' : 'z-10 w-1 cursor-col-resize touch-none select-none hover:bg-primary/40'} />
+              <ResizablePanel defaultSize={`${isSmallScreen ? 72 : 75}%`} minSize={`${isSmallScreen ? 58 : 62}%`} maxSize={`${isSmallScreen ? 80 : 82}%`} className="min-h-0 min-w-0">
+              {groups.map((group) => <TabsContent key={group.maNhom} value={group.maNhom} className="m-0 h-full min-w-0 overflow-auto p-3">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/40 px-3 py-2">
                   <Label className="flex cursor-pointer items-center gap-2 text-sm font-medium"><Checkbox disabled={locked || filteredPermissions.length === 0} checked={allVisibleSelected} onCheckedChange={(checked) => toggleVisible(checked === true)} />Chọn tất cả quyền đang hiển thị</Label>
                   <span className="text-xs text-muted-foreground">{filteredPermissions.length} / {activePermissions.length} quyền</span>
@@ -163,6 +177,8 @@ export function RoleDetailPage() {
                   </Table>
                 </div>}
               </TabsContent>)}
+              </ResizablePanel>
+              </ResizablePanelGroup>
             </Tabs>
           </CardContent>
         </Card>

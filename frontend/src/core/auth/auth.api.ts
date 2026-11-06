@@ -20,6 +20,13 @@ export const authApi = {
     return data
   },
 
+  async chonPhanCong(maPhanCong: string) {
+    const { data } = await apiClient.post<{ maPhanCongVaiTroDangHoatDong: string }>(
+      '/xac-thuc/phan-cong-vai-tro-dang-hoat-dong', { maPhanCong },
+    )
+    return data
+  },
+
   async dangXuat() {
     const { data } = await apiClient.post<{ daDangXuat: true; maTuongQuan: string }>(
       '/xac-thuc/dang-xuat',

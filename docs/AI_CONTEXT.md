@@ -12,9 +12,9 @@ Repository tách riêng `frontend/` (React/Vite) và `backend/` (NestJS/Prisma/P
 - Quản lý chức vụ, nhiệm kỳ, phân công và lịch sử; không hard-code tên đơn vị/chức vụ thực tế.
 - Phân quyền theo vai trò: mỗi vai trò có nhiều quyền trong ma trận; phân công gắn vai trò với tài khoản, phạm vi tổ chức và thời hạn. Một tài khoản có thể có nhiều phân công đồng thời. Máy chủ kiểm tra quyền + phạm vi; giao diện chỉ hỗ trợ trải nghiệm.
 - Phạm vi: `CA_NHAN`, `CAY_DON_VI`, `DON_VI_CHI_DINH`, `TOAN_HE_THONG`. Không mặc định mọi quyền đều được kế thừa.
-- Role quản trị cao nhất được duyệt là `QUAN_TRI_VIEN_TOAN_HE_THONG`, Assignment `TOAN_HE_THONG` không mặc định hết hạn; nhiều tài khoản được phép nếu từng tài khoản được chỉ định và cấp rõ ràng. Không có API thường cấp/khôi phục quyền cao nhất; khôi phục qua quy trình vận hành ngoài API có xác minh và audit. Backend phải bảo vệ Quản trị viên toàn hệ thống hợp lệ cuối cùng.
-- Quyền kỹ thuật không tự cấp quyền phê duyệt nghiệp vụ hoặc bỏ qua workflow hồ sơ/chuyển sinh hoạt.
-- Đơn vị gốc duy nhất được duyệt: `PTIT_DANG_UY`, “Đảng ủy Học viện Công nghệ Bưu chính Viễn thông”, loại `DANG_UY`, không có đơn vị cha, mặc định `DANG_HOAT_DONG`. Đây là quyết định đặc tả, chưa phải dữ liệu đã tạo.
+- Role quản trị cao nhất là `QUAN_TRI_VIEN_TOAN_HE_THONG`, được cấp toàn bộ Permission trong catalog với Assignment `TOAN_HE_THONG` không mặc định hết hạn; nhiều tài khoản được phép nếu từng tài khoản được chỉ định và cấp rõ ràng. Không có API thường cấp/khôi phục quyền cao nhất; khôi phục qua quy trình vận hành ngoài API có xác minh và audit. Backend phải bảo vệ Quản trị viên toàn hệ thống hợp lệ cuối cùng.
+- Role được cấp toàn bộ Permission hiện có; thao tác phê duyệt vẫn chạy qua API, kiểm tra Scope, workflow, audit và ràng buộc dữ liệu như quy định.
+- Đơn vị gốc là nút loại `DANG_UY` không có đơn vị cha. Mã nghiệp vụ do người có thẩm quyền khai báo, không được dùng làm định danh quyền; UUID nội bộ và quan hệ cha–con là căn cứ cho Assignment/Scope. `TOAN_HE_THONG` là Scope độc lập với cây tổ chức.
 - Trạng thái đơn vị được duyệt: `DANG_HOAT_DONG`, `TAM_NGUNG`, `NGUNG_HOAT_DONG`; đơn vị mới mặc định đang hoạt động; khôi phục đơn vị ngừng hoạt động cần đúng thẩm quyền, Permission + Scope và audit.
 - Tài khoản người dùng và hồ sơ Đảng viên là hai thực thể; liên kết tùy chọn một-một.
 - Giai đoạn đầu dùng tài khoản nội bộ do quản trị viên quản lý; không tự đăng ký. SSO nhà trường là khả năng tích hợp bổ sung sau nếu PTIT cấp quyền/điều kiện.

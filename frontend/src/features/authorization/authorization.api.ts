@@ -31,6 +31,7 @@ export type AccountOption = {
   tenDangNhap: string
   hoVaTen: string | null
   maHoSoNoiBo: string | null
+  chiBoHienTai?: string | null
 }
 
 export type OrganizationNode = {
@@ -50,10 +51,20 @@ export type AssignmentItem = {
   danhSachMaQuyen: string[]
   maDonViGoc: string | null
   danhSachMaDonVi: string[]
+  tenDonViGoc?: string | null
+  loaiDonViGoc?: string | null
+  donViChiDinh?: { maDonVi: string; tenDonVi: string | null; loaiDonVi: string }[]
   ngayHieuLucTu: string
   ngayHieuLucDen: string | null
   thuHoiLuc: string | null
   lyDo: string | null
+  trangThaiVaiTro?: string
+  laVaiTroHeThong?: boolean
+  ngayTao?: string
+  maNguoiCap?: string | null
+  tenNguoiCap?: string | null
+  maNguoiThuHoi?: string | null
+  tenNguoiThuHoi?: string | null
 }
 
 export type AssignmentInput = {
@@ -62,11 +73,12 @@ export type AssignmentInput = {
   loaiPhamVi: 'CAY_DON_VI' | 'DON_VI_CHI_DINH'
   maDonViGoc?: string
   danhSachMaDonVi?: string[]
+  ngayHieuLucTu?: string
   ngayHieuLucDen?: string
   lyDo: string
 }
 
-export type AssignmentUpdateInput = Omit<AssignmentInput, 'maTaiKhoan' | 'maVaiTro' | 'ngayHieuLucDen'> & { ngayHieuLucDen?: string | null }
+export type AssignmentUpdateInput = Omit<AssignmentInput, 'maTaiKhoan' | 'maVaiTro' | 'ngayHieuLucTu' | 'ngayHieuLucDen'> & { ngayHieuLucDen?: string | null }
 
 export const authorizationApi = {
   async permissions() {
@@ -108,6 +120,10 @@ export const authorizationApi = {
   },
   async assignments(maTaiKhoan: string) {
     const { data } = await apiClient.get<AssignmentItem[]>('/phan-cong-vai-tro', { params: { maTaiKhoan } })
+    return data
+  },
+  async assignmentHistory(maTaiKhoan: string) {
+    const { data } = await apiClient.get<Array<{ maDoiTuong: string | null; hanhDong: string; ketQua: string; lyDo: string | null; duLieuTruoc: unknown; duLieuSau: unknown; thoiDiem: string; tenNguoiThucHien: string }>>('/phan-cong-vai-tro/lich-su', { params: { maTaiKhoan } })
     return data
   },
   async createAssignment(input: AssignmentInput) {

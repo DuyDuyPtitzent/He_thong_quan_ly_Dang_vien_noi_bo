@@ -9,6 +9,7 @@ export type NguCanhXacThuc = {
   dangXuat: () => Promise<void>
   doiMatKhau: (input: { matKhauHienTai: string; matKhauMoi: string }) => Promise<void>
   taiLaiPhien: () => Promise<void>
+  chonPhanCong: (maPhanCong: string) => Promise<void>
 }
 
 export const AuthContext = createContext<NguCanhXacThuc | null>(null)

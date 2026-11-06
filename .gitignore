@@ -15,6 +15,10 @@ dist-ssr
 .env.*
 !.env.example
 backend/src/infrastructure/database/generated/prisma/
+backend/storage/private/
+/frontend/public/tinymce/
+/frontend/test-results/
+/frontend/playwright-report/
 
 # Editor directories and files
 .vscode/*

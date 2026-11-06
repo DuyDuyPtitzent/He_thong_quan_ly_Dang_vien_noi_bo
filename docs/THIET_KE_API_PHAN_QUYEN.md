@@ -1,6 +1,6 @@
 # API quản trị Permission, Role và Assignment
 
-**Trạng thái:** Backend đã triển khai API quản trị Role/Assignment nền, endpoint tự quản lý email/Assignment, cùng CLI vận hành cấp/thu hồi/khôi phục quản trị viên cao nhất. Danh mục Permission chỉ đọc; API thường không tạo Permission hoặc Role hệ thống. Migration `20261101010000_quan_tri_toan_he_thong_va_don_vi_goc` đã áp dụng lên PostgreSQL phát triển; catalog 71 Permission đã đồng bộ. Quản trị viên `Quantrivien` đã được cấp theo quyết định chỉ định được ghi nhận trong bàn giao. Giao diện quản lý Permission/Role/Assignment được triển khai tại `/quan-tri-phan-quyen/`.
+**Trạng thái:** Backend đã triển khai API quản trị Role/Assignment nền, endpoint tự quản lý email/Assignment, cùng CLI vận hành cấp/thu hồi/khôi phục quản trị viên cao nhất. Cập nhật 2026-11-03: hoàn thiện trang Phân quyền tài khoản dùng dữ liệu PostgreSQL, lọc/phân trang/KPI trong Scope, chi tiết và lịch sử Assignment, cấp/sửa/thu hồi Assignment. Không thay đổi schema hoặc migration cho phần này.
 
 ## Endpoint
 
@@ -10,20 +10,29 @@ Tài khoản đã xác thực có thể xem/sửa email của chính mình tại
 |---|---|---|
 | GET | `/api/v1/quyen` | `QUYEN_XEM_DANH_MUC` |
 | GET | `/api/v1/tai-khoan?tuKhoa={keyword}&gioiHan={10..50}` | `TAI_KHOAN_XEM` và Scope của Assignment nguồn |
+| GET | `/api/v1/tai-khoan?tuKhoa={keyword}&maChiBo={uuid}&maVaiTro={uuid}&coPhanCong={CO\|KHONG}&trang={n}&gioiHan={10..100}` | `TAI_KHOAN_XEM` và Scope của Assignment nguồn |
+| POST | `/api/v1/tai-khoan` | `TAI_KHOAN_TAO` |
+| GET | `/api/v1/tai-khoan/{maTaiKhoan}` | `TAI_KHOAN_XEM` |
+| PATCH | `/api/v1/tai-khoan/{maTaiKhoan}` | `TAI_KHOAN_SUA_THONG_TIN` |
+| PATCH | `/api/v1/tai-khoan/{maTaiKhoan}/trang-thai` | `TAI_KHOAN_KHOA_MO_KHOA` |
+| PATCH | `/api/v1/tai-khoan/{maTaiKhoan}/lien-ket-ho-so` | `TAI_KHOAN_LIEN_KET_HO_SO` |
+| GET | `/api/v1/tai-khoan/{maTaiKhoan}/lich-su` | `NHAT_KY_KIEM_TOAN_XEM` |
+| DELETE | `/api/v1/tai-khoan/{maTaiKhoan}` | `TAI_KHOAN_XOA` |
 | GET | `/api/v1/vai-tro` | `VAI_TRO_XEM` |
 | POST | `/api/v1/vai-tro` | `VAI_TRO_TAO` |
 | PATCH | `/api/v1/vai-tro/{maVaiTro}` | `VAI_TRO_SUA` |
 | DELETE | `/api/v1/vai-tro/{maVaiTro}` | `VAI_TRO_XOA` |
 | PATCH | `/api/v1/vai-tro/{maVaiTro}/quyen` | `VAI_TRO_GAN_QUYEN` |
 | GET | `/api/v1/phan-cong-vai-tro?maTaiKhoan={uuid}` | `PHAN_CONG_VAI_TRO_XEM` |
+| GET | `/api/v1/phan-cong-vai-tro/lich-su?maTaiKhoan={uuid}` | `NHAT_KY_KIEM_TOAN_XEM` và `PHAN_CONG_VAI_TRO_XEM`, trong Scope |
 | GET | `/api/v1/phan-cong-vai-tro/cua-toi` | `PHAN_CONG_VAI_TRO_XEM` |
 | POST | `/api/v1/phan-cong-vai-tro` | `PHAN_CONG_VAI_TRO_TAO` |
 | PATCH | `/api/v1/phan-cong-vai-tro/{maPhanCong}` | `PHAN_CONG_VAI_TRO_SUA` |
 | POST | `/api/v1/phan-cong-vai-tro/{maPhanCong}/thu-hoi` | `PHAN_CONG_VAI_TRO_THU_HOI` |
 
-`GET /api/v1/quyen` trả thêm metadata trình bày gồm tên/mô tả, nhóm Permission và trạng thái API (`DA_CO_API` hoặc `CHUA_CO_API`). Metadata được đồng bộ từ catalog nguồn; giao diện không thể tạo hoặc sửa Permission. `GET /api/v1/tai-khoan` chỉ trả tài khoản đang hoạt động, lọc từ khóa và giới hạn số dòng; Quản trị viên toàn hệ thống có thể tra cứu toàn hệ thống, quản trị viên có Scope đơn vị chỉ nhìn thấy tài khoản nằm trong Scope quản lý đã có Assignment phù hợp. Danh sách này không cấp quyền cho tài khoản chưa có Assignment.
+`GET /api/v1/quyen` trả thêm metadata trình bày gồm tên/mô tả, nhóm Permission và trạng thái API (`DA_CO_API` hoặc `CHUA_CO_API`). Metadata được đồng bộ từ catalog nguồn; giao diện không thể tạo hoặc sửa Permission. `GET /api/v1/tai-khoan` lọc từ khóa, trạng thái, liên kết hồ sơ, Chi bộ, Role và tình trạng Assignment, trả phân trang, danh mục Chi bộ và thống kê trong Scope (tổng tài khoản, đã/chưa có Assignment hiệu lực, Assignment sắp hết hạn trong 30 ngày). Scope và Permission lấy từ một Assignment đang dùng trong phiên. `GET /api/v1/phan-cong-vai-tro/lich-su` chỉ trả audit cho Assignment nhìn thấy được và kiểm tra Permission xem nhật ký. `POST /api/v1/xac-thuc/phan-cong-vai-tro-dang-hoat-dong` xác minh Assignment còn hiệu lực và đổi ngữ cảnh ngay trong session; không ghép quyền giữa Assignment.
 
-Giao diện React gồm danh mục Permission chỉ đọc, danh sách/tạo vai trò, trang chỉnh ma trận Permission cho Role thường và màn hình phân công Role. Vai trò hệ thống chỉ xem; tạo Assignment chỉ có Scope `CAY_DON_VI`/`DON_VI_CHI_DINH`, Role thường đang hoạt động và tài khoản được Backend trả về. Màn hình hỗ trợ sửa phạm vi/hạn, thu hồi có lý do và hiển thị trạng thái hiệu lực. Ẩn/khóa nút chỉ hỗ trợ trải nghiệm: tất cả API vẫn phải tự kiểm tra Permission, Scope, giới hạn cấp quyền và ghi Audit.
+Giao diện React gồm danh mục Permission chỉ đọc, danh sách/tạo vai trò, trang chỉnh ma trận Permission cho Role thường và trang Phân quyền tài khoản. Trang phân quyền có KPI, lọc và phân trang; bảng bảy cột; menu thao tác; Sheet chi tiết với từng Assignment riêng và lịch sử audit; Sheet cấp/sửa Scope và thời gian; AlertDialog thu hồi có lý do. Thời gian nhập/hiển thị theo múi giờ Việt Nam. Vai trò hệ thống chỉ xem; tạo Assignment chỉ có Scope `CAY_DON_VI`/`DON_VI_CHI_DINH`, Role thường đang hoạt động và tài khoản được Backend trả về. Ẩn/khóa nút chỉ hỗ trợ trải nghiệm: tất cả API vẫn phải tự kiểm tra Permission, Scope, giới hạn cấp quyền và ghi Audit.
 
 ## Ràng buộc
 
@@ -38,6 +47,6 @@ Giao diện React gồm danh mục Permission chỉ đọc, danh sách/tạo vai
 - Assignment `QUAN_TRI_VIEN_TOAN_HE_THONG` không đặt hạn mặc định. Có thể tồn tại nhiều Assignment hợp lệ cho nhiều tài khoản; cấp từng tài khoản phải được chỉ định rõ. Assignment thường vẫn kiểm tra hiệu lực, hết hạn và thu hồi.
 - Backend từ chối tự khóa/xóa tài khoản, tự thu hồi hoặc sửa Assignment cao nhất; đồng thời từ chối khóa/xóa/thu hồi nếu làm số Quản trị viên toàn hệ thống hợp lệ còn lại bằng 0. Định nghĩa hợp lệ và yêu cầu tuần tự hóa các thao tác cạnh tranh được quy định trong ma trận. Phép kiểm tra được thực hiện trong transaction ở Backend, không phụ thuộc frontend.
 - Quản trị viên toàn hệ thống được xem/sửa thông tin cá nhân, đổi thông tin xác thực và xem Role/Permission/Assignment của mình; không được tự khóa/xóa mình, tự thu hồi Assignment cao nhất hoặc sửa Assignment để nâng quyền/mở rộng Scope.
-- Quyền kỹ thuật không thay thế Permission và workflow nghiệp vụ. API phê duyệt hồ sơ/chuyển sinh hoạt phải kiểm tra quyền nghiệp vụ và Scope riêng như các tài khoản khác.
-- Không có API tạo tài khoản; người nhận Assignment thường phải là tài khoản đang hoạt động.
+- Quản trị viên toàn hệ thống có toàn bộ Permission nghiệp vụ trong catalog và Scope `TOAN_HE_THONG`. API vẫn kiểm tra Permission/Scope; thao tác không bỏ qua workflow, audit, bảo vệ dữ liệu nhạy cảm hoặc các invariant ngăn tự thu hồi quyền cao nhất.
+- Tài khoản nội bộ được tạo bởi API quản trị; người nhận Assignment thường phải là tài khoản đang hoạt động. Mật khẩu khởi tạo không buộc đổi ở lần đăng nhập đầu; yêu cầu đổi mật khẩu chủ động vẫn được áp dụng.
 - API thường cấm sửa/thu hồi Assignment Role hệ thống. Tự khôi phục ngoài API cần người vận hành được ủy quyền; nếu chưa còn quản trị viên, tài khoản đích khôi phục phải được khai báo chỉ định trong cấu hình vận hành trước khi chạy công cụ.

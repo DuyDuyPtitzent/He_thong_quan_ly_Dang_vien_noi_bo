@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Home, KeyRound, Network, ShieldCheck, UsersRound } from 'lucide-react'
+import { Home, KeyRound, ShieldCheck, UsersRound } from 'lucide-react'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/shared/components/ui/breadcrumb'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
 
@@ -10,9 +10,7 @@ export function AuthorizationPageHeader({ selectedRole }: { selectedRole?: strin
   const navigate = useNavigate()
   const value = location.pathname.endsWith('/quyen')
     ? 'permissions'
-    : location.pathname.endsWith('/phan-cong')
-      ? 'assignments'
-      : location.pathname.endsWith('/ma-tran') || /^\/quan-tri-phan-quyen\/vai-tro\/[^/]+$/.test(location.pathname)
+    : location.pathname.endsWith('/ma-tran') || /^\/quan-tri-phan-quyen\/vai-tro\/[^/]+$/.test(location.pathname)
         ? 'matrix'
         : 'roles'
   const title = value === 'matrix' && selectedRole ? `Ma trận quyền: ${selectedRole}` : 'Cấu hình phân quyền'
@@ -39,7 +37,6 @@ export function AuthorizationPageHeader({ selectedRole }: { selectedRole?: strin
         roles: `${root}/vai-tro`,
         matrix: `${root}/ma-tran`,
         permissions: `${root}/quyen`,
-        assignments: `${root}/phan-cong`,
       }
       navigate(paths[next] ?? `${root}/vai-tro`)
     }}>
@@ -47,7 +44,6 @@ export function AuthorizationPageHeader({ selectedRole }: { selectedRole?: strin
         <TabsTrigger value="roles" className="flex-none gap-2 px-4 py-3"><UsersRound />Quản lý vai trò</TabsTrigger>
         <TabsTrigger value="matrix" disabled={!selectedRole} className="flex-none gap-2 px-4 py-3"><ShieldCheck />{selectedRole ? `Ma trận: ${selectedRole}` : 'Ma trận'}</TabsTrigger>
         <TabsTrigger value="permissions" className="flex-none gap-2 px-4 py-3"><KeyRound />Danh mục quyền</TabsTrigger>
-        <TabsTrigger value="assignments" className="flex-none gap-2 px-4 py-3"><Network />Giao vai trò</TabsTrigger>
       </TabsList>
     </Tabs>
   </header>

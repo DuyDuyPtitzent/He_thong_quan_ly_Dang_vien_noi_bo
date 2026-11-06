@@ -104,7 +104,7 @@ Quyết định đã duyệt: đăng nhập nội bộ, quản trị viên quả
 
 #### 6. `ho_so_dang_vien`
 
-`ma_ho_so UUID PK`; `ma_ho_so_noi_bo varchar(50) NOT NULL UNIQUE`; `ho_va_ten varchar(200) NOT NULL`; `trang_thai enum NOT NULL (giá trị cần chốt)`; `ma_tai_khoan UUID NULL UNIQUE FK → tai_khoan_nguoi_dung`; `ngay_tao`, `ngay_cap_nhat timestamptz NOT NULL`.
+`ma_ho_so UUID PK`; `ma_ho_so_noi_bo varchar(50) NOT NULL UNIQUE`; `so_phieu_ly_lich varchar(50) NULL UNIQUE`; `so_the_dang_vien varchar(50) NULL UNIQUE`; `ho_va_ten varchar(200) NOT NULL`; `trang_thai enum NOT NULL (giá trị cần chốt)`; `ma_tai_khoan UUID NULL UNIQUE FK → tai_khoan_nguoi_dung`; `ngay_tao`, `ngay_cap_nhat timestamptz NOT NULL`.
 
 Một tài khoản liên kết tối đa một hồ sơ; tài khoản/hồ sơ đều có thể chưa được liên kết. Mã hồ sơ nội bộ không phải số thẻ Đảng hay CCCD.
 
@@ -118,8 +118,7 @@ Quan hệ 1:1; `ma_ho_so UUID PK/FK → ho_so_dang_vien`.
 |---|---|---|
 | `ngay_sinh` | date NULL | Có bắt buộc hay không cần biểu mẫu xác nhận |
 | `gioi_tinh` | enum/varchar NULL | Giá trị danh mục cần chốt |
-| `so_cccd_ma_hoa` | bytea NULL | Giá trị CCCD mã hóa ứng dụng; tương ứng trường nghiệp vụ `so_cccd` |
-| `ma_cccd_doi_chieu_bam` | char(64) NULL | HMAC chuẩn hóa bằng khóa bí mật ngoài DB; index không unique để dò ứng viên trùng |
+| `so_cccd` | varchar(12) NULL | CCCD lưu dạng rõ theo quyết định sản phẩm 2026-11-03; unique toàn hệ thống |
 | `ngay_cap_cccd` | date NULL | Ngày cấp CCCD |
 | `noi_cap_cccd` | varchar(250) NULL | Nơi cấp CCCD |
 | `quoc_tich` | varchar(100) NULL | Danh mục chuẩn hóa có thể bổ sung sau |
@@ -128,7 +127,7 @@ Quan hệ 1:1; `ma_ho_so UUID PK/FK → ho_so_dang_vien`.
 | `email_lien_he` | varchar(254) NULL | Không dùng làm định danh duy nhất |
 | `ngay_tao`, `ngay_cap_nhat` | timestamptz | NOT NULL |
 
-Không lưu CCCD dạng rõ và không lập index trên ciphertext. HMAC dùng khóa riêng ngoài database, chỉ phục vụ đối chiếu bằng nhau; index không unique để tìm ứng viên, không để lộ giá trị CCCD. Giao diện mặc định che một phần CCCD; log/audit không ghi giá trị rõ. Không có hộ chiếu.
+CCCD unique trên toàn bảng; khi tạo tài khoản đăng nhập đồng thời thì CCCD bắt buộc và phải có đúng 12 chữ số. Không ghi CCCD vào log/audit hoặc dữ liệu xuất; tầng ứng dụng không mã hóa CCCD. Giới hạn quyền truy cập database và backup. Không có hộ chiếu.
 
 #### 8. `dia_chi_dang_vien`
 

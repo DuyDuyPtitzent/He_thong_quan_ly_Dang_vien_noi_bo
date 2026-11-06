@@ -1,5 +1,7 @@
 # Kiến trúc hệ thống
 
+Quy hoạch nhóm Sidebar, vị trí module và quy tắc bổ sung chức năng được duy trì tại [`sidebar-module-conventions.md`](sidebar-module-conventions.md). Trước khi tạo module hoặc chức năng mới, cần đọc tài liệu này và xác định nhóm nghiệp vụ phù hợp.
+
 ## Trạng thái và mục tiêu
 
 ### Hiện có

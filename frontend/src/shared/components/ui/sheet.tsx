@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { cn } from 'cn'
-import { XIcon } from 'lucide-react'
+import { PanelRightOpen, XIcon } from 'lucide-react'
 import { Dialog as SheetPrimitive } from 'radix-ui'
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
@@ -49,11 +49,11 @@ function SheetContent({
 }) {
   return (
     <SheetPortal>
-      <SheetOverlay />
+      <SheetOverlay className="bg-black/35" />
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          'fixed z-50 flex flex-col gap-4 bg-background shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500',
+          'fixed z-50 flex flex-col gap-4 bg-modal text-modal-foreground shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500',
           side === 'right' &&
             'inset-y-0 right-0 h-full w-3/4 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm',
           side === 'left' &&
@@ -88,6 +88,10 @@ function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+function SheetBody({ className, ...props }: React.ComponentProps<'div'>) {
+  return <div data-slot="sheet-body" className={cn('min-h-0 flex-1 overflow-y-auto px-4 py-2', className)} {...props} />
+}
+
 function SheetFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -98,13 +102,13 @@ function SheetFooter({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
-function SheetTitle({ className, ...props }: React.ComponentProps<typeof SheetPrimitive.Title>) {
+function SheetTitle({ className, children, ...props }: React.ComponentProps<typeof SheetPrimitive.Title>) {
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
-      className={cn('font-semibold text-foreground', className)}
+      className={cn('flex items-center gap-2 font-semibold text-foreground', className)}
       {...props}
-    />
+    ><PanelRightOpen className="size-5 shrink-0 text-primary" aria-hidden="true" /><span className="min-w-0">{children}</span></SheetPrimitive.Title>
   )
 }
 
@@ -115,7 +119,7 @@ function SheetDescription({
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
-      className={cn('text-sm text-muted-foreground', className)}
+      className={cn('text-sm text-modal-muted-foreground', className)}
       {...props}
     />
   )
@@ -127,6 +131,7 @@ export {
   SheetClose,
   SheetContent,
   SheetHeader,
+  SheetBody,
   SheetFooter,
   SheetTitle,
   SheetDescription,

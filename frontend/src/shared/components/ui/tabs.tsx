@@ -3,6 +3,8 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from 'cn'
 import { Tabs as TabsPrimitive } from 'radix-ui'
 
+type IndicatorPosition = { x: number; width: number; visible: boolean }
+
 function Tabs({
   className,
   orientation = 'horizontal',
@@ -34,20 +36,89 @@ const tabsListVariants = cva(
   },
 )
 
-function TabsList({
-  className,
-  variant = 'default',
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.List> & VariantProps<typeof tabsListVariants>) {
+const TabsList = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> & VariantProps<typeof tabsListVariants>
+>(function TabsList({ className, variant = 'default', children, ...props }, forwardedRef) {
+  const listRef = React.useRef<React.ElementRef<typeof TabsPrimitive.List>>(null)
+  const [indicator, setIndicator] = React.useState<IndicatorPosition>({ x: 0, width: 0, visible: false })
+  const [horizontal, setHorizontal] = React.useState(true)
+
+  React.useImperativeHandle(forwardedRef, () => listRef.current as React.ElementRef<typeof TabsPrimitive.List>)
+
+  React.useLayoutEffect(() => {
+    const list = listRef.current
+    if (!list || variant !== 'line') return
+
+    const measure = () => {
+      const root = list.closest<HTMLElement>('[data-slot="tabs"]')
+      const isHorizontal = root?.dataset.orientation !== 'vertical'
+      setHorizontal((previous) => previous === isHorizontal ? previous : isHorizontal)
+      if (!isHorizontal || list.getClientRects().length === 0) {
+        setIndicator((previous) => previous.visible ? { ...previous, visible: false } : previous)
+        return
+      }
+
+      const active = list.querySelector<HTMLElement>('[role="tab"][data-state="active"]')
+      if (!active || active.getClientRects().length === 0) {
+        setIndicator((previous) => previous.visible ? { ...previous, visible: false } : previous)
+        return
+      }
+
+      const next = { x: active.offsetLeft, width: active.offsetWidth, visible: active.offsetWidth > 0 }
+      setIndicator((previous) => previous.x === next.x && previous.width === next.width && previous.visible === next.visible ? previous : next)
+    }
+
+    let frame = 0
+    const scheduleMeasure = () => {
+      if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+        measure()
+        return
+      }
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(measure)
+    }
+
+    measure()
+    const mutations = new MutationObserver(scheduleMeasure)
+    mutations.observe(list, { attributes: true, attributeFilter: ['data-state', 'disabled', 'hidden', 'class', 'style'], childList: true, subtree: true })
+    const root = list.closest<HTMLElement>('[data-slot="tabs"]')
+    if (root && root !== list) mutations.observe(root, { attributes: true, attributeFilter: ['data-orientation'] })
+
+    const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleMeasure)
+    if (resize) {
+      resize.observe(list)
+      list.querySelectorAll<HTMLElement>('[role="tab"]').forEach((trigger) => resize.observe(trigger))
+    }
+    const windowResize = () => scheduleMeasure()
+    window.addEventListener('resize', windowResize)
+
+    return () => {
+      mutations.disconnect()
+      resize?.disconnect()
+      window.removeEventListener('resize', windowResize)
+      if (frame) window.cancelAnimationFrame(frame)
+    }
+  }, [variant])
+
   return (
     <TabsPrimitive.List
+      ref={listRef}
       data-slot="tabs-list"
       data-variant={variant}
-      className={cn(tabsListVariants({ variant }), className)}
+      className={cn(tabsListVariants({ variant }), variant === 'line' && 'relative', className)}
       {...props}
-    />
+    >
+      {children}
+      {variant === 'line' && horizontal && <span
+        aria-hidden="true"
+        data-slot="tabs-indicator"
+        className="pointer-events-none absolute bottom-0 left-0 z-[1] h-0.5 bg-primary transition-[transform,width,opacity] duration-[250ms] ease-out motion-reduce:transition-none"
+        style={{ width: indicator.width, transform: `translateX(${indicator.x}px)`, opacity: indicator.visible ? 1 : 0 }}
+      />}
+    </TabsPrimitive.List>
   )
-}
+})
 
 function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   return (

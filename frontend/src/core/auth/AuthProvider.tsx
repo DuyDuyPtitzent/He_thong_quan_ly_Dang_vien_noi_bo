@@ -3,9 +3,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PropsWithChildren } from 'react'
 import { authApi } from './auth.api'
 import { AuthContext, type NguCanhXacThuc } from './auth-context'
-import type { TaiKhoanPhien } from './auth.types'
+import type { PhienHienTai, TaiKhoanPhien } from './auth.types'
 
 const khoaTruyVanPhien = ['xac-thuc', 'phien-hien-tai'] as const
+
+function taiKhoanTuPhien(session: PhienHienTai): TaiKhoanPhien {
+  return {
+    ...session.taiKhoan,
+    maPhanCongVaiTroDangHoatDong: session.maPhanCongVaiTroDangHoatDong,
+    phanCongHopLe: session.phanCongHopLe,
+    quyenDangHoatDong: session.quyenDangHoatDong,
+  }
+}
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient()
@@ -14,7 +23,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     queryFn: async () => {
       try {
         const ketQua = await authApi.layPhienHienTai()
-        return ketQua.taiKhoan
+        return ketQua
       } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 401) return null
         throw error
@@ -25,13 +34,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
   })
 
   const giaTri: NguCanhXacThuc = {
-    taiKhoan: phien.data ?? null,
+    taiKhoan: phien.data ? taiKhoanTuPhien(phien.data) : null,
     dangTaiPhien: phien.isPending,
     loiTaiPhien: phien.isError,
     dangNhap: async (input) => {
-      const ketQua = await authApi.dangNhap(input)
-      queryClient.setQueryData(khoaTruyVanPhien, ketQua.taiKhoan)
-      return ketQua.taiKhoan
+      await authApi.dangNhap(input)
+      const session = await authApi.layPhienHienTai()
+      queryClient.setQueryData(khoaTruyVanPhien, session)
+      return taiKhoanTuPhien(session)
     },
     dangXuat: async () => {
       await authApi.dangXuat()
@@ -39,12 +49,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     doiMatKhau: async (input) => {
       await authApi.doiMatKhau(input)
-      queryClient.setQueryData<TaiKhoanPhien | null>(khoaTruyVanPhien, (taiKhoan) =>
-        taiKhoan ? { ...taiKhoan, doiMatKhauLanDau: false } : null,
+      queryClient.setQueryData<PhienHienTai | null>(khoaTruyVanPhien, (session) =>
+        session
+          ? { ...session, taiKhoan: { ...session.taiKhoan, doiMatKhauLanDau: false } }
+          : null,
       )
     },
     taiLaiPhien: async () => {
       await queryClient.invalidateQueries({ queryKey: khoaTruyVanPhien })
+    },
+    chonPhanCong: async (maPhanCong) => {
+      await queryClient.cancelQueries()
+      await authApi.chonPhanCong(maPhanCong)
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== khoaTruyVanPhien[0] })
+      const session = await authApi.layPhienHienTai()
+      queryClient.setQueryData(khoaTruyVanPhien, session)
     },
   }
 

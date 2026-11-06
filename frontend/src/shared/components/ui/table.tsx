@@ -42,7 +42,7 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
     <tr
       data-slot="table-row"
       className={cn(
-        'border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted',
+        'group border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted',
         className,
       )}
       {...props}
@@ -63,6 +63,10 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
   )
 }
 
+function TableActionHead({ className, ...props }: React.ComponentProps<'th'>) {
+  return <TableHead className={cn('sticky right-0 z-20 border-l bg-background shadow-[-8px_0_12px_-12px_var(--outline)]', className)} {...props} />
+}
+
 function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   return (
     <td
@@ -76,6 +80,10 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   )
 }
 
+function TableActionCell({ className, ...props }: React.ComponentProps<'td'>) {
+  return <TableCell className={cn('sticky right-0 z-10 border-l bg-background shadow-[-8px_0_12px_-12px_var(--outline)] group-hover:bg-muted/50 group-data-[state=selected]:bg-muted', className)} {...props} />
+}
+
 function TableCaption({ className, ...props }: React.ComponentProps<'caption'>) {
   return (
     <caption
@@ -86,4 +94,4 @@ function TableCaption({ className, ...props }: React.ComponentProps<'caption'>) 
   )
 }
 
-export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption }
+export { Table, TableHeader, TableBody, TableFooter, TableHead, TableActionHead, TableRow, TableCell, TableActionCell, TableCaption }

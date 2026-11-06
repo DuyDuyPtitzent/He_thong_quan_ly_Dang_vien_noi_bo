@@ -39,6 +39,8 @@ Tất cả bảng dùng UUID PK, tên bảng/cột tiếng Việt không dấu `
 |---|---|---|
 | `ma_ho_so` | UUID | PK |
 | `ma_ho_so_noi_bo` | varchar(50) | Bắt buộc, unique; mã do hệ thống/quản trị cấp, không phải số thẻ Đảng |
+| `so_phieu_ly_lich` | varchar(50) NULL | Số phiếu lý lịch, unique khi có giá trị |
+| `so_the_dang_vien` | varchar(50) NULL | Số thẻ Đảng viên, unique khi có giá trị |
 | `ho_va_ten` | varchar(200) | Bắt buộc |
 | `trang_thai` | enum | Trạng thái hồ sơ theo danh mục được duyệt |
 | `ma_tai_khoan` | UUID NULL | FK `tai_khoan_nguoi_dung`, UNIQUE; liên kết tùy chọn một-một |
@@ -62,7 +64,7 @@ Quan hệ một-một, `ma_ho_so` vừa PK vừa FK tới lõi hồ sơ.
 | `so_dien_thoai`, `email_lien_he` | varchar(30), varchar(254) NULL | Không dùng làm khóa định danh hồ sơ |
 | `ngay_tao`, `ngay_cap_nhat` | timestamptz | Bắt buộc |
 
-CCCD phải được mã hóa khi lưu, che một phần trong giao diện mặc định, không ghi vào log/audit dạng rõ và chỉ hiển thị đầy đủ cho quyền được cấp. Dò trùng dùng HMAC đối chiếu với khóa riêng ngoài database, không lập index ciphertext và không dùng HMAC làm khóa duy nhất. Không đưa số hộ chiếu vào mô hình. Kết luận trùng do người có quyền xác minh; không tự động gộp hồ sơ.
+Theo quyết định sản phẩm ngày 2026-11-03, CCCD lưu dạng rõ trong database và có unique constraint toàn hệ thống; không ghi CCCD vào log/audit hoặc dữ liệu xuất. CCCD bắt buộc 12 chữ số khi tạo tài khoản cùng hồ sơ; trường hợp trùng bị từ chối, không tự động gộp hồ sơ. Không cần cấu hình khóa mã hóa/HMAC. Do bỏ mã hóa tầng ứng dụng, quyền truy cập database và backup cần được giới hạn phù hợp. Không đưa số hộ chiếu vào mô hình.
 
 ### 3.3. `dia_chi_dang_vien` — địa chỉ theo loại
 
@@ -142,3 +144,8 @@ Mỗi bảng dùng UUID PK, FK hồ sơ, ngày tạo/cập nhật và index `(ma
 4. Chốt danh mục trạng thái sinh viên, tính bắt buộc của trường, chuẩn địa chỉ và quy tắc chống trùng CCCD theo biểu mẫu/nguồn chính thức.
 
 Sau khi duyệt, cập nhật ERD/data dictionary tổng thể rồi mới tạo Prisma model và migration; không triển khai trường đang chờ xác nhận.
+
+## Phần đã triển khai — 2026-11-03
+
+- `ho_so_dang_vien` được bổ sung `trang_thai_dang_vien` nullable (`DU_BI`, `CHINH_THUC`, `DA_RA_KHOI_DANG`, `TU_TRAN`) và `ngay_vao_dang`; hồ sơ cũ giữ NULL do không có căn cứ để suy ra trạng thái. Thay đổi nằm trong migration bổ sung, không chỉnh sửa migration cũ.
+- Số CCCD tiếp tục được lưu trong trường mã hóa hiện hữu. Backend yêu cầu khóa AES-256-GCM và khóa HMAC đối chiếu tách biệt qua biến môi trường; không ghi số CCCD hoặc digest vào nhật ký kiểm toán.

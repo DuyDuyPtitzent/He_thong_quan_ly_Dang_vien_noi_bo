@@ -59,7 +59,7 @@
 | `HO_SO_XUAT_DU_LIEU` | Xuất hồ sơ/danh sách; quyền riêng. Chưa cấp trong MVP. |
 | `HO_SO_XEM_LICH_SU_THAY_DOI` | Xem lịch sử thay đổi hồ sơ được phép truy cập; chỉ đọc. |
 
-CCCD được hiển thị theo quyền xem hồ sơ thông thường, không che mặc định và không yêu cầu Permission riêng hoặc audit riêng cho từng lần xem. Nguyên tắc bảo vệ dữ liệu còn lại vẫn áp dụng: không ghi CCCD dạng rõ vào log/audit, mã hóa khi lưu theo thiết kế bảo vệ dữ liệu, không tự đưa CCCD vào dữ liệu xuất.
+Theo quyết định sản phẩm ngày 2026-11-03, CCCD được lưu dạng rõ và hiển thị theo quyền xem hồ sơ thông thường; không cần Permission/audit riêng cho từng lần xem. Không ghi CCCD vào log/audit hoặc dữ liệu xuất; giới hạn quyền truy cập database và backup.
 
 ### 3.3. Sinh hoạt và chuyển đơn vị
 
@@ -168,12 +168,12 @@ Chi bộ là cấp duyệt thông thường trong phạm vi được giao. Đả
 - Cấp, thay đổi hoặc thu hồi Assignment Role cao nhất phải qua quy trình vận hành có kiểm soát, xác minh thẩm quyền và audit; không cung cấp API công khai/API thường để cấp quyền cao nhất hoặc khôi phục quyền cao nhất. Mọi thao tác phải ghi người thực hiện, đối tượng, lý do, thời điểm, kết quả và dữ liệu trước/sau phù hợp.
 - Khôi phục quyền quản trị khi sự cố chỉ qua công cụ/quy trình vận hành ngoài API, do người vận hành được ủy quyền thực hiện sau khi xác minh thẩm quyền. Không có cơ chế tự khôi phục hoặc tự cấp lại quyền cao nhất.
 - Backend phải bảo vệ Quản trị viên toàn hệ thống hợp lệ cuối cùng. Một quản trị viên hợp lệ là tài khoản đang hoạt động, Role cao nhất đang hoạt động, cùng Assignment `TOAN_HE_THONG` đã có hiệu lực, chưa hết hạn (nếu có hạn) và chưa thu hồi. Trước khi khóa, xóa hoặc thu hồi Assignment cao nhất, Backend kiểm tra trong transaction số tài khoản hợp lệ còn lại; phép kiểm tra và ghi thay đổi phải được tuần tự hóa để hai thao tác đồng thời không cùng vượt qua kiểm tra cuối cùng. Từ chối nếu thao tác làm số đó về 0; thao tác tự khóa, tự xóa, tự thu hồi Assignment cao nhất hoặc tự sửa Assignment để nâng quyền đều bị từ chối. Kiểm tra này áp dụng ở Backend, không phụ thuộc UI.
-- Không gộp quyền quản trị kỹ thuật với quyền phê duyệt nghiệp vụ. Role cao nhất không bỏ qua Permission, Scope hoặc quy trình phê duyệt hồ sơ/chuyển sinh hoạt; muốn thực hiện nghiệp vụ phải có Permission nghiệp vụ tương ứng và tuân thủ workflow đã duyệt.
+- Role cao nhất có toàn bộ Permission trong catalog, gồm quyền phê duyệt nghiệp vụ. Quyền này không bỏ qua Scope, workflow, audit hoặc kiểm tra dữ liệu; các guard vẫn được thực thi theo quy trình đã duyệt.
 
 ## 6.1. Khởi tạo và vận hành Quản trị viên toàn hệ thống
 
 1. Người có thẩm quyền chỉ định cụ thể tài khoản đầu tiên trước triển khai. Người vận hành được ủy quyền xác minh chỉ định, danh tính/chủ tài khoản và trạng thái tài khoản qua quy trình vận hành kín.
-2. Công cụ khởi tạo có kiểm soát kiểm tra Role/Assignment hiện có để tránh cấp trùng hoặc phát hành lại ngoài ý muốn; tạo Role hệ thống `QUAN_TRI_VIEN_TOAN_HE_THONG` nếu chưa có theo cấu hình được duyệt, gắn bộ Permission quản trị đã duyệt và cấp Assignment `TOAN_HE_THONG` không đặt hạn mặc định. Bộ quyền kỹ thuật dự kiến lấy các Permission hiện có cho `TAI_KHOAN_*`, `VAI_TRO_*`, `PHAN_CONG_VAI_TRO_*`, `QUYEN_XEM_DANH_MUC`, `TO_CHUC_*` và `NHAT_KY_*`; không tự gắn Permission duyệt hồ sơ/chuyển sinh hoạt. Các Permission cấu hình/vận hành còn thiếu phải được định nghĩa và duyệt trước khi đưa vào Role. Ghi audit đầy đủ và không ghi bí mật xác thực vào log.
+2. Công cụ khởi tạo có kiểm soát kiểm tra Role/Assignment hiện có để tránh cấp trùng hoặc phát hành lại ngoài ý muốn; tạo Role hệ thống `QUAN_TRI_VIEN_TOAN_HE_THONG` nếu chưa có theo cấu hình được duyệt, gắn toàn bộ Permission trong catalog và cấp Assignment `TOAN_HE_THONG` không đặt hạn mặc định. Role Quản trị viên toàn hệ thống được gắn toàn bộ Permission đang có trong catalog, bao gồm hồ sơ, sinh hoạt và phê duyệt nghiệp vụ. Khi catalog có Permission mới, cần đồng bộ Role có kiểm soát và ghi audit. Ghi audit đầy đủ và không ghi bí mật xác thực vào log.
 3. Tài khoản quản trị viên tự đổi/thiết lập thông tin xác thực theo quy trình bảo mật. Các tài khoản quản trị viên tiếp theo chỉ được cấp khi có chỉ định rõ và qua cùng kiểm soát/audit; không có API thường cấp Role hệ thống hoặc Scope toàn hệ thống.
 4. Quản trị viên phân quyền xuống tài khoản khác bằng Assignment thông thường, đúng Permission và phạm vi trong thẩm quyền của mình. Backend không cho tự cấp, tự mở rộng Scope, hoặc ghép Permission và Scope từ hai Assignment khác nhau.
 5. Khi thu hồi/khóa/xóa một quản trị viên, Backend kiểm tra invariant quản trị viên hợp lệ cuối cùng. Thu hồi/quyền cao nhất cần ghi audit; nếu không còn quản trị viên hợp lệ sau thao tác thì từ chối.
@@ -193,7 +193,7 @@ Các Role là nhóm Permission theo chức năng, không phải chức danh PTIT
 | `QUAN_LY_TO_CHUC` | Quản lý cây và lịch sử tổ chức; xóa là Permission riêng | Theo đơn vị được giao |
 | `QUAN_LY_TAI_KHOAN` | Quản lý tài khoản, phiên và liên kết hồ sơ được giao | Theo phạm vi quản trị |
 | `QUAN_TRI_PHAN_QUYEN` | Quản lý Role, Permission trong Role và Assignment trong thẩm quyền | Không tự có `TOAN_HE_THONG` |
-| `QUAN_TRI_VIEN_TOAN_HE_THONG` | Quản trị kỹ thuật tài khoản, phân quyền, tổ chức, nhật ký và cấu hình được định nghĩa | `TOAN_HE_THONG`; chỉ cấp qua quy trình vận hành có kiểm soát; không bỏ qua workflow nghiệp vụ |
+| `QUAN_TRI_VIEN_TOAN_HE_THONG` | Toàn bộ Permission trong catalog hệ thống, gồm nghiệp vụ và quản trị | `TOAN_HE_THONG`; chỉ cấp qua quy trình vận hành có kiểm soát; các ràng buộc an toàn, audit và workflow vẫn được thực thi |
 | `KIEM_TRA_NHAT_KY` | Xem audit/bảo mật trong phạm vi | Theo phân công |
 | `QUAN_LY_CHUC_VU_NHIEM_KY` | Quản lý chức vụ, nhiệm kỳ, phân công được giao | Theo đơn vị |
 
@@ -234,6 +234,6 @@ Quyết định này thay thế mọi nội dung trước đó coi chủ thể p
 
 ## 11. Đơn vị gốc cây tổ chức PTIT
 
-**Quyết định đã duyệt:** Đơn vị gốc duy nhất trong phạm vi hệ thống hiện tại có mã `PTIT_DANG_UY`, tên “Đảng ủy Học viện Công nghệ Bưu chính Viễn thông”, loại `DANG_UY`, không có đơn vị cha (`NULL`) và trạng thái mặc định `DANG_HOAT_DONG`. Các Chi bộ trực thuộc Đảng ủy; các Tổ trực thuộc Chi bộ. Ba trạng thái hợp lệ là `DANG_HOAT_DONG`, `TAM_NGUNG`, `NGUNG_HOAT_DONG`; khôi phục trạng thái ngừng hoạt động phải qua quy trình có thẩm quyền, Permission + Scope và audit.
+**Quyết định kiến trúc hiện hành:** Đơn vị gốc là nút loại `DANG_UY` không có đơn vị cha; mã nghiệp vụ do người có thẩm quyền đặt. UUID nội bộ và quan hệ tổ chức thực tế là căn cứ cho Assignment/Scope. Các Chi bộ trực thuộc Đảng ủy; các Tổ trực thuộc Chi bộ. `TOAN_HE_THONG` độc lập với cây. Ba trạng thái hợp lệ là `DANG_HOAT_DONG`, `TAM_NGUNG`, `NGUNG_HOAT_DONG`; khôi phục trạng thái ngừng hoạt động phải qua quy trình có thẩm quyền, Permission + Scope và audit.
 
-Khởi tạo phải idempotent: nếu đơn vị gốc có mã `PTIT_DANG_UY` đã tồn tại thì không tạo trùng; phải xác minh loại, tên và quan hệ gốc phù hợp. CSDL cần ràng buộc/chiến lược bảo đảm chỉ có một Đảng ủy gốc trong cây hiện tại và ngăn đơn vị Đảng ủy gốc thứ hai. Không xóa lịch sử đơn vị khi đổi trạng thái. Chưa tạo dữ liệu tổ chức bằng quyết định tài liệu này.
+Khởi tạo phải idempotent theo loại và cấu trúc: nếu đã có Đảng ủy gốc thì không tạo trùng. CSDL cần bảo đảm chỉ có một Đảng ủy. Không xóa lịch sử đơn vị khi đổi trạng thái. Không tạo đơn vị `TOAN_HE_THONG` trong cây tổ chức.
