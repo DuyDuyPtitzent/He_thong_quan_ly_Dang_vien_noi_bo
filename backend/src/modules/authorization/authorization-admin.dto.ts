@@ -25,6 +25,7 @@ export class TaoPhanCongVaiTroDto {
   @IsEnum(LoaiPhamVi) loaiPhamVi!: LoaiPhamVi
   @IsOptional() @IsUUID('4') maDonViGoc?: string
   @IsOptional() @IsArray() @ArrayUnique() @IsUUID('4', { each: true }) danhSachMaDonVi?: string[]
+  @IsOptional() @IsDateString() ngayHieuLucTu?: string
   @IsOptional() @IsDateString() ngayHieuLucDen?: string
   @IsString() @IsNotEmpty() @MaxLength(1000) lyDo!: string
 }

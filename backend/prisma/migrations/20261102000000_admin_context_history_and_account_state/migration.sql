@@ -1,11 +1,23 @@
 BEGIN;
 
 -- Preserve the existing calendar day while introducing exact Vietnam-local times.
+-- The prior exclusion constraint is date-based and cannot be rebuilt against
+-- timestamptz columns. Replace it with the matching half-open time interval.
+ALTER TABLE "lich_su_ten_don_vi"
+  DROP CONSTRAINT "ex_lich_su_ten_don_vi_khong_chong_lan";
+
 ALTER TABLE "lich_su_ten_don_vi"
   ALTER COLUMN "ngay_hieu_luc_tu" TYPE TIMESTAMPTZ(6)
     USING ("ngay_hieu_luc_tu"::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'),
   ALTER COLUMN "ngay_hieu_luc_den" TYPE TIMESTAMPTZ(6)
     USING ("ngay_hieu_luc_den"::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh');
+
+ALTER TABLE "lich_su_ten_don_vi"
+  ADD CONSTRAINT "ex_lich_su_ten_don_vi_khong_chong_lan"
+  EXCLUDE USING gist (
+    "ma_don_vi" WITH =,
+    tstzrange("ngay_hieu_luc_tu", "ngay_hieu_luc_den", '[)') WITH &&
+  );
 
 ALTER TABLE "lich_su_ten_don_vi"
   ADD COLUMN "nguon_ban_ghi" VARCHAR(30) NOT NULL DEFAULT 'CAN_XAC_MINH',

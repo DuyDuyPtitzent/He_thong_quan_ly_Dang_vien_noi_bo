@@ -11,11 +11,14 @@ import {
   demQuanTriVienToanHeThongHopLe,
   khoaKiemTraQuanTriVienCuoi,
   systemAdministratorPermissionCodes,
+  systemAdministratorRoleDescription,
   systemAdministratorRoleCode,
   yeuCauConQuanTriVienHopLe,
 } from '../modules/authorization/system-administrator.policy'
 
 const active = 'DANG_HOAT_DONG'
+
+class SafeAdminOperationError extends Error {}
 
 function inputSecret(label: string) {
   if (!stdin.isTTY || typeof stdin.setRawMode !== 'function') throw new Error('Cần terminal tương tác để xác minh thông tin xác thực.')
@@ -137,7 +140,7 @@ async function grant(prisma: PrismaClient, operator: string, reference: string, 
     const createdRole = !role
     if (!role) role = await tx.vaiTro.create({ data: {
       maDinhDanh: systemAdministratorRoleCode, ten: 'Quản trị viên toàn hệ thống',
-      moTa: 'Quản trị kỹ thuật toàn hệ thống; không thay thế quy trình phê duyệt nghiệp vụ.',
+      moTa: systemAdministratorRoleDescription,
       laVaiTroHeThong: true, trangThai: active,
     } })
     if (!role.laVaiTroHeThong || role.trangThai !== active) throw new Error('Role quản trị toàn hệ thống hiện có không đúng trạng thái hệ thống.')
@@ -233,10 +236,56 @@ async function revoke(prisma: PrismaClient, operator: string, reference: string)
   stdout.write(`Đã thu hồi ${result} Assignment quản trị toàn hệ thống.\n`)
 }
 
+async function syncPermissions(prisma: PrismaClient, operator: string, reference: string) {
+  const prompt = createInterface({ input: stdin, output: stdout })
+  let approverUsername: string
+  try {
+    approverUsername = (await prompt.question('Tài khoản Quản trị viên phê duyệt đồng bộ quyền: ')).trim()
+    if (!approverUsername || approverUsername.length > 100) throw new Error('Tài khoản người duyệt không hợp lệ.')
+  } finally { prompt.close() }
+  const account = await prisma.taiKhoanNguoiDung.findUnique({ where: { tenDangNhap: approverUsername }, select: { ma: true, trangThai: true, doiMatKhauLanDau: true } })
+  if (!account) throw new SafeAdminOperationError('Không tìm thấy đúng tên đăng nhập này. Hãy nhập tên đăng nhập nội bộ, không phải tên hiển thị.')
+  if (account.trangThai !== active) throw new SafeAdminOperationError('Tài khoản phê duyệt chưa ở trạng thái Đang hoạt động.')
+  if (account.doiMatKhauLanDau) throw new SafeAdminOperationError('Tài khoản đang bị yêu cầu đổi mật khẩu; hãy hoàn tất đổi mật khẩu trước.')
+  const now = new Date()
+  const assignment = await prisma.phanCongVaiTro.findFirst({ where: {
+    maTaiKhoan: account.ma, loaiPhamVi: 'TOAN_HE_THONG', thuHoiLuc: null,
+    ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }],
+    taiKhoan: { trangThai: active }, vaiTro: { maDinhDanh: systemAdministratorRoleCode, laVaiTroHeThong: true, trangThai: active },
+  }, select: { ma: true } })
+  if (!assignment) throw new SafeAdminOperationError('Tài khoản chưa có Assignment Quản trị viên toàn hệ thống đang có hiệu lực.')
+  const password = await inputSecret(`Mật khẩu hiện tại của ${approverUsername} (không hiển thị): `)
+  let approver: Awaited<ReturnType<typeof verifyAccount>>
+  try { approver = await verifyAccount(prisma, approverUsername, password, true) }
+  catch { throw new SafeAdminOperationError('Không xác minh được mật khẩu hiện tại. Hãy kiểm tra mật khẩu của đúng tài khoản vừa nhập; mật khẩu không được hiển thị khi gõ.') }
+  const added = await prisma.$transaction(async (tx) => {
+    await verifyAdministratorInTransaction(tx, approver.ma, approver.matKhauBam)
+    const role = await tx.vaiTro.findUnique({ where: { maDinhDanh: systemAdministratorRoleCode } })
+    if (!role || !role.laVaiTroHeThong || role.trangThai !== active) throw new SafeAdminOperationError('Không tìm thấy Role Quản trị viên toàn hệ thống đang hoạt động.')
+    const permissionRows = await tx.quyen.findMany({ where: { maDinhDanh: { in: [...systemAdministratorPermissionCodes] } }, select: { ma: true, maDinhDanh: true } })
+    if (permissionRows.length !== systemAdministratorPermissionCodes.length) throw new SafeAdminOperationError('Cần đồng bộ đầy đủ danh mục Permission trước khi đồng bộ Role.')
+    const existingLinks = await tx.vaiTroQuyen.findMany({ where: { maVaiTro: role.ma }, include: { quyen: { select: { maDinhDanh: true } } } })
+    const expected = new Set<string>(systemAdministratorPermissionCodes)
+    if (existingLinks.some(({ quyen }) => !expected.has(quyen.maDinhDanh))) throw new SafeAdminOperationError('Role hệ thống có Permission ngoài danh mục hiện hành; từ chối đồng bộ để cần rà soát.')
+    const linked = new Set(existingLinks.map(({ quyen }) => quyen.maDinhDanh))
+    const missing = permissionRows.filter(({ maDinhDanh }) => !linked.has(maDinhDanh))
+    if (missing.length) await tx.vaiTroQuyen.createMany({ data: missing.map(({ ma }) => ({ maVaiTro: role.ma, maQuyen: ma, maNguoiGhiNhan: approver.ma })) })
+    await tx.vaiTro.update({ where: { ma: role.ma }, data: { moTa: systemAdministratorRoleDescription } })
+    await tx.nhatKyKiemToan.create({ data: {
+      maNguoiThucHien: approver.ma, hanhDong: 'CAP_NHAT_QUYEN_QUAN_TRI_VIEN_TOAN_HE_THONG',
+      loaiDoiTuong: 'VAI_TRO', maDoiTuong: role.ma, ketQua: 'THANH_CONG', lyDo: reference,
+      duLieuSau: { nguoiVanHanh: operator, maTaiKhoanPheDuyet: approver.ma, tongPermission: permissionRows.length, maQuyenThem: missing.map(({ maDinhDanh }) => maDinhDanh) },
+      maTuongQuan: randomUUID(),
+    } })
+    return { added: missing.length, total: permissionRows.length }
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+  stdout.write(`Đã đồng bộ Quản trị viên toàn hệ thống: ${added.total} Permission, thêm mới ${added.added}.\n`)
+}
+
 async function main() {
   const operator = operatorIdentity()
   const operation = process.argv[2]
-  if (operation !== 'grant' && operation !== 'revoke' && operation !== 'recover') throw new Error('Cú pháp: manage:system-administrator grant|revoke|recover')
+  if (operation !== 'grant' && operation !== 'revoke' && operation !== 'recover' && operation !== 'sync-permissions') throw new Error('Cú pháp: manage:system-administrator grant|revoke|recover|sync-permissions')
   const prompt = createInterface({ input: stdin, output: stdout })
   let reference: string
   try { reference = (await prompt.question('Mã hồ sơ/ quyết định được phê duyệt: ')).trim() }
@@ -248,11 +297,17 @@ async function main() {
   try {
     if (operation === 'grant') await grant(prisma, operator, reference)
     else if (operation === 'recover') await grant(prisma, operator, reference, true)
-    else await revoke(prisma, operator, reference)
+    else if (operation === 'revoke') await revoke(prisma, operator, reference)
+    else await syncPermissions(prisma, operator, reference)
   } finally { await prisma.$disconnect() }
 }
 
 main().catch((error: unknown) => {
+  if (error instanceof SafeAdminOperationError) {
+    stdout.write(`Không thể đồng bộ quyền quản trị: ${error.message}\nKhông có thay đổi nào được ghi.\n`)
+    process.exitCode = 1
+    return
+  }
   const code = typeof error === 'object' && error !== null && 'code' in error ? ` (${String(error.code)})` : ''
   const diagnostics = new Map<string, string>()
   const pending: unknown[] = [error]

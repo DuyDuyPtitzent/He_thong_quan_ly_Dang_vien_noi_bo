@@ -4,7 +4,8 @@ import { PhanQuyenService } from '../src/modules/authorization/authorization.ser
 
 function setup(assignments: any[] = []) {
   const prisma = {
-    phanCongVaiTro: { findMany: vi.fn().mockResolvedValue(assignments) },
+    phienDangNhap: { findFirst: vi.fn().mockResolvedValue({ maPhanCongVaiTroDangHoatDong: 'assignment-active' }) },
+    phanCongVaiTro: { findMany: vi.fn(({ where }: { where?: { ma?: string } }) => Promise.resolve(where?.ma ? assignments.filter((item) => item.ma === where.ma) : assignments)) },
     hoSoDangVien: { findFirst: vi.fn() },
     lichSuDonViDangVien: { findFirst: vi.fn() },
     $queryRaw: vi.fn().mockResolvedValue([{ found: true }]),
@@ -28,6 +29,36 @@ describe('PhanQuyenService', () => {
     ])
     await expect(service.kiemTra('account-1', 'P_READ', { maDonVi: 'unit-outside' }))
       .rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it('uses only the Assignment selected in the current session and reflects a switch immediately', async () => {
+    let active = 'assignment-a'
+    const prisma = {
+      phienDangNhap: { findFirst: vi.fn(async () => ({ maPhanCongVaiTroDangHoatDong: active })) },
+      phanCongVaiTro: { findMany: vi.fn(({ where }: { where?: { ma?: string } }) => Promise.resolve([
+        { ...grant('TOAN_HE_THONG', null, ['P_A']), ma: 'assignment-a' },
+        { ...grant('TOAN_HE_THONG', null, ['P_B']), ma: 'assignment-b' },
+      ].filter((item) => item.ma === where?.ma))) },
+      hoSoDangVien: { findFirst: vi.fn() },
+      lichSuDonViDangVien: { findFirst: vi.fn() },
+      $queryRaw: vi.fn(),
+    }
+    const service = new PhanQuyenService(prisma as never)
+    await expect(service.kiemTra('account-1', 'P_A', {}, 'session-1')).resolves.toBeUndefined()
+    await expect(service.kiemTra('account-1', 'P_B', {}, 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+    active = 'assignment-b'
+    await expect(service.kiemTra('account-1', 'P_B', {}, 'session-1')).resolves.toBeUndefined()
+    await expect(service.kiemTra('account-1', 'P_A', {}, 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it('does not treat a root organization tree as TOAN_HE_THONG', async () => {
+    const { service, prisma } = setup([
+      { ...grant('CAY_DON_VI', 'ptit-root', ['NAM_HOC_XEM']), ma: 'assignment-active' },
+      { ...grant('TOAN_HE_THONG', null, ['NAM_HOC_TAO']), ma: 'assignment-other' },
+    ])
+    await expect(service.kiemTra('account-1', 'NAM_HOC_XEM', { maDonVi: 'unit-1' }, 'session-1')).resolves.toBeUndefined()
+    await expect(service.kiemTra('account-1', 'NAM_HOC_TAO', { maDonVi: 'unit-1' }, 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+    expect(prisma.phanCongVaiTro.findMany.mock.calls[0][0].where.ma).toBe('assignment-active')
   })
 
   it('allows only an explicitly selected unit for DON_VI_CHI_DINH', async () => {

@@ -12,13 +12,8 @@ import { BamMatKhauService } from '../modules/auth/password-hasher'
 import { ToChucService } from '../modules/organizations/organizations.service'
 
 const username = 'Quantrivien'
-const referenceDefault = 'KHOI_TAO_DON_VI_GOC_PTIT_DANG_UY_2026-11-01'
-const root = {
-  maDinhDanh: 'PTIT_DANG_UY',
-  tenDonVi: 'Đảng ủy Học viện Công nghệ Bưu chính Viễn thông',
-  loaiDonVi: 'DANG_UY' as const,
-  trangThai: 'DANG_HOAT_DONG',
-}
+const referenceDefault = 'KHOI_TAO_DON_VI_GOC'
+const rootNameDefault = 'Đảng ủy Học viện Công nghệ Bưu chính Viễn thông'
 
 function verifyOperator() {
   const current = userInfo().username
@@ -60,6 +55,15 @@ async function main() {
   try {
     reference = (await prompt.question(`Mã hồ sơ/quyết định (Enter dùng ${referenceDefault}): `)).trim() || referenceDefault
   } finally { prompt.close() }
+  const rootPrompt = createInterface({ input: stdin, output: stdout })
+  let rootCode: string
+  let rootName: string
+  try {
+    rootCode = (await rootPrompt.question('Mã nghiệp vụ Đảng ủy gốc: ')).trim()
+    rootName = (await rootPrompt.question(`Tên Đảng ủy gốc (Enter dùng ${rootNameDefault}): `)).trim() || rootNameDefault
+  } finally { rootPrompt.close() }
+  if (!rootCode || rootCode.length > 50) throw new Error('Mã đơn vị gốc phải có từ 1 đến 50 ký tự.')
+  if (!rootName || rootName.length > 200) throw new Error('Tên đơn vị gốc phải có từ 1 đến 200 ký tự.')
   if (reference.length > 200) throw new Error('Mã hồ sơ/quyết định quá dài.')
 
   const password = await inputSecret()
@@ -76,13 +80,13 @@ async function main() {
       doiMatKhauLanDau: account.doiMatKhauLanDau, maPhien: 'VAN_HANH_NGOAI_API',
     }
     const result = await app.get(ToChucService).tao(actor, {
-      loaiDonVi: root.loaiDonVi,
-      maDinhDanh: root.maDinhDanh,
-      tenDonVi: root.tenDonVi,
-      trangThai: root.trangThai,
+      loaiDonVi: 'DANG_UY',
+      maDinhDanh: rootCode,
+      tenDonVi: rootName,
+      trangThai: 'DANG_HOAT_DONG',
       ngayHieuLucTu: `${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`,
     }, { lyDo: reference, maTuongQuan: randomUUID() })
-    stdout.write(`Đơn vị gốc ${root.maDinhDanh} đã sẵn sàng; mã đơn vị: ${result.maDonVi}; trạng thái: ${result.trangThai}; operator=${operator}; căn cứ=${reference}.\n`)
+    stdout.write(`Đơn vị gốc ${rootCode} đã sẵn sàng; mã nội bộ: ${result.maDonVi}; trạng thái: ${result.trangThai}; operator=${operator}; căn cứ=${reference}.\n`)
   } finally {
     await app.close()
   }

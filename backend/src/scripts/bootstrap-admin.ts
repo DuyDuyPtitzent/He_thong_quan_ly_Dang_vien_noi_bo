@@ -91,7 +91,7 @@ async function chayBootstrap() {
           tenDangNhap,
           matKhauBam,
           trangThai: trangThaiTaiKhoanHoatDong,
-          doiMatKhauLanDau: true,
+          doiMatKhauLanDau: false,
         },
         select: { ma: true, tenDangNhap: true },
       })
@@ -103,7 +103,7 @@ async function chayBootstrap() {
           loaiDoiTuong: 'TAI_KHOAN',
           ketQua: 'THANH_CONG',
           lyDo: 'KHOI_TAO_TAI_KHOAN_DAU_TIEN',
-          duLieuSau: { tenDangNhap: taiKhoan.tenDangNhap, doiMatKhauLanDau: true },
+          duLieuSau: { tenDangNhap: taiKhoan.tenDangNhap, doiMatKhauLanDau: false },
           maTuongQuan: 'BOOTSTRAP_DAU_TIEN',
         },
       })

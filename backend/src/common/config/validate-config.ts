@@ -11,6 +11,7 @@ const mauCauHinh = Joi.object({
   KET_NOI_CO_SO_DU_LIEU: Joi.string()
     .uri({ scheme: ['postgres', 'postgresql'] })
     .required(),
+  KHO_TEP_RIENG: Joi.string().min(1).default('./storage/private'),
 }).unknown(true)
 
 export function kiemTraCauHinh(bienMoiTruong: Record<string, unknown>) {

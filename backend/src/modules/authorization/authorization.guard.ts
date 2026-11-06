@@ -40,7 +40,7 @@ export class PhanQuyenGuard implements CanActivate {
       maDonVi: this.chuoiThamSo(request.params?.maDonVi),
       maHoSo: this.chuoiThamSo(request.params?.maHoSo),
     }
-    await this.phanQuyen.kiemTra(request.taiKhoanDaXacThuc.maTaiKhoan, maQuyen, target)
+    await this.phanQuyen.kiemTra(request.taiKhoanDaXacThuc.maTaiKhoan, maQuyen, target, request.taiKhoanDaXacThuc.maPhien)
     return true
   }
 

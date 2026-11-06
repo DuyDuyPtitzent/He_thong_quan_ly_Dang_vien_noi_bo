@@ -1,25 +1,12 @@
 import { ConflictException } from '@nestjs/common'
 import type { Prisma } from '../../infrastructure/database/generated/prisma/client'
-import { permissionCatalog } from './permission-catalog'
+import { permissionCatalog, type MaPermission } from './permission-catalog'
 
 export const systemAdministratorRoleCode = 'QUAN_TRI_VIEN_TOAN_HE_THONG'
+export const systemAdministratorRoleDescription = 'Được cấp toàn bộ Permission trong danh mục hệ thống; thao tác vẫn ghi nhật ký và tuân thủ ràng buộc an toàn.'
 
-export const systemAdministratorPermissionCodes = [
-  'TO_CHUC_XEM', 'TO_CHUC_TAO', 'TO_CHUC_SUA_THONG_TIN', 'TO_CHUC_SUA_LOAI',
-  'TO_CHUC_DOI_DON_VI_CHA', 'TO_CHUC_XEM_LICH_SU', 'TO_CHUC_SUA_LICH_SU',
-  'TO_CHUC_DOI_TRANG_THAI', 'TO_CHUC_KHOI_PHUC', 'TO_CHUC_XOA',
-  'TAI_KHOAN_XEM', 'TAI_KHOAN_TAO', 'TAI_KHOAN_SUA_THONG_TIN', 'TAI_KHOAN_KHOA_MO_KHOA',
-  'TAI_KHOAN_THU_HOI_PHIEN', 'TAI_KHOAN_LIEN_KET_HO_SO',
-  'VAI_TRO_XEM', 'VAI_TRO_TAO', 'VAI_TRO_SUA', 'VAI_TRO_XOA', 'VAI_TRO_GAN_QUYEN',
-  'PHAN_CONG_VAI_TRO_XEM', 'PHAN_CONG_VAI_TRO_TAO', 'PHAN_CONG_VAI_TRO_SUA', 'PHAN_CONG_VAI_TRO_THU_HOI',
-  'QUYEN_XEM_DANH_MUC', 'NHAT_KY_KIEM_TOAN_XEM', 'NHAT_KY_BAO_MAT_XEM', 'NHAT_KY_KIEM_TOAN_XUAT',
-  'CAU_HINH_HE_THONG_XEM', 'CAU_HINH_HE_THONG_SUA', 'VAN_HANH_HE_THONG',
-] as const
-
-const catalog = new Set<string>(permissionCatalog)
-for (const code of systemAdministratorPermissionCodes) {
-  if (!catalog.has(code)) throw new Error(`Permission quản trị hệ thống chưa có trong danh mục: ${code}`)
-}
+/** The full-system administrator receives every Permission defined by the system catalog. */
+export const systemAdministratorPermissionCodes: readonly MaPermission[] = permissionCatalog
 
 export async function demQuanTriVienToanHeThongHopLe(
   tx: Prisma.TransactionClient,

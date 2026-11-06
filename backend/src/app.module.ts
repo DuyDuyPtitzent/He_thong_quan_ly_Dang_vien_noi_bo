@@ -5,8 +5,11 @@ import { XacThucModule } from './modules/auth/auth.module'
 import { PhanQuyenModule } from './modules/authorization/authorization.module'
 import { ToChucModule } from './modules/organizations/organizations.module'
 import { SucKhoeModule } from './modules/health/health.module'
+import { TaiKhoanModule } from './modules/accounts/accounts.module'
+import { HoSoDangVienModule } from './modules/member-profiles/member-profiles.module'
+import { NamHocModule } from './modules/school-years/school-years.module'
 
 @Module({
-  imports: [CauHinhModule, CoSoDuLieuModule, XacThucModule, PhanQuyenModule, ToChucModule, SucKhoeModule],
+  imports: [CauHinhModule, CoSoDuLieuModule, XacThucModule, PhanQuyenModule, ToChucModule, TaiKhoanModule, HoSoDangVienModule, NamHocModule, SucKhoeModule],
 })
 export class UngDungModule {}

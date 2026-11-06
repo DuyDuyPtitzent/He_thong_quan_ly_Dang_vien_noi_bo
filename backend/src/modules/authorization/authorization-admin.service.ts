@@ -34,7 +34,7 @@ export class QuanTriPhanQuyenService {
   }
 
   async taiKhoanDePhanQuyen(actor: TaiKhoanDaXacThuc, query: TimTaiKhoanPhanQuyenDto) {
-    const scope = await this.phanQuyen.layDonViTrongPhamVi(actor.maTaiKhoan, 'TAI_KHOAN_XEM')
+    const scope = await this.phanQuyen.layDonViTrongPhamVi(actor.maTaiKhoan, 'TAI_KHOAN_XEM', actor.maPhien)
     if (!scope.coQuyen) throw new ForbiddenException({ maLoi: 'KHONG_DU_QUYEN', thongBao: 'Không có quyền xem tài khoản.' })
 
     const accountIds = scope.toanHeThong ? undefined : await this.taiKhoanTrongDonViDuocQuanLy(scope.maDonVi)
@@ -92,7 +92,7 @@ export class QuanTriPhanQuyenService {
 
   async taoVaiTro(actor: TaiKhoanDaXacThuc, dto: TaoVaiTroDto) {
     if (dto.maDinhDanh === systemAdministratorRoleCode || dto.maDinhDanh === 'QUAN_TRI_KHOI_TAO_24H') throw forbidden()
-    await this.kiemTraCoTheCap(actor.maTaiKhoan, 'VAI_TRO_TAO', [])
+    await this.kiemTraCoTheCap(actor, 'VAI_TRO_TAO', [])
     try {
       return await this.prisma.$transaction(async (tx) => {
         const role = await tx.vaiTro.create({ data: {
@@ -105,7 +105,7 @@ export class QuanTriPhanQuyenService {
   }
 
   async suaVaiTro(actor: TaiKhoanDaXacThuc, maVaiTro: string, dto: SuaVaiTroDto) {
-    await this.kiemTraCoTheCap(actor.maTaiKhoan, 'VAI_TRO_SUA', [])
+    await this.kiemTraCoTheCap(actor, 'VAI_TRO_SUA', [])
     const before = await this.prisma.vaiTro.findUnique({ where: { ma: maVaiTro } })
     if (!before) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_VAI_TRO', thongBao: 'Không tìm thấy vai trò.' })
     if (before.laVaiTroHeThong) throw forbidden()
@@ -117,7 +117,7 @@ export class QuanTriPhanQuyenService {
   }
 
   async xoaVaiTro(actor: TaiKhoanDaXacThuc, maVaiTro: string) {
-    await this.kiemTraCoTheCap(actor.maTaiKhoan, 'VAI_TRO_XOA', [])
+    await this.kiemTraCoTheCap(actor, 'VAI_TRO_XOA', [])
     const role = await this.prisma.vaiTro.findUnique({ where: { ma: maVaiTro } })
     if (!role) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_VAI_TRO', thongBao: 'Không tìm thấy vai trò.' })
     if (role.laVaiTroHeThong || (await this.prisma.phanCongVaiTro.count({ where: { maVaiTro } })) > 0) throw forbidden()
@@ -141,7 +141,7 @@ export class QuanTriPhanQuyenService {
       ...role.quyen.map(({ quyen }) => quyen).filter(({ ma }) => !dto.boMaQuyen.includes(ma)).map(({ maDinhDanh }) => maDinhDanh),
       ...codes.map(({ maDinhDanh }) => maDinhDanh),
     ]
-    await this.kiemTraCoTheSuaQuyenVaiTro(actor.maTaiKhoan, resultingCodes, maVaiTro)
+    await this.kiemTraCoTheSuaQuyenVaiTro(actor, resultingCodes, maVaiTro)
     await this.prisma.$transaction(async (tx) => {
       if (dto.boMaQuyen.length) await tx.vaiTroQuyen.deleteMany({ where: { maVaiTro, maQuyen: { in: dto.boMaQuyen } } })
       if (dto.themMaQuyen.length) await tx.vaiTroQuyen.createMany({
@@ -156,8 +156,8 @@ export class QuanTriPhanQuyenService {
     return { maVaiTro, soQuyenThem: dto.themMaQuyen.length, soQuyenGo: dto.boMaQuyen.length }
   }
 
-  async kiemTraQuyenDanhMuc(actorId: string, code: 'QUYEN_XEM_DANH_MUC' | 'VAI_TRO_XEM') {
-    await this.kiemTraCoTheCap(actorId, code, [])
+  async kiemTraQuyenDanhMuc(actor: TaiKhoanDaXacThuc, code: 'QUYEN_XEM_DANH_MUC' | 'VAI_TRO_XEM') {
+    await this.kiemTraCoTheCap(actor, code, [])
   }
 
   async taoPhanCong(actor: TaiKhoanDaXacThuc, dto: TaoPhanCongVaiTroDto) {
@@ -173,10 +173,10 @@ export class QuanTriPhanQuyenService {
     if (target.trangThai !== active) throw new ConflictException({ maLoi: 'TAI_KHOAN_KHONG_HOAT_DONG', thongBao: 'Chỉ cấp phân công cho tài khoản đang hoạt động.' })
     if (!role || role.trangThai !== active) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_VAI_TRO_HOAT_DONG', thongBao: 'Không tìm thấy vai trò đang hoạt động.' })
     if (role.laVaiTroHeThong) throw forbidden()
-    await this.kiemTraCoTheCap(actor.maTaiKhoan, 'PHAN_CONG_VAI_TRO_TAO', role.quyen.map(({ quyen }) => quyen.maDinhDanh), dto)
+    await this.kiemTraCoTheCap(actor, 'PHAN_CONG_VAI_TRO_TAO', role.quyen.map(({ quyen }) => quyen.maDinhDanh), dto)
+    const start = dto.ngayHieuLucTu ? new Date(dto.ngayHieuLucTu) : new Date()
     const end = dto.ngayHieuLucDen ? new Date(dto.ngayHieuLucDen) : null
-    if (end && end <= new Date()) throw new ConflictException({ maLoi: 'THOI_HAN_KHONG_HOP_LE', thongBao: 'Thời điểm hết hạn phải ở tương lai.' })
-    const start = new Date()
+    if (!Number.isFinite(start.getTime()) || (end && (!Number.isFinite(end.getTime()) || end <= start))) throw new ConflictException({ maLoi: 'THOI_HAN_KHONG_HOP_LE', thongBao: 'Thời điểm bắt đầu không hợp lệ hoặc thời điểm kết thúc không sau thời điểm bắt đầu.' })
     return this.prisma.$transaction(async (tx) => {
       const assignment = await tx.phanCongVaiTro.create({ data: {
         maTaiKhoan: dto.maTaiKhoan, maVaiTro: dto.maVaiTro, loaiPhamVi: dto.loaiPhamVi,
@@ -188,36 +188,57 @@ export class QuanTriPhanQuyenService {
       } })
       await tx.nhatKyKiemToan.create({ data: {
         maNguoiThucHien: actor.maTaiKhoan, hanhDong: 'PHAN_CONG_VAI_TRO_TAO', loaiDoiTuong: 'PHAN_CONG_VAI_TRO', maDoiTuong: assignment.ma,
-        ketQua: 'THANH_CONG', duLieuSau: { maTaiKhoan: target.ma, maVaiTro: role.ma, loaiPhamVi: dto.loaiPhamVi, maDonViGoc: dto.maDonViGoc, hetHanLuc: end?.toISOString() ?? null }, maTuongQuan: randomUUID(),
+        ketQua: 'THANH_CONG', duLieuSau: { maTaiKhoan: target.ma, maVaiTro: role.ma, loaiPhamVi: dto.loaiPhamVi, maDonViGoc: dto.maDonViGoc, danhSachMaDonVi: dto.danhSachMaDonVi ?? [], ngayHieuLucTu: start.toISOString(), ngayHieuLucDen: end?.toISOString() ?? null }, maTuongQuan: randomUUID(),
       } })
       return { maPhanCong: assignment.ma, ngayHieuLucTu: start, ngayHieuLucDen: end }
     })
   }
 
   async danhSachPhanCong(actor: TaiKhoanDaXacThuc, maTaiKhoan: string) {
-    await this.kiemTraCoTheCap(actor.maTaiKhoan, 'PHAN_CONG_VAI_TRO_XEM', [])
+    await this.kiemTraCoTheCap(actor, 'PHAN_CONG_VAI_TRO_XEM', [])
     const account = await this.prisma.taiKhoanNguoiDung.findUnique({ where: { ma: maTaiKhoan }, select: { ma: true } })
     if (!account) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_TAI_KHOAN', thongBao: 'Không tìm thấy tài khoản.' })
+    const now = new Date()
     const assignments = await this.prisma.phanCongVaiTro.findMany({
       where: { maTaiKhoan }, orderBy: { ngayTao: 'desc' },
       include: {
-        vaiTro: { select: { maDinhDanh: true, ten: true, quyen: { include: { quyen: { select: { maDinhDanh: true } } } } } },
-        phamViDonViChiDinh: true,
+        vaiTro: { select: { maDinhDanh: true, ten: true, trangThai: true, laVaiTroHeThong: true, quyen: { include: { quyen: { select: { maDinhDanh: true } } } } } },
+        donViGoc: { select: { maDinhDanh: true, loaiDonVi: true, tenDonVi: { where: { ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }] }, take: 1, select: { ten: true } } } },
+        phamViDonViChiDinh: { include: { donVi: { select: { ma: true, maDinhDanh: true, loaiDonVi: true, tenDonVi: { where: { ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }] }, take: 1, select: { ten: true } } } } } },
+        nguoiCap: { select: { tenDangNhap: true } },
+        nguoiThuHoi: { select: { tenDangNhap: true } },
       },
     })
     const visible: typeof assignments = []
     for (const assignment of assignments) {
-      const permitted = await this.coPhamViQuanSatDuoc(actor.maTaiKhoan, assignment)
+      const permitted = await this.coPhamViQuanSatDuoc(actor, assignment)
       if (permitted) visible.push(assignment)
     }
     return visible.map((assignment) => ({
       maPhanCong: assignment.ma, maVaiTro: assignment.vaiTro.maDinhDanh,
       tenVaiTro: assignment.vaiTro.ten, loaiPhamVi: assignment.loaiPhamVi,
+      trangThaiVaiTro: assignment.vaiTro.trangThai, laVaiTroHeThong: assignment.vaiTro.laVaiTroHeThong,
       danhSachMaQuyen: assignment.vaiTro.quyen.map(({ quyen }) => quyen.maDinhDanh),
       maDonViGoc: assignment.maDonViGoc, danhSachMaDonVi: assignment.phamViDonViChiDinh.map(({ maDonVi }) => maDonVi),
+      tenDonViGoc: assignment.donViGoc?.tenDonVi[0]?.ten ?? assignment.donViGoc?.maDinhDanh ?? null,
+      loaiDonViGoc: assignment.donViGoc?.loaiDonVi ?? null,
+      donViChiDinh: assignment.phamViDonViChiDinh.map(({ donVi }) => ({ maDonVi: donVi.ma, tenDonVi: donVi.tenDonVi[0]?.ten ?? donVi.maDinhDanh, loaiDonVi: donVi.loaiDonVi })),
       ngayHieuLucTu: assignment.ngayHieuLucTu, ngayHieuLucDen: assignment.ngayHieuLucDen,
-      thuHoiLuc: assignment.thuHoiLuc, lyDo: assignment.lyDo,
+      thuHoiLuc: assignment.thuHoiLuc, lyDo: assignment.lyDo, ngayTao: assignment.ngayTao,
+      maNguoiCap: assignment.maNguoiCap, tenNguoiCap: assignment.nguoiCap?.tenDangNhap ?? null,
+      maNguoiThuHoi: assignment.maNguoiThuHoi, tenNguoiThuHoi: assignment.nguoiThuHoi?.tenDangNhap ?? null,
     }))
+  }
+
+  async lichSuPhanCongTaiKhoan(actor: TaiKhoanDaXacThuc, maTaiKhoan: string) {
+    await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'NHAT_KY_KIEM_TOAN_XEM', {}, actor.maPhien)
+    const assignments = await this.danhSachPhanCong(actor, maTaiKhoan)
+    if (!assignments.length) return []
+    return this.prisma.nhatKyKiemToan.findMany({
+      where: { loaiDoiTuong: 'PHAN_CONG_VAI_TRO', maDoiTuong: { in: assignments.map(({ maPhanCong }) => maPhanCong) } },
+      orderBy: { thoiDiem: 'desc' }, take: 200,
+      select: { maDoiTuong: true, hanhDong: true, ketQua: true, lyDo: true, duLieuTruoc: true, duLieuSau: true, thoiDiem: true, nguoiThucHien: { select: { tenDangNhap: true } } },
+    }).then((rows) => rows.map((row) => ({ ...row, tenNguoiThucHien: row.nguoiThucHien?.tenDangNhap ?? 'Hệ thống', nguoiThucHien: undefined })))
   }
 
   async suaPhanCong(actor: TaiKhoanDaXacThuc, maPhanCong: string, dto: SuaPhanCongVaiTroDto) {
@@ -231,11 +252,11 @@ export class QuanTriPhanQuyenService {
     if ((dto.loaiPhamVi === 'CAY_DON_VI') !== Boolean(dto.maDonViGoc)) throw new ConflictException({ maLoi: 'PHAM_VI_KHONG_HOP_LE', thongBao: 'Phạm vi cây cần đúng một đơn vị gốc.' })
     if ((dto.loaiPhamVi === 'DON_VI_CHI_DINH') !== Boolean(dto.danhSachMaDonVi?.length)) throw new ConflictException({ maLoi: 'PHAM_VI_KHONG_HOP_LE', thongBao: 'Phạm vi đơn vị chỉ định cần danh sách rõ ràng.' })
     const roleCodes = assignment.vaiTro.quyen.map(({ quyen }) => quyen.maDinhDanh)
-    await this.kiemTraCoTheCap(actor.maTaiKhoan, 'PHAN_CONG_VAI_TRO_SUA', roleCodes, dto)
+    await this.kiemTraCoTheCap(actor, 'PHAN_CONG_VAI_TRO_SUA', roleCodes, dto)
     const end = dto.ngayHieuLucDen ? new Date(dto.ngayHieuLucDen) : null
-    if (end && end <= new Date()) throw new ConflictException({ maLoi: 'THOI_HAN_KHONG_HOP_LE', thongBao: 'Thời điểm hết hạn phải ở tương lai.' })
+    if (dto.ngayHieuLucDen && (!end || !Number.isFinite(end.getTime()) || end <= assignment.ngayHieuLucTu)) throw new ConflictException({ maLoi: 'THOI_HAN_KHONG_HOP_LE', thongBao: 'Thời điểm hết hạn phải sau thời điểm bắt đầu hiệu lực.' })
     return this.prisma.$transaction(async (tx) => {
-      const before = { loaiPhamVi: assignment.loaiPhamVi, maDonViGoc: assignment.maDonViGoc, ngayHieuLucDen: assignment.ngayHieuLucDen?.toISOString() ?? null }
+      const before = { loaiPhamVi: assignment.loaiPhamVi, maDonViGoc: assignment.maDonViGoc, danhSachMaDonVi: assignment.phamViDonViChiDinh.map(({ maDonVi }) => maDonVi), ngayHieuLucDen: assignment.ngayHieuLucDen?.toISOString() ?? null }
       await tx.phamViDonVi.deleteMany({ where: { maPhanCong } })
       const updated = await tx.phanCongVaiTro.update({ where: { ma: maPhanCong }, data: {
         loaiPhamVi: dto.loaiPhamVi, maDonViGoc: dto.loaiPhamVi === 'CAY_DON_VI' ? dto.maDonViGoc : null,
@@ -246,7 +267,7 @@ export class QuanTriPhanQuyenService {
       } })
       await tx.nhatKyKiemToan.create({ data: {
         maNguoiThucHien: actor.maTaiKhoan, hanhDong: 'PHAN_CONG_VAI_TRO_SUA', loaiDoiTuong: 'PHAN_CONG_VAI_TRO', maDoiTuong: maPhanCong,
-        ketQua: 'THANH_CONG', duLieuTruoc: before, duLieuSau: { loaiPhamVi: dto.loaiPhamVi, maDonViGoc: dto.maDonViGoc, ngayHieuLucDen: end?.toISOString() ?? null }, maTuongQuan: randomUUID(),
+        ketQua: 'THANH_CONG', lyDo: dto.lyDo, duLieuTruoc: before, duLieuSau: { loaiPhamVi: dto.loaiPhamVi, maDonViGoc: dto.maDonViGoc ?? null, danhSachMaDonVi: dto.danhSachMaDonVi ?? [], ngayHieuLucDen: end?.toISOString() ?? null }, maTuongQuan: randomUUID(),
       } })
       return { maPhanCong: updated.ma, loaiPhamVi: updated.loaiPhamVi, ngayHieuLucDen: end }
     })
@@ -258,7 +279,7 @@ export class QuanTriPhanQuyenService {
     })
     if (!assignment) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_PHAN_CONG', thongBao: 'Không tìm thấy phân công.' })
     if (assignment.vaiTro.laVaiTroHeThong || assignment.vaiTro.maDinhDanh === 'QUAN_TRI_VIEN_TOAN_HE_THONG') throw forbidden()
-    await this.kiemTraCoTheCap(actor.maTaiKhoan, 'PHAN_CONG_VAI_TRO_THU_HOI', assignment.vaiTro.quyen.map(({ quyen }) => quyen.maDinhDanh), {
+    await this.kiemTraCoTheCap(actor, 'PHAN_CONG_VAI_TRO_THU_HOI', assignment.vaiTro.quyen.map(({ quyen }) => quyen.maDinhDanh), {
       loaiPhamVi: assignment.loaiPhamVi, maDonViGoc: assignment.maDonViGoc ?? undefined,
       danhSachMaDonVi: assignment.phamViDonViChiDinh.map(({ maDonVi }) => maDonVi),
     })
@@ -275,14 +296,15 @@ export class QuanTriPhanQuyenService {
   }
 
   private async kiemTraCoTheCap(
-    actorId: string,
+    actor: TaiKhoanDaXacThuc,
     requiredPermission: string,
     targetPermissions: string[],
     target?: { loaiPhamVi: string; maDonViGoc?: string; danhSachMaDonVi?: string[] },
   ) {
+    if (!actor.maPhanCongVaiTroDangHoatDong) throw forbidden()
     const now = new Date()
     const sources = await this.prisma.phanCongVaiTro.findMany({
-      where: { maTaiKhoan: actorId, ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }], thuHoiLuc: null, vaiTro: { trangThai: active } },
+      where: { ma: actor.maPhanCongVaiTroDangHoatDong, maTaiKhoan: actor.maTaiKhoan, ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }], thuHoiLuc: null, vaiTro: { trangThai: active } },
       include: { vaiTro: { include: { quyen: { include: { quyen: true } } } }, phamViDonViChiDinh: true },
     })
     for (const source of sources) {
@@ -295,14 +317,15 @@ export class QuanTriPhanQuyenService {
     throw forbidden()
   }
 
-  private async kiemTraCoTheSuaQuyenVaiTro(actorId: string, permissionCodes: string[], roleId: string) {
+  private async kiemTraCoTheSuaQuyenVaiTro(actor: TaiKhoanDaXacThuc, permissionCodes: string[], roleId: string) {
+    if (!actor.maPhanCongVaiTroDangHoatDong) throw forbidden()
     const roleAssignments = await this.prisma.phanCongVaiTro.findMany({
       where: { maVaiTro: roleId },
       include: { phamViDonViChiDinh: true },
     })
     const now = new Date()
     const sources = await this.prisma.phanCongVaiTro.findMany({
-      where: { maTaiKhoan: actorId, ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }], thuHoiLuc: null, vaiTro: { trangThai: active } },
+      where: { ma: actor.maPhanCongVaiTroDangHoatDong, maTaiKhoan: actor.maTaiKhoan, ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }], thuHoiLuc: null, vaiTro: { trangThai: active } },
       include: { vaiTro: { include: { quyen: { include: { quyen: true } } } }, phamViDonViChiDinh: true },
     })
     for (const source of sources) {
@@ -346,12 +369,13 @@ export class QuanTriPhanQuyenService {
     return false
   }
 
-  private async coPhamViQuanSatDuoc(actorId: string, target: {
+  private async coPhamViQuanSatDuoc(actor: TaiKhoanDaXacThuc, target: {
     loaiPhamVi: string; maDonViGoc: string | null; phamViDonViChiDinh: { maDonVi: string }[]
   }) {
+    if (!actor.maPhanCongVaiTroDangHoatDong) return false
     const now = new Date()
     const sources = await this.prisma.phanCongVaiTro.findMany({
-      where: { maTaiKhoan: actorId, ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }], thuHoiLuc: null, vaiTro: { trangThai: active } },
+      where: { ma: actor.maPhanCongVaiTroDangHoatDong, maTaiKhoan: actor.maTaiKhoan, ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }], thuHoiLuc: null, vaiTro: { trangThai: active } },
       include: { vaiTro: { include: { quyen: { include: { quyen: true } } } }, phamViDonViChiDinh: true },
     })
     for (const source of sources) {

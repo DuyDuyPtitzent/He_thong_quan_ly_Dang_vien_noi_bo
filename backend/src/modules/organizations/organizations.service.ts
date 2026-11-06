@@ -15,13 +15,6 @@ const permissions = {
   restore: 'TO_CHUC_KHOI_PHUC',
 } as const
 
-const rootUnit = {
-  code: 'PTIT_DANG_UY',
-  name: 'Đảng ủy Học viện Công nghệ Bưu chính Viễn thông',
-  type: 'DANG_UY' as const,
-  status: 'DANG_HOAT_DONG',
-}
-
 @Injectable()
 export class ToChucService {
   constructor(
@@ -30,7 +23,7 @@ export class ToChucService {
   ) {}
 
   async danhSach(taiKhoan: TaiKhoanDaXacThuc, query: DanhSachDonViDto) {
-    const allowed = await this.phanQuyen.layDonViTrongPhamVi(taiKhoan.maTaiKhoan, permissions.read)
+    const allowed = await this.phanQuyen.layDonViTrongPhamVi(taiKhoan.maTaiKhoan, permissions.read, taiKhoan.maPhien)
     if (!allowed.coQuyen) throw new ForbiddenException({ maLoi: 'KHONG_DU_QUYEN', thongBao: 'Không có quyền xem tổ chức.' })
     const where: Prisma.DonViToChucWhereInput = {
       ...(query.loaiDonVi ? { loaiDonVi: query.loaiDonVi } : {}),
@@ -58,7 +51,7 @@ export class ToChucService {
   }
 
   async cay(taiKhoan: TaiKhoanDaXacThuc, thoiDiem = new Date()) {
-    const allowed = await this.phanQuyen.layDonViTrongPhamVi(taiKhoan.maTaiKhoan, permissions.read)
+    const allowed = await this.phanQuyen.layDonViTrongPhamVi(taiKhoan.maTaiKhoan, permissions.read, taiKhoan.maPhien)
     if (!allowed.coQuyen) throw new ForbiddenException({ maLoi: 'KHONG_DU_QUYEN', thongBao: 'Không có quyền xem tổ chức.' })
     const donVi = await this.prisma.donViToChuc.findMany({
       where: allowed.toanHeThong ? {} : { ma: { in: allowed.maDonVi } },
@@ -120,20 +113,21 @@ export class ToChucService {
   async tao(taiKhoan: TaiKhoanDaXacThuc, dto: TaoDonViDto, auditContext?: { lyDo?: string; maTuongQuan?: string }) {
     const status = dto.trangThai ?? 'DANG_HOAT_DONG'
     if (dto.loaiDonVi === 'DANG_UY') {
-      await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.create)
-      if (dto.maDonViCha || dto.maDinhDanh !== rootUnit.code || dto.tenDonVi !== rootUnit.name || status !== rootUnit.status) {
-        throw this.xungDot('Đảng ủy gốc phải dùng đúng mã, tên và trạng thái đã được cấu hình; không có đơn vị cha.')
+      await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.create, {}, taiKhoan.maPhien)
+      if (dto.maDonViCha || !dto.maDinhDanh?.trim()) {
+        throw this.xungDot('Đảng ủy gốc phải có mã đơn vị và không có đơn vị cha.')
       }
-    } else if (dto.maDonViCha) await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.create, { maDonVi: dto.maDonViCha })
-    else await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.create)
+    } else if (dto.maDonViCha) await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.create, { maDonVi: dto.maDonViCha }, taiKhoan.maPhien)
+    else await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.create, {}, taiKhoan.maPhien)
     this.kiemTraThoiDiem(dto.ngayHieuLucTu)
     await this.kiemTraTrangThaiDonVi(status)
     const parent = dto.maDonViCha
-      ? await this.prisma.donViToChuc.findUnique({ where: { ma: dto.maDonViCha }, select: { ma: true, loaiDonVi: true } })
+      ? await this.prisma.donViToChuc.findUnique({ where: { ma: dto.maDonViCha }, select: { ma: true, loaiDonVi: true, trangThai: true } })
       : null
     if (dto.maDonViCha && !parent) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_DON_VI_CHA', thongBao: 'Không tìm thấy đơn vị cha.' })
     if (!this.quanHeHopLe(dto.loaiDonVi, parent?.loaiDonVi ?? null)) throw this.xungDot('Quan hệ cha-con không đúng tầng tổ chức.')
     if ((dto.loaiDonVi === 'DANG_UY') !== !parent) throw this.xungDot('Đảng ủy là tầng gốc; Chi bộ và Tổ phải có đơn vị cha.')
+    if (parent && parent.trangThai !== 'DANG_HOAT_DONG') throw this.xungDot('Không thể tạo đơn vị dưới đơn vị cha chưa hoạt động.')
     try {
       return await this.prisma.$transaction(async (tx) => {
         if (dto.loaiDonVi === 'DANG_UY') {
@@ -143,22 +137,23 @@ export class ToChucService {
             include: { tenDonVi: { where: { ngayHieuLucDen: null }, take: 1 }, quanHeCha: true },
           })
           if (existing) {
-            const matches = existing.maDinhDanh === rootUnit.code
-              && existing.tenDonVi[0]?.ten === rootUnit.name && existing.quanHeCha.length === 0
-            if (!matches) throw this.xungDot('Đã có Đảng ủy gốc khác cấu hình; không tạo trùng.')
-            return { maDonVi: existing.ma, tenDonVi: rootUnit.name, loaiDonVi: existing.loaiDonVi, trangThai: existing.trangThai }
+            const existingName = existing.tenDonVi[0]?.ten
+            if (existing.quanHeCha.length !== 0 || existing.maDinhDanh !== dto.maDinhDanh?.trim() || existingName !== dto.tenDonVi) {
+              throw this.xungDot('Đã có Đảng ủy gốc với thông tin khác; không tạo trùng hoặc tự thay đổi dữ liệu hiện hữu.')
+            }
+            return { maDonVi: existing.ma, tenDonVi: existingName, loaiDonVi: existing.loaiDonVi, trangThai: existing.trangThai }
           }
         }
         const unit = await tx.donViToChuc.create({ data: {
-          maDinhDanh: dto.loaiDonVi === 'DANG_UY' ? rootUnit.code : dto.maDinhDanh,
+          maDinhDanh: dto.maDinhDanh?.trim(),
           loaiDonVi: dto.loaiDonVi,
           trangThai: status,
         } })
         await tx.lichSuTenDonVi.create({ data: {
-          maDonVi: unit.ma, ten: dto.tenDonVi, ngayHieuLucTu: this.ngay(dto.ngayHieuLucTu), maNguoiGhiNhan: taiKhoan.maTaiKhoan,
+          maDonVi: unit.ma, ten: dto.tenDonVi, ngayHieuLucTu: new Date(dto.ngayHieuLucTu), nguonBanGhi: 'KHOI_TAO', maNguoiGhiNhan: taiKhoan.maTaiKhoan,
         } })
         if (parent) await tx.lichSuQuanHeDonVi.create({ data: {
-          maDonViCha: parent.ma, maDonViCon: unit.ma, ngayHieuLucTu: new Date(dto.ngayHieuLucTu), maNguoiGhiNhan: taiKhoan.maTaiKhoan,
+          maDonViCha: parent.ma, maDonViCon: unit.ma, ngayHieuLucTu: new Date(dto.ngayHieuLucTu), nguonBanGhi: 'KHOI_TAO', maNguoiGhiNhan: taiKhoan.maTaiKhoan,
         } })
         await this.audit(tx, taiKhoan.maTaiKhoan, unit.ma, 'TO_CHUC_TAO', undefined,
           { maDinhDanh: dto.maDinhDanh, loaiDonVi: dto.loaiDonVi, tenDonVi: dto.tenDonVi, trangThai: status }, auditContext)
@@ -168,13 +163,13 @@ export class ToChucService {
   }
 
   async sua(taiKhoan: TaiKhoanDaXacThuc, maDonVi: string, dto: SuaDonViDto) {
-    if (dto.loaiDonVi) await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.editType, { maDonVi })
+    if (dto.loaiDonVi) await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.editType, { maDonVi }, taiKhoan.maPhien)
     try {
       return await this.prisma.$transaction(async (tx) => {
         const before = await tx.donViToChuc.findUnique({ where: { ma: maDonVi } })
         if (!before) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_DON_VI', thongBao: 'Không tìm thấy đơn vị.' })
-        if (before.loaiDonVi === 'DANG_UY' && (dto.loaiDonVi && dto.loaiDonVi !== 'DANG_UY' || dto.maDinhDanh && dto.maDinhDanh !== rootUnit.code)) {
-          throw this.xungDot('Không thể thay đổi loại hoặc mã định danh Đảng ủy gốc đã được xác định.')
+        if (before.loaiDonVi === 'DANG_UY' && dto.loaiDonVi && dto.loaiDonVi !== 'DANG_UY') {
+          throw this.xungDot('Không thể đổi loại của Đảng ủy gốc.')
         }
         const after = await tx.donViToChuc.update({ where: { ma: maDonVi }, data: {
           maDinhDanh: dto.maDinhDanh, loaiDonVi: dto.loaiDonVi,
@@ -192,7 +187,7 @@ export class ToChucService {
       if (!before) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_DON_VI', thongBao: 'Không tìm thấy đơn vị.' })
       if (before.trangThai === dto.trangThai) return before
       const restoring = before.trangThai === 'NGUNG_HOAT_DONG' && dto.trangThai === 'DANG_HOAT_DONG'
-      await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, restoring ? permissions.restore : permissions.changeStatus, { maDonVi })
+      await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, restoring ? permissions.restore : permissions.changeStatus, { maDonVi }, taiKhoan.maPhien)
       const after = await tx.donViToChuc.update({ where: { ma: maDonVi }, data: { trangThai: dto.trangThai } })
       await this.audit(tx, taiKhoan.maTaiKhoan, maDonVi, restoring ? 'TO_CHUC_KHOI_PHUC' : 'TO_CHUC_DOI_TRANG_THAI',
         { trangThai: before.trangThai }, { trangThai: after.trangThai })
@@ -202,14 +197,14 @@ export class ToChucService {
 
   async doiTen(taiKhoan: TaiKhoanDaXacThuc, maDonVi: string, dto: DoiTenDonViDto) {
     this.kiemTraThoiDiem(dto.ngayHieuLucTu)
-    await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.edit, { maDonVi })
+    await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.edit, { maDonVi }, taiKhoan.maPhien)
     return this.prisma.$transaction(async (tx) => {
       const current = await tx.lichSuTenDonVi.findFirst({ where: { maDonVi, ngayHieuLucDen: null } })
       if (!current) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_TEN_HIEN_HANH', thongBao: 'Không tìm thấy tên hiện hành.' })
-      const start = this.ngay(dto.ngayHieuLucTu)
+      const start = new Date(dto.ngayHieuLucTu)
       if (start <= current.ngayHieuLucTu) throw this.xungDot('Thời điểm đổi tên phải sau ngày bắt đầu tên hiện hành.')
-      await tx.lichSuTenDonVi.update({ where: { ma: current.ma }, data: { ngayHieuLucDen: start } })
-      await tx.lichSuTenDonVi.create({ data: { maDonVi, ten: dto.tenDonVi, ngayHieuLucTu: start, maNguoiGhiNhan: taiKhoan.maTaiKhoan } })
+      await tx.lichSuTenDonVi.update({ where: { ma: current.ma }, data: { ngayHieuLucDen: start, nguonBanGhi: 'LICH_SU' } })
+      await tx.lichSuTenDonVi.create({ data: { maDonVi, ten: dto.tenDonVi, ngayHieuLucTu: start, nguonBanGhi: 'LICH_SU', maNguoiGhiNhan: taiKhoan.maTaiKhoan } })
       await this.audit(tx, taiKhoan.maTaiKhoan, maDonVi, 'TO_CHUC_DOI_TEN', { ten: current.ten }, { ten: dto.tenDonVi })
       return { maDonVi, tenDonVi: dto.tenDonVi, ngayHieuLucTu: start }
     })
@@ -217,40 +212,69 @@ export class ToChucService {
 
   async doiQuanHeCha(taiKhoan: TaiKhoanDaXacThuc, maDonVi: string, dto: DoiQuanHeChaDto) {
     this.kiemTraThoiDiem(dto.ngayHieuLucTu)
-    await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.changeParent, { maDonVi })
-    if (dto.maDonViCha) await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.changeParent, { maDonVi: dto.maDonViCha })
+    await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.changeParent, { maDonVi }, taiKhoan.maPhien)
+    if (dto.maDonViCha) await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.changeParent, { maDonVi: dto.maDonViCha }, taiKhoan.maPhien)
     const target = await this.prisma.donViToChuc.findUnique({ where: { ma: maDonVi } })
     if (!target) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_DON_VI', thongBao: 'Không tìm thấy đơn vị.' })
     const parent = dto.maDonViCha ? await this.prisma.donViToChuc.findUnique({ where: { ma: dto.maDonViCha } }) : null
     if (dto.maDonViCha && !parent) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_DON_VI_CHA', thongBao: 'Không tìm thấy đơn vị cha.' })
+    if (parent && parent.trangThai !== 'DANG_HOAT_DONG') throw this.xungDot('Không thể chuyển đơn vị dưới đơn vị cha chưa hoạt động.')
     if (!this.quanHeHopLe(target.loaiDonVi, parent?.loaiDonVi ?? null) || (target.loaiDonVi === 'DANG_UY') !== !parent) throw this.xungDot('Quan hệ cha-con không đúng tầng tổ chức.')
-    if (parent && await this.laHauDueCua(maDonVi, parent.ma, new Date(dto.ngayHieuLucTu))) throw this.xungDot('Thay đổi này tạo chu trình trong cây tổ chức.')
     return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`LOCK TABLE "lich_su_quan_he_don_vi" IN SHARE ROW EXCLUSIVE MODE`
       const start = new Date(dto.ngayHieuLucTu)
+      if (parent && await this.laHauDueCua(maDonVi, parent.ma, start, tx)) throw this.xungDot('Thay đổi này tạo chu trình trong cây tổ chức.')
       const old = await tx.lichSuQuanHeDonVi.findFirst({ where: { maDonViCon: maDonVi, ngayHieuLucDen: null } })
       if (old && start <= old.ngayHieuLucTu) throw this.xungDot('Thời điểm đổi cha phải sau lúc bắt đầu quan hệ hiện hành.')
-      if (old) await tx.lichSuQuanHeDonVi.update({ where: { ma: old.ma }, data: { ngayHieuLucDen: start } })
-      if (parent) await tx.lichSuQuanHeDonVi.create({ data: { maDonViCha: parent.ma, maDonViCon: maDonVi, ngayHieuLucTu: start, maNguoiGhiNhan: taiKhoan.maTaiKhoan } })
+      if (old) await tx.lichSuQuanHeDonVi.update({ where: { ma: old.ma }, data: { ngayHieuLucDen: start, nguonBanGhi: 'LICH_SU' } })
+      if (parent) await tx.lichSuQuanHeDonVi.create({ data: { maDonViCha: parent.ma, maDonViCon: maDonVi, ngayHieuLucTu: start, nguonBanGhi: 'LICH_SU', maNguoiGhiNhan: taiKhoan.maTaiKhoan } })
       await this.audit(tx, taiKhoan.maTaiKhoan, maDonVi, 'TO_CHUC_DOI_DON_VI_CHA', { maDonViCha: old?.maDonViCha }, { maDonViCha: parent?.ma ?? null })
       return { maDonVi, maDonViCha: parent?.ma ?? null, ngayHieuLucTu: start }
     })
   }
 
   async xoa(taiKhoan: TaiKhoanDaXacThuc, maDonVi: string) {
-    await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.delete, { maDonVi })
+    await this.phanQuyen.kiemTra(taiKhoan.maTaiKhoan, permissions.delete, { maDonVi }, taiKhoan.maPhien)
     try {
       return await this.prisma.$transaction(async (tx) => {
         const unit = await tx.donViToChuc.findUnique({ where: { ma: maDonVi } })
         if (!unit) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_DON_VI', thongBao: 'Không tìm thấy đơn vị.' })
+        if (unit.loaiDonVi === 'DANG_UY') throw this.xungDot('Không thể xóa nút Đảng ủy gốc bằng thao tác quản trị thông thường.')
+        const [names, parentRelations, childRelations, memberships, terms, officerAssignments, roleRoots, selectedScopes] = await Promise.all([
+          tx.lichSuTenDonVi.findMany({ where: { maDonVi }, select: { ma: true, nguonBanGhi: true } }),
+          tx.lichSuQuanHeDonVi.findMany({ where: { maDonViCha: maDonVi }, select: { ma: true } }),
+          tx.lichSuQuanHeDonVi.findMany({ where: { maDonViCon: maDonVi }, select: { ma: true, nguonBanGhi: true } }),
+          tx.lichSuDonViDangVien.count({ where: { OR: [{ maChiBo: maDonVi }, { maTo: maDonVi }] } }),
+          tx.nhiemKy.count({ where: { maDonVi } }),
+          tx.phanCongChucVu.count({ where: { maDonVi } }),
+          tx.phanCongVaiTro.count({ where: { maDonViGoc: maDonVi } }),
+          tx.phamViDonVi.count({ where: { maDonVi } }),
+        ])
+        const hasBusinessReferences = memberships + terms + officerAssignments + roleRoots + selectedScopes > 0
+        const hasNonInitialHistory = names.some((row) => row.nguonBanGhi !== 'KHOI_TAO')
+          || childRelations.some((row) => row.nguonBanGhi !== 'KHOI_TAO')
+        if (parentRelations.length || hasBusinessReferences || hasNonInitialHistory) {
+          const reasons = [
+            parentRelations.length ? 'có đơn vị con hoặc lịch sử quan hệ làm đơn vị cha' : '',
+            memberships ? 'có lịch sử sinh hoạt Đảng viên' : '',
+            terms ? 'có nhiệm kỳ' : '',
+            officerAssignments ? 'có phân công chức vụ' : '',
+            roleRoots + selectedScopes ? 'có Assignment hoặc phạm vi đơn vị' : '',
+            hasNonInitialHistory ? 'có lịch sử tên/quan hệ cần bảo toàn' : '',
+          ].filter(Boolean)
+          throw this.xungDot(`Không thể xóa đơn vị vì ${reasons.join('; ')}.`)
+        }
         await this.audit(tx, taiKhoan.maTaiKhoan, maDonVi, 'TO_CHUC_XOA', { loaiDonVi: unit.loaiDonVi })
+        await tx.lichSuTenDonVi.deleteMany({ where: { maDonVi, nguonBanGhi: 'KHOI_TAO' } })
+        await tx.lichSuQuanHeDonVi.deleteMany({ where: { maDonViCon: maDonVi, nguonBanGhi: 'KHOI_TAO' } })
         await tx.donViToChuc.delete({ where: { ma: maDonVi } })
         return { daXoa: true, maDonVi }
       })
     } catch (error) { this.mapDbError(error) }
   }
 
-  private async laHauDueCua(maTo: string, maUngVienCha: string, thoiDiem: Date) {
-    const rows = await this.prisma.$queryRaw<Array<{ found: boolean }>>`
+  private async laHauDueCua(maTo: string, maUngVienCha: string, thoiDiem: Date, tx: Prisma.TransactionClient = this.prisma) {
+    const rows = await tx.$queryRaw<Array<{ found: boolean }>>`
       WITH RECURSIVE to_tien(ma_don_vi) AS (
         SELECT ${maUngVienCha}::uuid
         UNION
@@ -278,7 +302,6 @@ export class ToChucService {
     if (new Date(value).getTime() > Date.now()) throw new ForbiddenException({ maLoi: 'KHONG_CHO_PHEP_TUONG_LAI', thongBao: 'Không cho phép nhập hiệu lực trong tương lai.' })
   }
 
-  private ngay(value: string) { return new Date(`${value.slice(0, 10)}T00:00:00.000Z`) }
   private xungDot(message: string) { return new ConflictException({ maLoi: 'XUNG_DOT_TO_CHUC', thongBao: message }) }
 
   private async audit(

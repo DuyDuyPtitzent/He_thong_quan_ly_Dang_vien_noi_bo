@@ -12,8 +12,9 @@ export class PhanQuyenService {
     maTaiKhoan: string,
     maQuyen: string,
     phamViYeuCau: YeuCauPhamVi = {},
+    maPhien?: string,
   ): Promise<void> {
-    const assignments = await this.layAssignments(maTaiKhoan)
+    const assignments = await this.layAssignments(maTaiKhoan, maPhien)
 
     for (const assignment of assignments) {
       // Permission and Scope are deliberately evaluated on the same Assignment.
@@ -23,12 +24,12 @@ export class PhanQuyenService {
 
     throw new ForbiddenException({
       maLoi: 'KHONG_DU_QUYEN',
-      thongBao: 'Tài khoản không có Permission và phạm vi phù hợp để thực hiện thao tác này.',
+      thongBao: 'Tài khoản không có đủ quyền hoặc phạm vi phù hợp để thực hiện thao tác này.',
     })
   }
 
-  async layDonViTrongPhamVi(maTaiKhoan: string, maQuyen: string) {
-    const assignments = await this.layAssignments(maTaiKhoan)
+  async layDonViTrongPhamVi(maTaiKhoan: string, maQuyen: string, maPhien?: string) {
+    const assignments = await this.layAssignments(maTaiKhoan, maPhien)
     const phuHop = assignments.filter((assignment) =>
       assignment.vaiTro.quyen.some(({ quyen }) => quyen.maDinhDanh === maQuyen),
     )
@@ -59,11 +60,21 @@ export class PhanQuyenService {
     return { coQuyen: phuHop.length > 0, toanHeThong: false, maDonVi: [...ids] }
   }
 
-  private async layAssignments(maTaiKhoan: string) {
+  private async layAssignments(maTaiKhoan: string, maPhien?: string) {
+    let activeAssignmentId: string | undefined
+    if (maPhien) {
+      const session = await this.prisma.phienDangNhap.findFirst({
+        where: { ma: maPhien, maTaiKhoan, thuHoiLuc: null, hetHanLuc: { gt: new Date() } },
+        select: { maPhanCongVaiTroDangHoatDong: true },
+      })
+      activeAssignmentId = session?.maPhanCongVaiTroDangHoatDong ?? undefined
+      if (!activeAssignmentId) return []
+    }
     const hienTai = new Date()
     return this.prisma.phanCongVaiTro.findMany({
       where: {
         maTaiKhoan,
+        ...(maPhien ? { ma: activeAssignmentId } : {}),
         ngayHieuLucTu: { lte: hienTai },
         OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: hienTai } }],
         thuHoiLuc: null,

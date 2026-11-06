@@ -113,15 +113,74 @@ export class XacThucService {
     })
     if (!taiKhoan || taiKhoan.trangThai !== trangThaiTaiKhoanHoatDong) return null
 
+    const now = new Date()
+    const assignments = await this.prisma.phanCongVaiTro.findMany({
+      where: {
+        maTaiKhoan: taiKhoan.ma,
+        ngayHieuLucTu: { lte: now },
+        OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }],
+        thuHoiLuc: null,
+        vaiTro: { trangThai: 'DANG_HOAT_DONG' },
+      },
+      orderBy: [{ ngayTao: 'asc' }, { ma: 'asc' }],
+      select: {
+        ma: true, loaiPhamVi: true, maDonViGoc: true,
+        vaiTro: { select: { maDinhDanh: true, ten: true, quyen: { select: { quyen: { select: { maDinhDanh: true } } } } } },
+        donViGoc: { select: { maDinhDanh: true, tenDonVi: { where: { ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }] }, take: 1, select: { ten: true } } } },
+        phamViDonViChiDinh: { select: { donVi: { select: { maDinhDanh: true, tenDonVi: { where: { ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }] }, take: 1, select: { ten: true } } } } } },
+      },
+    })
+    let activeAssignmentId = phien.maPhanCongVaiTroDangHoatDong
+    if (activeAssignmentId && !assignments.some(({ ma }) => ma === activeAssignmentId)) {
+      await this.prisma.phienDangNhap.update({ where: { ma: phien.ma }, data: { maPhanCongVaiTroDangHoatDong: null } })
+      activeAssignmentId = null
+    }
+    if (!activeAssignmentId && assignments.length === 1 && assignments[0]) {
+      activeAssignmentId = assignments[0].ma
+      await this.prisma.phienDangNhap.update({ where: { ma: phien.ma }, data: { maPhanCongVaiTroDangHoatDong: activeAssignmentId } })
+    }
+
     return {
       maPhien: phien.ma,
       hetHanLuc: phien.hetHanLuc,
+      maPhanCongVaiTroDangHoatDong: activeAssignmentId,
+      phanCongHopLe: assignments.map(({ ma, loaiPhamVi, vaiTro, maDonViGoc, donViGoc, phamViDonViChiDinh }) => ({
+        maPhanCong: ma,
+        maVaiTro: vaiTro.maDinhDanh,
+        tenVaiTro: vaiTro.ten,
+        loaiPhamVi,
+        maDonViGoc,
+        tenDonViGoc: donViGoc?.tenDonVi[0]?.ten ?? donViGoc?.maDinhDanh ?? null,
+        donViChiDinh: phamViDonViChiDinh.map(({ donVi }) => donVi.tenDonVi[0]?.ten ?? donVi.maDinhDanh),
+      })),
+      quyenDangHoatDong: assignments.find(({ ma }) => ma === activeAssignmentId)?.vaiTro.quyen.map(({ quyen }) => quyen.maDinhDanh) ?? [],
       taiKhoan: {
         maTaiKhoan: taiKhoan.ma,
         tenDangNhap: taiKhoan.tenDangNhap,
         doiMatKhauLanDau: taiKhoan.doiMatKhauLanDau,
       },
     }
+  }
+
+  async chonPhanCongDangHoatDong(maTaiKhoan: string, maPhien: string, maPhanCong: string) {
+    const now = new Date()
+    const assignment = await this.prisma.phanCongVaiTro.findFirst({
+      where: {
+        ma: maPhanCong, maTaiKhoan,
+        ngayHieuLucTu: { lte: now },
+        OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }],
+        thuHoiLuc: null,
+        vaiTro: { trangThai: 'DANG_HOAT_DONG' },
+      },
+      select: { ma: true },
+    })
+    if (!assignment) throw new ForbiddenException({ maLoi: 'PHAN_CONG_KHONG_HOP_LE', thongBao: 'Phân công không còn hiệu lực hoặc không thuộc tài khoản này.' })
+    const updated = await this.prisma.phienDangNhap.updateMany({
+      where: { ma: maPhien, maTaiKhoan, thuHoiLuc: null, hetHanLuc: { gt: now } },
+      data: { maPhanCongVaiTroDangHoatDong: assignment.ma },
+    })
+    if (!updated.count) throw new UnauthorizedException({ maLoi: 'PHIEN_KHONG_HOP_LE', thongBao: 'Phiên đăng nhập không còn hiệu lực.' })
+    return { maPhanCongVaiTroDangHoatDong: assignment.ma }
   }
 
   async dangXuat(tokenPhien: string | undefined, thongTin: ThongTinYeuCau) {

@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import type { Request, Response } from 'express'
-import { CapNhatThongTinTaiKhoanCuaToiDto, DangNhapDto, DoiMatKhauDto } from './auth.dto'
+import { CapNhatThongTinTaiKhoanCuaToiDto, ChonPhanCongDangHoatDongDto, DangNhapDto, DoiMatKhauDto } from './auth.dto'
 import { XacThucGuard } from './auth.guard'
 import { XacThucService, type ThongTinYeuCau } from './auth.service'
 import type { YeuCauDaXacThuc } from './auth.types'
@@ -50,12 +50,32 @@ export class XacThucController {
   @UseGuards(XacThucGuard)
   phienHienTai(@Req() yeuCau: YeuCauDaXacThuc) {
     return {
+      maPhanCongVaiTroDangHoatDong: yeuCau.taiKhoanDaXacThuc.maPhanCongVaiTroDangHoatDong,
+      phanCongHopLe: yeuCau.taiKhoanDaXacThuc.phanCongHopLe,
+      quyenDangHoatDong: yeuCau.taiKhoanDaXacThuc.quyenDangHoatDong,
       taiKhoan: {
         maTaiKhoan: yeuCau.taiKhoanDaXacThuc.maTaiKhoan,
         tenDangNhap: yeuCau.taiKhoanDaXacThuc.tenDangNhap,
         doiMatKhauLanDau: yeuCau.taiKhoanDaXacThuc.doiMatKhauLanDau,
       },
     }
+  }
+
+  @Post('phan-cong-vai-tro-dang-hoat-dong')
+  @HttpCode(200)
+  @UseGuards(XacThucGuard)
+  async chonPhanCongDangHoatDong(
+    @Body() dto: ChonPhanCongDangHoatDongDto,
+    @Req() yeuCau: YeuCauDaXacThuc,
+    @Headers('origin') nguon: string | undefined,
+  ) {
+    this.xacThuc.kiemTraNguonYeuCau(nguon)
+    await this.xacThuc.chonPhanCongDangHoatDong(
+      yeuCau.taiKhoanDaXacThuc.maTaiKhoan,
+      yeuCau.taiKhoanDaXacThuc.maPhien,
+      dto.maPhanCong,
+    )
+    return { maPhanCongVaiTroDangHoatDong: dto.maPhanCong }
   }
 
   @Get('tai-khoan-cua-toi')

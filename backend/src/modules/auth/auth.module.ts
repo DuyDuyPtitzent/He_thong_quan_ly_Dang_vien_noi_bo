@@ -7,6 +7,6 @@ import { BamMatKhauService } from './password-hasher'
 @Module({
   controllers: [XacThucController],
   providers: [XacThucService, XacThucGuard, BamMatKhauService],
-  exports: [XacThucGuard, XacThucService],
+  exports: [XacThucGuard, XacThucService, BamMatKhauService],
 })
 export class XacThucModule {}

@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, Length, MaxLength } from 'class-validator'
+import { IsEmail, IsOptional, IsString, IsUUID, Length, MaxLength } from 'class-validator'
 
 export class DangNhapDto {
   @IsString()
@@ -25,4 +25,8 @@ export class CapNhatThongTinTaiKhoanCuaToiDto {
   @IsEmail()
   @MaxLength(254)
   email?: string | null
+}
+
+export class ChonPhanCongDangHoatDongDto {
+  @IsUUID('4') maPhanCong!: string
 }

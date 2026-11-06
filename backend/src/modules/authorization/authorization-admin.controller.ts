@@ -11,18 +11,13 @@ export class QuanTriPhanQuyenController {
 
   @Get('quyen')
   async danhMuc(@Req() request: YeuCauDaXacThuc) {
-    await this.service.kiemTraQuyenDanhMuc(request.taiKhoanDaXacThuc.maTaiKhoan, 'QUYEN_XEM_DANH_MUC')
+    await this.service.kiemTraQuyenDanhMuc(request.taiKhoanDaXacThuc, 'QUYEN_XEM_DANH_MUC')
     return this.service.danhMucQuyen()
-  }
-
-  @Get('tai-khoan')
-  taiKhoanDePhanQuyen(@Req() request: YeuCauDaXacThuc, @Query() query: TimTaiKhoanPhanQuyenDto) {
-    return this.service.taiKhoanDePhanQuyen(request.taiKhoanDaXacThuc, query)
   }
 
   @Get('vai-tro')
   async danhSachVaiTro(@Req() request: YeuCauDaXacThuc) {
-    await this.service.kiemTraQuyenDanhMuc(request.taiKhoanDaXacThuc.maTaiKhoan, 'VAI_TRO_XEM')
+    await this.service.kiemTraQuyenDanhMuc(request.taiKhoanDaXacThuc, 'VAI_TRO_XEM')
     return this.service.vaiTro()
   }
 
@@ -59,6 +54,11 @@ export class QuanTriPhanQuyenController {
   @Get('phan-cong-vai-tro/cua-toi')
   danhSachPhanCongCuaToi(@Req() request: YeuCauDaXacThuc) {
     return this.service.danhSachPhanCong(request.taiKhoanDaXacThuc, request.taiKhoanDaXacThuc.maTaiKhoan)
+  }
+
+  @Get('phan-cong-vai-tro/lich-su')
+  lichSuPhanCongTaiKhoan(@Req() request: YeuCauDaXacThuc, @Query() query: LocPhanCongVaiTroDto) {
+    return this.service.lichSuPhanCongTaiKhoan(request.taiKhoanDaXacThuc, query.maTaiKhoan)
   }
 
   @Patch('phan-cong-vai-tro/:maPhanCong')

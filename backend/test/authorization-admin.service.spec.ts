@@ -1,9 +1,17 @@
 import { ForbiddenException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 import { QuanTriPhanQuyenService } from '../src/modules/authorization/authorization-admin.service'
+import { systemAdministratorPermissionCodes } from '../src/modules/authorization/system-administrator.policy'
+import { permissionCatalog } from '../src/modules/authorization/permission-catalog'
+
+describe('Chính sách Quản trị viên toàn hệ thống', () => {
+  it('cấp toàn bộ Permission có trong danh mục hệ thống', () => {
+    expect(systemAdministratorPermissionCodes).toEqual(permissionCatalog)
+  })
+})
 
 function actor(maTaiKhoan = 'actor-1') {
-  return { maTaiKhoan, tenDangNhap: 'actor', doiMatKhauLanDau: false, maPhien: 'session-1' }
+  return { maTaiKhoan, tenDangNhap: 'actor', doiMatKhauLanDau: false, maPhien: 'session-1', maPhanCongVaiTroDangHoatDong: 'assignment-actor' }
 }
 
 function setup(assignments: any[] = [], phanQuyen: any = {}) {
@@ -43,7 +51,7 @@ describe('QuanTriPhanQuyenService', () => {
 
     await service.taiKhoanDePhanQuyen(actor(), { tuKhoa: 'tree', gioiHan: 20 })
 
-    expect(phanQuyen.layDonViTrongPhamVi).toHaveBeenCalledWith('actor-1', 'TAI_KHOAN_XEM')
+    expect(phanQuyen.layDonViTrongPhamVi).toHaveBeenCalledWith('actor-1', 'TAI_KHOAN_XEM', 'session-1')
     expect(prisma.taiKhoanNguoiDung.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ ma: { in: ['target-tree', 'target-list'] }, trangThai: 'DANG_HOAT_DONG' }),
     }))
@@ -54,6 +62,14 @@ describe('QuanTriPhanQuyenService', () => {
     const { service, prisma } = setup([], phanQuyen)
     await expect(service.taiKhoanDePhanQuyen(actor(), {})).rejects.toBeInstanceOf(ForbiddenException)
     expect(prisma.taiKhoanNguoiDung.findMany).not.toHaveBeenCalled()
+  })
+
+  it('requires the audit-view Permission before returning Assignment audit history', async () => {
+    const phanQuyen = { kiemTra: vi.fn().mockRejectedValue(new ForbiddenException()) }
+    const { service, prisma } = setup([], phanQuyen)
+    await expect(service.lichSuPhanCongTaiKhoan(actor(), 'target-1')).rejects.toBeInstanceOf(ForbiddenException)
+    expect(phanQuyen.kiemTra).toHaveBeenCalledWith('actor-1', 'NHAT_KY_KIEM_TOAN_XEM', {}, 'session-1')
+    expect(prisma.taiKhoanNguoiDung.findUnique).not.toHaveBeenCalled()
   })
 
   it('blocks self-assignment before reading role or target account', async () => {
@@ -108,6 +124,7 @@ describe('QuanTriPhanQuyenService', () => {
 
   it('lets the explicitly system-wide administrator delegate business Permissions without inheriting them', async () => {
     const adminSource = {
+      ma: 'assignment-actor', maTaiKhoan: 'actor-1', ngayHieuLucTu: new Date(0), ngayHieuLucDen: null, thuHoiLuc: null,
       loaiPhamVi: 'TOAN_HE_THONG', maDonViGoc: null, phamViDonViChiDinh: [],
       vaiTro: { maDinhDanh: 'QUAN_TRI_VIEN_TOAN_HE_THONG', laVaiTroHeThong: true, quyen: [
         { quyen: { maDinhDanh: 'PHAN_CONG_VAI_TRO_TAO' } },
@@ -135,5 +152,16 @@ describe('QuanTriPhanQuyenService', () => {
     await expect(service.taoPhanCong(actor(), {
       maTaiKhoan: 'target-1', maVaiTro: 'role-1', loaiPhamVi: 'CAY_DON_VI', maDonViGoc: 'outside-root', lyDo: 'test',
     })).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it('rejects an Assignment end time that is not after its start time', async () => {
+    const { service, prisma } = setup([source(['PHAN_CONG_VAI_TRO_TAO', 'TO_CHUC_TAO'])])
+    const start = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+    const end = new Date(start.getTime() - 60 * 60 * 1000)
+    await expect(service.taoPhanCong(actor(), {
+      maTaiKhoan: 'target-1', maVaiTro: 'role-1', loaiPhamVi: 'CAY_DON_VI', maDonViGoc: 'root-1',
+      ngayHieuLucTu: start.toISOString(), ngayHieuLucDen: end.toISOString(), lyDo: 'thời hạn không hợp lệ',
+    })).rejects.toMatchObject({ response: { maLoi: 'THOI_HAN_KHONG_HOP_LE' } })
+    expect(prisma.$transaction).not.toHaveBeenCalled()
   })
 })
