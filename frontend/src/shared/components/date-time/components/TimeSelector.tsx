@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
 import { cn } from 'cn'
 import { Button } from '@/shared/components/ui/button'
 
@@ -15,7 +15,7 @@ export function TimeSelector({ hour, minute, onHour, onMinute, label, matchHeigh
       column.scrollTop += selectedBox.top - columnBox.top - (column.clientHeight - selected.clientHeight) / 2
     }
   }, [hour, minute])
-  useEffect(() => {
+  useLayoutEffect(() => {
     const target = matchHeightToRef?.current
     if (!target) return
     const updateHeight = () => setMatchedHeight(target.getBoundingClientRect().height)

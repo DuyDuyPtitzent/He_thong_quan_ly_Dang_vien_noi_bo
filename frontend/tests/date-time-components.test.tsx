@@ -129,6 +129,7 @@ describe('single-value pickers', () => {
 
     const hourList = screen.getByRole('listbox', { name: 'Thời gian: giờ' })
     const minuteList = screen.getByRole('listbox', { name: 'Thời gian: phút' })
+    expect(screen.getByRole('region', { name: 'Thời gian' }).parentElement).toHaveClass('sm:items-start')
     expect(within(hourList).getAllByRole('option')).toHaveLength(24)
     expect(within(minuteList).getAllByRole('option')).toHaveLength(60)
     expect(hourList).toHaveClass('h-48', 'overscroll-contain')
@@ -163,6 +164,7 @@ describe('date-time range picker', () => {
     render(<DateTimeRangePicker value={{ from: '2026-11-04T08:00' }} onChange={onChange} />)
     fireEvent.click(screen.getByRole('button', { name: /04\/11\/2026 08:00/i }))
     const timeLists = screen.getAllByRole('listbox')
+    expect(screen.getByRole('region', { name: 'Bắt đầu' }).parentElement?.parentElement).toHaveClass('xl:items-start')
     expect(timeLists).toHaveLength(4)
     expect(timeLists.map((list) => within(list).getAllByRole('option').length)).toEqual([24, 60, 24, 60])
     expect(timeLists.every((list) => list.classList.contains('overscroll-contain'))).toBe(true)
