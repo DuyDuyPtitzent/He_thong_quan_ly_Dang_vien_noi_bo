@@ -7,6 +7,7 @@ export type NavigationItem = {
   icon?: LucideIcon
   children?: NavigationItem[]
   permission?: string | string[]
+  systemAdministratorOnly?: boolean
   hidden?: boolean
   disabled?: boolean
 }
@@ -48,7 +49,7 @@ export const navigationConfig: { title: string; items: NavigationItem[] }[] = [
           { id: 'settings-appearance', title: 'Giao diện', path: '/settings/appearance' },
         ],
       },
-      { id: 'system-logs', title: 'Nhật ký hệ thống (Đang phát triển)', icon: Network, permission: ['NHAT_KY_KIEM_TOAN_XEM', 'NHAT_KY_BAO_MAT_XEM'], disabled: true },
+      { id: 'system-logs', title: 'Nhật ký hệ thống', path: '/nhat-ky-he-thong', icon: Network, permission: ['NHAT_KY_KIEM_TOAN_XEM', 'NHAT_KY_BAO_MAT_XEM'], systemAdministratorOnly: true },
     ],
   },
   {

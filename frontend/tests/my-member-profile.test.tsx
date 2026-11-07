@@ -2,12 +2,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { MyMemberProfilePage } from '@/features/accounts/MyMemberProfilePage'
+import { MyMemberProfilePage } from '@/features/my-profile/pages/MyMemberProfilePage'
 
 const mocks = vi.hoisted(() => ({ permissions: ['SINH_HOAT_XEM_HIEN_TAI'] as string[], myProfile: vi.fn(), myUpdateWindow: vi.fn(), myUpdateRequests: vi.fn(), submitUpdateRequest: vi.fn(), myAvatar: vi.fn(), membershipHistory: vi.fn(), partyProcess: vi.fn(), positionAssignments: vi.fn() }))
 vi.mock('@/core/auth/auth-context', () => ({ useAuth: () => ({ taiKhoan: { maTaiKhoan: 'account-a', quyenDangHoatDong: mocks.permissions } }) }))
-vi.mock('@/features/accounts/member-profiles.api', () => ({ memberProfilesApi: mocks }))
-vi.mock('@/features/accounts/MemberProfileAvatar', () => ({ MemberProfileAvatar: () => <div aria-label="Ảnh đại diện"/> }))
+vi.mock('@/features/member-profiles/api/member-profiles.api', () => ({ memberProfilesApi: mocks }))
+vi.mock('@/features/my-profile/api/my-profile.api', () => ({ myProfileApi: { profile: mocks.myProfile, updateWindow: mocks.myUpdateWindow, updateRequests: mocks.myUpdateRequests, submitUpdateRequest: mocks.submitUpdateRequest, avatar: mocks.myAvatar } }))
+vi.mock('@/features/my-profile/components/MyProfileAvatar', () => ({ MyProfileAvatar: () => <div aria-label="Ảnh đại diện"/> }))
 
 const renderPage = () => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })

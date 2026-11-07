@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { HoSoInput } from '../src/features/accounts/member-profiles.api'
-import { kiemTraSuaHoSo, kiemTraTaoHoSo } from '../src/features/accounts/member-profiles.validation'
+import type { HoSoInput } from '../src/features/member-profiles/types/member-profiles.types'
+import { kiemTraSuaHoSo, kiemTraTaoHoSo } from '../src/features/member-profiles/validation/member-profiles.validation'
 
 const hopLe: HoSoInput = {
   maHoSoNoiBo: 'HS-001', hoVaTen: 'Nguyễn An', trangThai: 'DANG_HOAT_DONG',

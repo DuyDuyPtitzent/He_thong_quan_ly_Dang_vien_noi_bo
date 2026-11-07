@@ -36,4 +36,41 @@ describe('SchoolYearsPage', () => {
     await screen.findByText('2026–2027')
     expect(screen.getByRole('button', { name: 'Tạo năm học' })).toBeInTheDocument()
   })
+
+  it('saves school-year dates as date-only values across the year boundary', async () => {
+    mocks.permissions = ['NAM_HOC_XEM', 'NAM_HOC_TAO']
+    mocks.scope = 'TOAN_HE_THONG'
+    mocks.create.mockResolvedValue(undefined)
+    renderPage()
+    await screen.findByText('2026–2027')
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo năm học' }))
+    fireEvent.change(screen.getByLabelText('Mã năm học'), { target: { value: '2026-2027' } })
+    fireEvent.change(screen.getByLabelText('Tên năm học'), { target: { value: '2026–2027' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ngày bắt đầu năm học' }))
+    fireEvent.change(screen.getByPlaceholderText('dd/MM/yyyy'), { target: { value: '01/09/2026' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ngày kết thúc năm học' }))
+    fireEvent.change(screen.getByPlaceholderText('dd/MM/yyyy'), { target: { value: '31/08/2027' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu năm học' }))
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ ngayBatDau: '2026-09-01', ngayKetThuc: '2027-08-31' })))
+  })
+
+  it('keeps the save action disabled when the school-year start date is after the end date', async () => {
+    mocks.permissions = ['NAM_HOC_XEM', 'NAM_HOC_TAO']
+    mocks.scope = 'TOAN_HE_THONG'
+    renderPage()
+    await screen.findByText('2026–2027')
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo năm học' }))
+    fireEvent.change(screen.getByLabelText('Mã năm học'), { target: { value: 'invalid-range' } })
+    fireEvent.change(screen.getByLabelText('Tên năm học'), { target: { value: 'Khoảng ngày sai' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ngày bắt đầu năm học' }))
+    fireEvent.change(screen.getByPlaceholderText('dd/MM/yyyy'), { target: { value: '01/09/2027' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ngày kết thúc năm học' }))
+    fireEvent.change(screen.getByPlaceholderText('dd/MM/yyyy'), { target: { value: '31/08/2027' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
+    expect(screen.getByRole('button', { name: 'Lưu năm học' })).toBeDisabled()
+    expect(mocks.create).not.toHaveBeenCalled()
+  })
 })

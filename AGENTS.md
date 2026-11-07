@@ -29,10 +29,15 @@
 - Giữ nghiệp vụ giao diện trong `frontend/src/features/<feature>/`; `app` lắp ghép route/provider, `core` giữ hạ tầng ứng dụng, `layouts` giữ khung, `shared` chỉ chứa thứ thật sự dùng chung.
 - Không để `shared`, `core` hoặc `layouts` phụ thuộc vào `features`; tránh gọi API trong component trình bày. Dùng Axios client và TanStack Query hiện có khi tích hợp API.
 - Ưu tiên UI primitives và shared components đã có trước khi tạo mới. UI permission chỉ phục vụ trải nghiệm; quyền dữ liệu phải được kiểm tra phía server. Backend có guard Permission + Scope cho API tổ chức và quản trị quyền; không suy ra các API hồ sơ/tài khoản đã sẵn sàng.
+- Khi triển khai hoặc sửa một API/chức năng gắn với Permission, phải đối chiếu `backend/src/modules/authorization/permission-catalog.ts` trong cùng thay đổi: đặt trạng thái `DA_CO_API` khi endpoint Backend thực sự đã có kiểm tra xác thực, Permission và Scope cần thiết; giữ `CHUA_CO_API` khi mới là quyền quy hoạch hoặc endpoint chưa tồn tại. Không suy trạng thái từ tên quyền, UI, tài liệu kế hoạch hoặc việc quyền đã được cấp cho Role. Khi rà soát, lần từ Permission qua route/controller tới service và kiểm tra hành vi phía máy chủ.
 - Mọi trang con trong `AdminLayout` đã được bọc bởi `PageContainer`; không bọc `PageContainer` thêm lần nữa trong feature. Dùng `PageHeader`, `StatisticCard`, primitives bảng/lọc, `StandardSheet` và Dialog dùng chung. Giữ nhất quán chiều rộng, padding và nhịp khu vực theo trang quản trị tham chiếu; không tự đặt `max-width`, chiều cao, lề hoặc khoảng cách riêng theo cảm tính. Nếu nghiệp vụ cần ngoại lệ, giới hạn thay đổi tại trang đó và nêu lý do.
 - Khuôn trang quản trị chuẩn: `PageHeader`, các khối nội dung theo `space-y-5`, lưới thống kê `gap-3 sm:grid-cols-2 xl:grid-cols-4`, bộ lọc và bảng trong các Card riêng; bảng rộng dùng vùng cuộn ngang trong Card, không làm rộng/vỡ khung trang. Giữ kích thước input, hàng bảng và phân trang theo shared primitives.
 - Khi tạo hoặc chỉnh sửa giao diện, sử dụng skill UI UX Pro Max và tuân thủ design system hiện có.
 - Mọi màu giao diện phải dùng token tập trung tại `frontend/src/app/styles/globals.css` (các biến semantic như `background`, `foreground`, `primary`, `accent`, `sidebar`). Không đặt mã màu trực tiếp hoặc tự tạo bảng màu trong module/feature; chỉ thay đổi theme tập trung hoặc thêm token dùng chung khi được yêu cầu.
+- Trước khi tạo module hoặc chức năng mới, đọc `docs/sidebar-module-conventions.md`, xác định nhóm nghiệp vụ hiện có và tuân thủ quy hoạch Sidebar; nếu chưa phù hợp nhóm nào, đề xuất phương án và chờ phê duyệt trước khi đổi cấu trúc điều hướng.
+- Tổ chức frontend theo feature nghiệp vụ: `pages/`, `components/`, `api/`, `types/`, `validation/`, `constants/`, `services/`, `hooks/` chỉ tạo khi có nội dung phù hợp. Trang chỉ điều phối; chuyển adapter HTTP vào `api/`, kiểu miền vào `types/`, validation vào `validation/`, và logic biến đổi/định dạng thuần cần kiểm thử vào `services/`. Tách biểu mẫu/hộp thoại hoặc thành phần lớn có trách nhiệm riêng vào `components/` khi phù hợp.
+- Không để `shared`, `core`, `layouts` phụ thuộc vào `features`; tránh chu trình phụ thuộc giữa các feature. Phụ thuộc một chiều giữa feature chỉ được dùng có chủ đích cho luồng tổng hợp dữ liệu và phải giữ API/Permission/Scope hiện có. Thành phần dùng chung không chứa nghiệp vụ đặt trong `shared`.
+- Tái cấu trúc phải giữ nguyên URL, giao diện, luồng dữ liệu, hợp đồng API, quyền và hành vi hiện hành; không đổi backend/schema nếu yêu cầu chỉ thuộc frontend. Không tạo thư mục rỗng hoặc lớp trừu tượng nếu chưa có nhu cầu thực tế.
 - Định hướng Đảng viên trong kế hoạch nguồn là yêu cầu sản phẩm cần xác nhận và chia giai đoạn, không phải bằng chứng tính năng đã được triển khai. Không mang nguyên xi Tenant, RBAC, Workflow, nghiệp vụ Đoàn hoặc cấu trúc backend từ dự án nguồn.
 - Thay đổi schema, backend, hệ thống quyền, thư viện hoặc cấu trúc nền tảng cần được nêu thành kế hoạch rõ trước khi triển khai. Không thêm dependency nếu chưa thật cần.
 - Khi tạo migration Prisma mới, sau khi kiểm tra schema và migration phải tự áp dụng migration vào PostgreSQL phát triển đang cấu hình bằng lệnh `npm run prisma:migrate:deploy`; không được dừng ở việc chỉ tạo file migration. Xác nhận đúng cơ sở dữ liệu phát triển trước khi ghi, sau đó chạy `npm run prisma:migrate:status` và ghi kết quả vào `docs/SESSION_HANDOFF.md`. Không tự áp dụng vào production. Nếu PostgreSQL phát triển chưa chạy hoặc không kết nối được, thử khởi động dịch vụ CSDL cục bộ theo cấu hình/tài liệu dự án; nếu vẫn không khả dụng thì báo rõ migration còn chờ áp dụng và nguyên nhân, không tuyên bố hoàn tất.
@@ -42,3 +47,17 @@
 - Không quét toàn bộ `frontend/src/`, `node_modules/` hay lịch sử git nếu yêu cầu không cần.
 - Tìm symbol/route cụ thể bằng `rg`, lần theo import và chỉ mở các file cần thiết.
 - Chỉ đọc sâu `BASE_SOURCE_GUIDE.md` khi tác vụ cần chi tiết nền; tài liệu đó mô tả snapshot của source, nên code hiện tại là căn cứ cuối cùng.
+
+## Module Nhập/Xuất dữ liệu dùng chung
+
+- Nghiệp vụ cần nhập/xuất Excel ưu tiên dùng `backend/src/modules/data-transfer/` và `frontend/src/shared/components/data-transfer/`; mỗi feature sở hữu mapping, validation nghiệp vụ và quyền dữ liệu của mình.
+- Module dùng chung chỉ xử lý kỹ thuật workbook; không ghi trực tiếp vào bảng nghiệp vụ. Backend kiểm tra Permission + Scope, kiểm tra dữ liệu trước xác nhận và ghi audit.
+- Nhập dữ liệu cần preview có thời hạn gắn với người thao tác, giới hạn dung lượng/số dòng, kiểm tra lại trước khi ghi, xử lý lỗi nguyên tử và chống xác nhận lặp. Không lưu mật khẩu/secret trong workbook hoặc nhật ký.
+- Mẫu Excel có phiên bản và hướng dẫn tiếng Việt; không mặc định mọi trang đều cần nút Nhập/Xuất. Đặt thao tác trong trang nghiệp vụ, không thêm mục Sidebar riêng.
+- Cấu hình trường xuất rõ ràng và chỉ trả dữ liệu trong Permission + Scope hiện hành; không xuất toàn bộ cột CSDL theo mặc định.
+
+## Component ngày và thời gian dùng chung
+
+- Mọi chức năng chọn ngày, tháng, năm hoặc khoảng thời gian phải ưu tiên dùng bộ component tại `frontend/src/shared/components/date-time/`; không tự tạo lịch riêng khi component hiện có đáp ứng yêu cầu.
+- Dùng kiểu date-only `yyyy-MM-dd` cho ngày và `yyyy-MM` cho tháng; không chuyển qua UTC để tránh lệch ngày. Ngày giờ cục bộ dùng `yyyy-MM-dd'T'HH:mm`.
+- Các component chỉ quản lý lựa chọn và giới hạn chung; validation nghiệp vụ vẫn thuộc feature. Không thay thế hàng loạt trường hiện có nếu yêu cầu không bao gồm.

@@ -1,6 +1,6 @@
 # Đề xuất thiết kế hồ sơ đảng viên theo nhóm tab
 
-**Trạng thái:** Prisma model và migration dữ liệu hồ sơ đã tạo; chưa có API hoặc giao diện hồ sơ. Yêu cầu CCCD, nhóm thông tin sinh viên theo ảnh (bỏ hộ chiếu/mã bưu chính), lớp hành chính, Khóa dạng mã như `D23CQ` và Chi bộ khóa đã được ghi nhận. Cách chia tab và các trường chưa có biểu mẫu vẫn chờ duyệt.
+**Trạng thái:** Tài liệu thiết kế ban đầu; một phần API và giao diện hồ sơ đã được triển khai. Tính đến 2026-11-06, API xóa vật lý hồ sơ tạo nhầm đã có theo quy tắc ở mục “Phần đã triển khai”. Các nội dung thiết kế khác chưa được xác nhận tiếp tục ở trạng thái đề xuất; code hiện tại là căn cứ về triển khai.
 
 ## 1. Nguyên tắc
 
@@ -149,3 +149,10 @@ Sau khi duyệt, cập nhật ERD/data dictionary tổng thể rồi mới tạo
 
 - `ho_so_dang_vien` được bổ sung `trang_thai_dang_vien` nullable (`DU_BI`, `CHINH_THUC`, `DA_RA_KHOI_DANG`, `TU_TRAN`) và `ngay_vao_dang`; hồ sơ cũ giữ NULL do không có căn cứ để suy ra trạng thái. Thay đổi nằm trong migration bổ sung, không chỉnh sửa migration cũ.
 - Số CCCD tiếp tục được lưu trong trường mã hóa hiện hữu. Backend yêu cầu khóa AES-256-GCM và khóa HMAC đối chiếu tách biệt qua biến môi trường; không ghi số CCCD hoặc digest vào nhật ký kiểm toán.
+
+## Xóa hồ sơ tạo nhầm — 2026-11-06
+
+- `DELETE /ho-so-dang-vien/:maHoSo` yêu cầu xác thực, Permission `HO_SO_DANG_VIEN_XOA` và Scope trên hồ sơ. Backend khóa dòng hồ sơ trong transaction, kiểm tra lịch sử và ghi audit kết quả.
+- Chỉ cho xóa vật lý nếu xác minh được bản ghi tạo hồ sơ cùng đúng một bản ghi sinh hoạt ban đầu và tối đa một mốc `VAO_DANG_DU_BI` được tạo cùng transaction. Xóa các bản ghi ban đầu cùng thông tin cá nhân, địa chỉ và thông tin sinh viên trong transaction; giữ nguyên audit. Từ chối nếu có lịch sử sinh hoạt hoặc quá trình khác, phân công chức vụ hay yêu cầu cập nhật.
+- Nếu hồ sơ liên kết tài khoản, giữ bản ghi tài khoản, đặt trạng thái `TAM_KHOA`, thu hồi mọi Assignment và phiên đăng nhập. Không cho thao tác làm mất Quản trị viên toàn hệ thống hợp lệ cuối cùng.
+- Giao diện danh sách chỉ hiện thao tác khi có Permission, yêu cầu xác nhận bằng `AlertDialog`, nêu hồ sơ/Chi bộ/tác động, chờ Backend xác nhận rồi mới đóng và làm mới danh sách/thống kê.

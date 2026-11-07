@@ -49,7 +49,7 @@
 | `HO_SO_DANG_VIEN_XEM_TONG_QUAN` | Xem thông tin tổng quan được phép. |
 | `HO_SO_DANG_VIEN_TAO` | Tạo hồ sơ. |
 | `HO_SO_DANG_VIEN_SUA_THONG_TIN_CO_BAN` | Sửa dữ liệu lõi của hồ sơ theo Scope. |
-| `HO_SO_DANG_VIEN_XOA` | Xóa hẳn hồ sơ chỉ khi không còn lịch sử hoặc tham chiếu; nếu còn thì từ chối. |
+| `HO_SO_DANG_VIEN_XOA` | Xóa vật lý hồ sơ tạo nhầm sau khi kiểm tra Permission + Scope; chỉ xóa sinh hoạt/quá trình ban đầu được xác minh, từ chối khi có lịch sử phát sinh, phân công chức vụ hoặc yêu cầu cập nhật cần bảo lưu. Tài khoản liên kết được giữ lại nhưng khóa đăng nhập, thu hồi Assignment và phiên đăng nhập. |
 | `HO_SO_CA_NHAN_XEM` | Xem thông tin cá nhân; bao gồm xem CCCD bình thường theo quyền xem hồ sơ, không cần Permission CCCD riêng. |
 | `HO_SO_CA_NHAN_SUA` | Sửa thông tin cá nhân thông thường theo Scope. Với SELF, chỉ số điện thoại/email liên hệ và phải qua quy trình mở khóa, gửi yêu cầu, Chi bộ phê duyệt tại mục 4. |
 | `HO_SO_DIA_CHI_XEM` | Xem địa chỉ trong Scope. |
@@ -118,10 +118,14 @@ Người quản trị phân quyền chỉ được cấp Permission và Scope m�
 
 | Mã Permission | Hành động |
 |---|---|
-| `NHAT_KY_KIEM_TOAN_XEM` | Xem audit theo hồ sơ/đơn vị nằm trong Scope. |
-| `NHAT_KY_BAO_MAT_XEM` | Xem sự kiện đăng nhập, khóa tài khoản và thu hồi phiên; chỉ người được giao. |
+| `NHAT_KY_KIEM_TOAN_XEM` | Xem nhật ký toàn hệ thống; chỉ Quản trị viên toàn hệ thống có Assignment hiệu lực, chưa thu hồi, còn hạn và Scope `TOAN_HE_THONG`. |
+| `NHAT_KY_BAO_MAT_XEM` | Xem nhật ký bảo mật theo cùng điều kiện Quản trị viên toàn hệ thống; Permission riêng vẫn bắt buộc. |
 | `NHAT_KY_KIEM_TOAN_XUAT` | Xuất nhật ký bằng quyền riêng trong phạm vi. |
-| — | Không cấp quyền sửa hoặc xóa nhật ký. |
+| `NHAT_KY_XOA` | Permission riêng cho API xem trước yêu cầu xóa trong Scope; không tự cấp cho Role nào. Catalog `DA_CO_API` cho API xem trước; API xóa vật lý chưa có và không được phép thực hiện. |
+
+Tình trạng cập nhật 2026-11-07: Nhật ký hệ thống là chức năng quản trị đặc biệt, chỉ Quản trị viên toàn hệ thống có Assignment hợp lệ được truy cập. Mọi API đọc và xem trước dọn dẹp yêu cầu Role có mã `QUAN_TRI_VIEN_TOAN_HE_THONG`, tài khoản và Role đang hoạt động, Assignment chưa thu hồi/còn hạn, Scope `TOAN_HE_THONG`, cùng Permission riêng theo loại nhật ký. Các Permission xem cũ không đủ cho vai trò thông thường. Không tự động cấp quyền hoặc xóa lịch sử Assignment cũ; cần rà soát qua quy trình quản trị phân quyền. API chi tiết chưa trả JSON trước/sau do chưa có kiểm tra quyền dữ liệu nghiệp vụ riêng. Quyền xuất vẫn chưa có API; quyền xem không tự cấp quyền xuất. API xem trước xóa chỉ đếm số bản ghi khớp; chưa có chính sách lưu trữ được phê duyệt và không xóa.
+
+Chưa có chính sách lưu trữ nhật ký PTIT được phê duyệt. Bảng `nhat_ky_kiem_toan` có trigger append-only từ chối UPDATE/DELETE. Không thay đổi trigger hoặc thêm API xóa vật lý trước khi phê duyệt phân loại, thời hạn, ngoại lệ kiểm toán/điều tra, cách lưu dấu vết riêng và phương án bảo toàn dữ liệu.
 
 Audit không chứa mật khẩu, session token hoặc CCCD dạng rõ. Xem CCCD bình thường không tạo audit theo từng lượt xem.
 
@@ -173,13 +177,15 @@ Chi bộ là cấp duyệt thông thường trong phạm vi được giao. Đả
 ## 6.1. Khởi tạo và vận hành Quản trị viên toàn hệ thống
 
 1. Người có thẩm quyền chỉ định cụ thể tài khoản đầu tiên trước triển khai. Người vận hành được ủy quyền xác minh chỉ định, danh tính/chủ tài khoản và trạng thái tài khoản qua quy trình vận hành kín.
-2. Công cụ khởi tạo có kiểm soát kiểm tra Role/Assignment hiện có để tránh cấp trùng hoặc phát hành lại ngoài ý muốn; tạo Role hệ thống `QUAN_TRI_VIEN_TOAN_HE_THONG` nếu chưa có theo cấu hình được duyệt, gắn toàn bộ Permission trong catalog và cấp Assignment `TOAN_HE_THONG` không đặt hạn mặc định. Role Quản trị viên toàn hệ thống được gắn toàn bộ Permission đang có trong catalog, bao gồm hồ sơ, sinh hoạt và phê duyệt nghiệp vụ. Khi catalog có Permission mới, cần đồng bộ Role có kiểm soát và ghi audit. Ghi audit đầy đủ và không ghi bí mật xác thực vào log.
+2. Công cụ khởi tạo có kiểm soát kiểm tra Role/Assignment hiện có để tránh cấp trùng hoặc phát hành lại ngoài ý muốn; tạo Role hệ thống `QUAN_TRI_VIEN_TOAN_HE_THONG` nếu chưa có theo cấu hình được duyệt, gắn các Permission quản trị mặc định theo danh mục (ngoại trừ `NHAT_KY_XOA`, không tự động cấp cho Role nào) và cấp Assignment `TOAN_HE_THONG` không đặt hạn mặc định. Quản trị viên toàn hệ thống có thể cập nhật ma trận Role hệ thống qua API có kiểm tra Assignment hiệu lực, Scope toàn hệ thống và `VAI_TRO_GAN_QUYEN`; có thể cấp `NHAT_KY_XOA` bằng thao tác ma trận có chủ đích. Các quyền `QUYEN_XEM_DANH_MUC`, `VAI_TRO_XEM`, `VAI_TRO_GAN_QUYEN` được giữ để tránh tự khóa khả năng quản trị. Mọi thay đổi ma trận được ghi audit; không ghi bí mật xác thực vào log.
 3. Tài khoản quản trị viên tự đổi/thiết lập thông tin xác thực theo quy trình bảo mật. Các tài khoản quản trị viên tiếp theo chỉ được cấp khi có chỉ định rõ và qua cùng kiểm soát/audit; không có API thường cấp Role hệ thống hoặc Scope toàn hệ thống.
 4. Quản trị viên phân quyền xuống tài khoản khác bằng Assignment thông thường, đúng Permission và phạm vi trong thẩm quyền của mình. Backend không cho tự cấp, tự mở rộng Scope, hoặc ghép Permission và Scope từ hai Assignment khác nhau.
 5. Khi thu hồi/khóa/xóa một quản trị viên, Backend kiểm tra invariant quản trị viên hợp lệ cuối cùng. Thu hồi/quyền cao nhất cần ghi audit; nếu không còn quản trị viên hợp lệ sau thao tác thì từ chối.
 6. Khi mất toàn bộ quyền quản trị, người vận hành được ủy quyền xác minh yêu cầu và dùng công cụ/quy trình khôi phục ngoài API. Công cụ phải ghi nhật ký kiểm toán bất biến/đầy đủ; không tự chạy khi khởi động ứng dụng hoặc bootstrap.
 
 **Ranh giới triển khai:** Permission cấu hình/vận hành được thêm vào catalog và Role quản trị; API/module cấu hình và thao tác bảo trì cụ thể chưa được triển khai. Các hành động này phải có kiểm tra riêng; `VAN_HANH_HE_THONG` không phải quyền bỏ qua guard hoặc workflow.
+
+Theo quyết định ngày 2026-11-07, ma trận Permission của Role hệ thống được sửa qua API chỉ khi phiên hiện tại có Assignment hợp lệ của `QUAN_TRI_VIEN_TOAN_HE_THONG` với Scope `TOAN_HE_THONG` và Permission `VAI_TRO_GAN_QUYEN`. Quyền sửa thông tin, tạm ngừng, xóa Role hệ thống và thay đổi Assignment hệ thống vẫn bị khóa. Các quyền `QUYEN_XEM_DANH_MUC`, `VAI_TRO_XEM`, `VAI_TRO_GAN_QUYEN` được bảo vệ khỏi việc gỡ khỏi Role quản trị viên để tránh tự khóa công cụ quản trị. `NHAT_KY_XOA` không được bootstrap/sync tự động; chỉ có thể thêm bằng thao tác ma trận được ủy quyền.
 
 ## 7. Role chức năng mẫu
 
@@ -216,15 +222,16 @@ Các Role mẫu không tự được gán khi bootstrap. Việc cấp Role/Assig
 | Quản trị viên tự thu hồi Assignment cao nhất của mình | Backend từ chối và audit. |
 | Quản trị viên toàn hệ thống duyệt nghiệp vụ chỉ dựa vào quyền kỹ thuật | Từ chối nếu thiếu Permission/workflow nghiệp vụ tương ứng. |
 | Chi bộ B chấp thuận tiếp nhận Đảng viên A | Chuyển quan hệ sinh hoạt và quyền của Đảng viên gắn với Chi bộ sang B; lưu lịch sử. |
-| Xóa hồ sơ còn lịch sử/tham chiếu | Từ chối; không cascade. |
-| Người có quyền xem nhật ký sửa hoặc xóa audit | Từ chối. |
+| Xóa hồ sơ có lịch sử sinh hoạt/quá trình ngoài dữ liệu tạo ban đầu, chức vụ hoặc yêu cầu cập nhật | Từ chối và ghi audit; không cascade. |
+| Người chỉ có quyền xem nhật ký yêu cầu xóa | Từ chối vì thiếu `NHAT_KY_XOA`. |
+| Người có `NHAT_KY_XOA` yêu cầu xóa vật lý audit khi chưa có chính sách lưu trữ | Chỉ cho xem trước số bản ghi trong phạm vi; không xóa. |
 
 ## 9. Các nội dung chưa chốt trước khi triển khai
 
 1. Thời lượng, người mở và phạm vi áp dụng cửa sổ tự cập nhật; xử lý đề nghị còn chờ khi hết hạn.
 2. Ai được khởi tạo chuyển sinh hoạt; Chi bộ A có cần xác nhận ngoài việc Chi bộ B tiếp nhận không.
 
-Các nội dung đã được quyết định tại tài liệu này không mở lại: `DON_VI_CHI_DINH` chọn đúng đơn vị, `CAY_DON_VI` tại Chi bộ bao gồm Tổ trực thuộc, không cho xuất hồ sơ trong MVP, Role tự xem hồ sơ cá nhân có trong MVP, CCCD xem theo quyền hồ sơ thông thường, và hồ sơ còn lịch sử/tham chiếu không được xóa hẳn.
+Các nội dung đã được quyết định tại tài liệu này không mở lại: `DON_VI_CHI_DINH` chọn đúng đơn vị, `CAY_DON_VI` tại Chi bộ bao gồm Tổ trực thuộc, không cho xuất hồ sơ trong MVP, Role tự xem hồ sơ cá nhân có trong MVP, CCCD xem theo quyền hồ sơ thông thường. Quyết định ngày 2026-11-06 cho phép xóa vật lý hồ sơ tạo nhầm cùng các bản ghi sinh hoạt/quá trình ban đầu đã xác minh; lịch sử phát sinh sau đó vẫn phải bảo toàn.
 
 ## 10. Cập nhật quyết định về quyền duyệt cấp trên
 

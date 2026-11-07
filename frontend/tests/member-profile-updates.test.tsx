@@ -1,18 +1,40 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MemberProfileUpdatesPage } from '@/features/accounts/MemberProfileUpdatesPage'
-import type { YeuCauCapNhatHoSo } from '@/features/accounts/member-profiles.api'
+import { MemberProfileUpdatesPage } from '@/features/profile-updates/pages/MemberProfileUpdatesPage'
+import type { YeuCauCapNhatHoSo } from '@/features/profile-updates/types/profile-updates.types'
 
 const mocks = vi.hoisted(() => ({ permissions: ['HO_SO_CA_NHAN_MO_DOT_CAP_NHAT'] as string[], updateWindows: vi.fn(), updateUnits: vi.fn(), createUpdateWindow: vi.fn(), createAndActivateUpdateWindow: vi.fn(), updateUpdateWindow: vi.fn(), activateUpdateWindow: vi.fn(), finishUpdateWindow: vi.fn(), deleteUpdateWindow: vi.fn(), updateWindowStats: vi.fn(), reviewRequests: vi.fn(), approveUpdateRequest: vi.fn(), rejectUpdateRequest: vi.fn() }))
 vi.mock('@/core/auth/auth-context', () => ({ useAuth: () => ({ taiKhoan: { quyenDangHoatDong: mocks.permissions } }) }))
-vi.mock('@/features/accounts/member-profiles.api', () => ({ memberProfilesApi: mocks }))
+vi.mock('@/features/profile-updates/api/profile-updates.api', () => ({ profileUpdatesApi: mocks }))
 vi.mock('@/shared/components/RichTextEditor', () => ({ RichTextEditor: ({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (value: string) => void }) => <label htmlFor={id}>{label}<textarea id={id} value={value} onChange={(event) => onChange(event.target.value)}/></label> }))
 vi.mock('@/shared/components/RichTextContent', () => ({ RichTextContent: ({ html }: { html: string }) => <div>{html}</div> }))
 
+function setDateTimeRange(from: string, to: string) {
+  const selectDate = (value: string) => {
+    const [date] = value.split('T')
+    const [year, month, day] = date.split('-').map(Number)
+    const label = new Date(year, month - 1, day).toLocaleDateString()
+    const button = screen.getAllByRole('button').find((item) => item.getAttribute('data-day') === label)
+    if (!button) throw new Error(`Calendar day ${date} was not rendered`)
+    fireEvent.click(button)
+  }
+  const selectTime = (side: 'Bắt đầu' | 'Kết thúc', value: string) => {
+    const [, time] = value.split('T')
+    const [hour, minute] = time.split(':').map(Number)
+    fireEvent.click(within(screen.getByRole('listbox', { name: `${side}: giờ` })).getByRole('option', { name: String(hour).padStart(2, '0') }))
+    fireEvent.click(within(screen.getByRole('listbox', { name: `${side}: phút` })).getByRole('option', { name: String(minute).padStart(2, '0') }))
+  }
+  fireEvent.click(screen.getByRole('button', { name: 'Khoảng ngày giờ đợt cập nhật' }))
+  selectDate(from)
+  selectDate(to)
+  selectTime('Bắt đầu', from)
+  selectTime('Kết thúc', to)
+  fireEvent.click(screen.getByRole('button', { name: 'Xác nhận' }))
+}
+
 const makeWindow = (id: string, name: string, start: Date, end: Date, trangThaiQuanLy: 'BAN_NHAP' | 'DA_KICH_HOAT' | 'KET_THUC_SOM' = 'DA_KICH_HOAT') => ({ ma: id, ten: name, moTa: null, maDonVi: null, tenDonVi: 'Toàn hệ thống', ngayBatDau: start.toISOString(), ngayKetThuc: end.toISOString(), cacTruongDuocPhep: ['thongTinCaNhan.soDienThoai'], trangThaiQuanLy, maNguoiTao: 'account-admin', nguoiTao: 'admin', ngayTao: start.toISOString(), maNguoiKichHoat: 'account-admin', nguoiKichHoat: 'admin', thoiDiemKichHoat: start.toISOString(), maNguoiKetThucSom: null, nguoiKetThucSom: null, thoiDiemKetThucSom: null, soYeuCau: 0 })
 const makeQueueResponse = (duLieu: YeuCauCapNhatHoSo[], total = duLieu.length, trang = 1, gioiHan = 25) => ({ duLieu, phanTrang: { trang, gioiHan, tongSo: total, tongTrang: Math.ceil(total / gioiHan) }, thongKe: { tongYeuCau: total, choXuLy: total, daPheDuyet: 0, daTuChoi: 0, daHuy: 0 }, boLoc: { donVi: [{ ma: 'unit-a', ten: 'Chi bộ A' }], dotCapNhat: [{ ma: 'window-a', ten: 'Rà soát hồ sơ' }] } })
-const localDateTimeInput = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(<QueryClientProvider client={client}><MemberProfileUpdatesPage/></QueryClientProvider>)
@@ -68,8 +90,7 @@ describe('MemberProfileUpdatesPage', () => {
     await screen.findByText('Đợt đang mở')
     fireEvent.click(screen.getByRole('button', { name: 'Tạo đợt cập nhật' }))
     fireEvent.change(screen.getByLabelText(/Tên đợt cập nhật/), { target: { value: 'Đợt rà soát mới' } })
-    fireEvent.change(document.getElementById('campaign-start')!, { target: { value: '2027-02-01T09:00' } })
-    fireEvent.change(document.getElementById('campaign-end')!, { target: { value: '2027-02-03T17:00' } })
+    setDateTimeRange('2026-11-10T09:00', '2026-12-03T17:00')
     fireEvent.click(screen.getByRole('checkbox', { name: 'Cho phép đề nghị thay đổi Số điện thoại' }))
     fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
     expect(mocks.createUpdateWindow).not.toHaveBeenCalled()
@@ -79,13 +100,11 @@ describe('MemberProfileUpdatesPage', () => {
   })
 
   it('tạo và kích hoạt nguyên tử sau khi xác nhận từ cùng biểu mẫu', async () => {
-    const now = Date.now()
     renderPage()
     await screen.findByText('Đợt đang mở')
     fireEvent.click(screen.getByRole('button', { name: 'Tạo đợt cập nhật' }))
     fireEvent.change(screen.getByLabelText(/Tên đợt cập nhật/), { target: { value: 'Đợt cần mở ngay' } })
-    fireEvent.change(document.getElementById('campaign-start')!, { target: { value: localDateTimeInput(new Date(now + 60 * 60_000)) } })
-    fireEvent.change(document.getElementById('campaign-end')!, { target: { value: localDateTimeInput(new Date(now + 2 * 60 * 60_000)) } })
+    setDateTimeRange('2026-11-09T09:00', '2026-11-09T10:00')
     fireEvent.click(screen.getByRole('checkbox', { name: 'Cho phép đề nghị thay đổi Số điện thoại' }))
     fireEvent.click(screen.getByRole('button', { name: 'Lưu và kích hoạt' }))
     expect(mocks.createAndActivateUpdateWindow).not.toHaveBeenCalled()
@@ -98,13 +117,11 @@ describe('MemberProfileUpdatesPage', () => {
 
   it('keeps entered values when creating and activating fails', async () => {
     mocks.createAndActivateUpdateWindow.mockRejectedValue(new Error('Thời hạn bị trùng với đợt khác.'))
-    const now = Date.now()
     renderPage()
     await screen.findByText('Đợt đang mở')
     fireEvent.click(screen.getByRole('button', { name: 'Tạo đợt cập nhật' }))
     fireEvent.change(screen.getByLabelText(/Tên đợt cập nhật/), { target: { value: 'Đợt không được mất dữ liệu' } })
-    fireEvent.change(document.getElementById('campaign-start')!, { target: { value: localDateTimeInput(new Date(now + 60 * 60_000)) } })
-    fireEvent.change(document.getElementById('campaign-end')!, { target: { value: localDateTimeInput(new Date(now + 2 * 60 * 60_000)) } })
+    setDateTimeRange('2026-11-09T09:00', '2026-11-09T10:00')
     fireEvent.click(screen.getByRole('checkbox', { name: 'Cho phép đề nghị thay đổi Số điện thoại' }))
     fireEvent.click(screen.getByRole('button', { name: 'Lưu và kích hoạt' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Lưu và kích hoạt' }))

@@ -1,3 +1,51 @@
+## Tích hợp bộ chọn ngày và thời gian dùng chung — 2026-11-08
+
+- Kiểm kê trước thay đổi trong Frontend: hồ sơ Đảng viên (ngày nhập hồ sơ và ngày sinh hoạt bị khóa khi sửa); hồ sơ của tôi (ngày sinh và ngày cấp CCCD được chọn động theo kiểu `date`); nhập Excel (ngày áp dụng hàng loạt và ngày từng dòng); cập nhật hồ sơ (mốc bắt đầu/kết thúc đợt, bộ lọc yêu cầu và bộ lọc danh sách đợt); tổ chức (thời điểm hiệu lực khi tạo/sửa); năm học (bộ lọc và ngày bắt đầu/kết thúc); phân quyền tài khoản (thời hạn phân công); nhật ký (lọc và xem trước xóa theo ngày); thư viện component (ví dụ Input và Sheet). Không thấy bộ chọn native cho tháng/năm riêng.
+- Chuyển mọi trường tương tác ở trên sang `DatePicker`, `DateTimePicker`, `DateRangePicker` hoặc `DateTimeRangePicker` theo kiểu dữ liệu. Đợt cập nhật dùng `DateTimeRangePicker`; bộ lọc nhật ký, năm học, đợt và yêu cầu dùng `DateRangePicker`. Hồ sơ tài khoản và các màn hình xem lịch sử/ngày tạo chỉ hiển thị ngày giờ, không có trường nhập ngày độc lập để thay. Ngày trong bảng/chi tiết và thời điểm trong nhật ký vẫn là giá trị hiển thị.
+- Năm học giữ nguyên giá trị ngày thuần `yyyy-MM-dd`, payload API và điều kiện ngày bắt đầu nhỏ hơn ngày kết thúc; sửa bản ghi tiếp tục lấy phần ngày từ giá trị Backend mà không quy đổi UTC. Ngày giờ giữ giá trị giờ địa phương hiện hành trước khi đổi sang ISO theo API. Trường ngày sinh hoạt bị khóa khi sửa vẫn chỉ đọc và không thể xóa.
+- `DateRangePicker` và `DateTimeRangePicker` giữ lịch hai tháng; vùng lịch/cuộn ngang giới hạn chiều rộng trong viewport. `DateTimePicker` đồng bộ lại giờ/phút khi nhận giá trị bản ghi đã tải/thay đổi. Trường ngày hồ sơ giữ `aria-invalid` và mô tả lỗi trên nút picker.
+- Rà soát sau thay đổi: không còn `input type="date"`, `datetime-local`, `month` hoặc `time` trong `frontend/src`; không có Calendar/DatePicker cũ được dùng làm trường nhập trong feature.
+- Kiểm thử 6 bộ liên quan đạt 41/41. Toàn bộ Frontend đạt 84/85 ở 20 tệp; lỗi duy nhất ngoài phạm vi thay đổi tại `tests/rich-text-editor.test.tsx`, kỳ vọng `readonly` trên mock TinyMCE. Tệp test và component RichTextEditor không được chỉnh sửa ở tác vụ này.
+- `npm run build` đạt (TypeScript + Vite); lint các tệp liên quan không có lỗi, có 3 cảnh báo hook tại trang cập nhật hồ sơ; `git diff --check` đạt. Rà `frontend/src` không còn `input type="date"`, `datetime-local`, `month` hoặc `time`. Build hiện cảnh báo một chunk lớn hơn 500 kB.
+
+## Nhập tài khoản hàng loạt bằng Excel — 2026-11-07
+
+## Tách cột trạng thái và lỗi trong preview nhập tài khoản — 2026-11-08
+
+- Tách bảng dùng chung `AccountImportRowsTable` với đúng thứ tự 8 cột: Dòng Excel, Tên đăng nhập, Email, Trạng thái ban đầu, Loại tài khoản, Kết quả, Trạng thái tồn tại, Lỗi chi tiết. Kết quả chỉ hiện Badge Hợp lệ/Có lỗi; trạng thái tồn tại lấy từ API; lỗi từng trường nằm riêng, mỗi mục trên dòng riêng.
+- Cột lỗi giới hạn ban đầu hai lỗi, có Xem thêm/Thu gọn khi một dòng có nhiều hơn hai lỗi, giữ chiều rộng tối đa và tự xuống dòng. Tái sử dụng bảng tại xem trước, xác nhận và kết quả thực nhập; kết quả nhập API nay kèm các dòng tài khoản đã tạo. Không hiển thị mã hồ sơ như cột phụ để giữ đúng thứ tự cột đã yêu cầu.
+- Backend trả `DA_TON_TAI` khi username/email khớp PostgreSQL hoặc hồ sơ đích đã liên kết tài khoản; `CHUA_TON_TAI` khi các kiểm tra tồn tại hoàn tất và không có va chạm; hợp lệ và lỗi vẫn phân loại độc lập theo dòng. Trùng trong workbook vẫn nằm ở Lỗi chi tiết, không bị đánh dấu tồn tại trong hệ thống. Kiểm tra hệ thống không hoàn tất thì yêu cầu kiểm tra thất bại thay vì khẳng định chưa tồn tại; kiểu dữ liệu vẫn hỗ trợ trạng thái `CHUA_KIEM_TRA` cho dòng Backend đánh dấu chưa xác minh.
+- Kiểm tra đạt: Frontend/Backend typecheck; Frontend `accounts-import.test.tsx` 3/3; Backend `accounts-import.service.spec.ts` 15/15. Không thay đổi schema/migration, Permission + Scope hay chính sách xác nhận nhập.
+
+## Chuẩn hóa StarCard và nhận diện dữ liệu đã tồn tại khi nhập Excel — 2026-11-07
+
+- Card dùng chung trong bản xem trước nhập không còn dòng hướng dẫn phụ; selected state chỉ đổi màu chữ/nền/viền, không có class scale hoặc thay đổi bố cục. Chọn thẻ áp dụng bộ lọc, bấm lại giữ nguyên; thẻ Tổng số đưa bộ lọc thẻ về toàn bộ. Tìm kiếm và bộ lọc trạng thái vẫn được kết hợp như trước.
+- Bổ sung tone semantic màu vàng cam `exists` dùng token sáng/tối trong `globals.css`, và StarCard “Hồ sơ đã tồn tại” / “Tài khoản đã tồn tại”. Preview mỗi dòng có `daTonTai`; mỗi tổng có `soDaTonTai`. Thẻ tồn tại chỉ đếm dòng khớp dữ liệu PostgreSQL, không tính trùng bên trong workbook; một dòng có thể đồng thời nằm trong Có lỗi và Đã tồn tại.
+- Hồ sơ: nhận diện xung đột mã hồ sơ, CCCD, số phiếu lý lịch, số thẻ Đảng viên, tên đăng nhập/email đã nhập cùng tài khoản tạo mới, và mã sinh viên. Không dùng họ tên. Tài khoản: nhận diện username/email trùng dữ liệu đã lưu và mã hồ sơ đã có liên kết tài khoản; trùng trong workbook vẫn có lỗi riêng, không đánh dấu Đã tồn tại. Thông báo chỉ nêu trường định danh đầu vào, không lộ thông tin bản ghi khớp.
+- Sửa thống kê hồ sơ để `hopLe`/`coLoi` tính theo số dòng hồ sơ, không theo số thông báo lỗi hoặc va chạm số dòng giữa các sheet. Các dòng lỗi và dòng đã tồn tại không được xác nhận; xác nhận hồ sơ kiểm tra lại unique identifiers trước giao dịch, unique constraints tiếp tục làm chốt chống race condition. Luồng tài khoản giữ kiểm tra lại username/email và trạng thái liên kết trước khi ghi.
+- Kiểm tra đạt: Frontend typecheck; Backend typecheck; hai test giao diện nhập đạt 5/5; hai test Backend nhập đạt 33/33; `git diff --check`. Không thay đổi schema/migration hoặc Permission + Scope.
+
+- Trang Quản lý tài khoản có nút “Nhập Excel” với Dialog 4 bước và hai mẫu: tài khoản độc lập; tài khoản liên kết với hồ sơ hiện có. Dùng API `/tai-khoan/nhap-xuat/{mau,kiem-tra,xac-nhan,bao-cao-loi}`; giới hạn .xlsx 5 MB/200 dòng; preview hiển thị login/email/mã hồ sơ và không có mật khẩu. Thêm `ImportStepProgress` và `ImportSummaryCard` dùng chung trong `shared/components/data-transfer/`, đồng thời chuyển Dialog hồ sơ Đảng viên sang tái sử dụng hai component này. Thẻ kết quả bấm để lọc danh sách; các StatisticCard trên trang cũng lọc theo tổng/đang hoạt động/bị khóa-ngừng/chưa liên kết.
+- Backend tái sử dụng `DataTransferService.readCell` để đọc scalar/cached formula và từ chối cache thiếu/lỗi, hyperlink, external/unsafe formula. Kiểm tra theo DTO tạo tài khoản hiện có, duplicate trong file/CSDL, trạng thái, hồ sơ tồn tại/chưa liên kết và Permission + Scope từng hồ sơ. Password được băm trước khi cất trong phiên xem trước, phiên gắn actor và TTL 10 phút; xác nhận kiểm tra lại quyền/trùng/link, tạo toàn bộ tài khoản và audit trong transaction; không cấp Role/Permission/Assignment. Không đổi schema/migration. Catalog hiện có `TAI_KHOAN_TAO` và `TAI_KHOAN_LIEN_KET_HO_SO` ở `DA_CO_API`, các luồng nhập dùng lại các quyền này.
+- Cập nhật `docs/architecture.md` mô tả vị trí và hợp đồng để module khác dùng lại kỹ thuật đọc workbook chung.
+- Kiểm tra: Backend `accounts-import.service.spec.ts` + `data-transfer.service.spec.ts` đạt 9/9; bài `accounts-import.postgres.integration.spec.ts` đạt 1/1 trên CSDL phát triển sau khi xác nhận đúng database, tạo tài khoản và audit bên trong transaction rồi rollback, sau đó xác minh cả hai không tồn tại; Frontend `accounts-import.test.tsx`, `accounts-stat-filters.test.tsx` và hồi quy `member-profiles-import-export.test.tsx` đạt 5/5; cả hai typecheck đạt; `git diff --check` đạt. Không để lại dữ liệu thử trong PostgreSQL. Cần đăng nhập bằng role có `TAI_KHOAN_TAO`; chế độ liên kết yêu cầu thêm `TAI_KHOAN_LIEN_KET_HO_SO` và Scope phù hợp. Preview sessions hiện lưu trong memory một process, giống luồng nhập hồ sơ; nhiều Backend instances cần kho phiên dùng chung.
+- Sửa thống kê và kiểm tra theo từng dòng: mỗi dòng xem trước có `trangThaiKiemTra` và danh sách lỗi riêng; lỗi dòng không làm các dòng hợp lệ bị đánh dấu lỗi. `hopLe`/`coLoi` đếm số dòng, còn tài khoản độc lập/liên kết đếm mọi dòng theo loại kể cả dòng lỗi. Lỗi tệp rỗng trả riêng, không bịa ra lỗi dòng. Thẻ StarCard lọc đúng tổng/hợp lệ/có lỗi/loại tài khoản và thể hiện lựa chọn. Báo cáo lỗi lấy danh sách lỗi dòng thực tế; lỗi hệ thống làm hỏng toàn bộ lượt kiểm tra thì không trả preview dở dang. Kiểm tra sau sửa: Backend `accounts-import.service.spec.ts` 13/13, Frontend `accounts-import.test.tsx` 2/2 và hồi quy `member-profiles-import-export.test.tsx` 2/2; backend/frontend typecheck đạt, `git diff --check` đạt.
+- Chuẩn hóa StarCard trong xem trước nhập hồ sơ và nhập tài khoản: card dùng chung có tone semantic (tổng xanh dương, hợp lệ xanh lá, lỗi đỏ, tài khoản độc lập tím, liên kết xanh ngọc, không tạo tài khoản cam), trạng thái chọn/nhấn lại để bỏ lọc, `aria-pressed`, hỗ trợ focus/disabled/loading. Bộ lọc thẻ ghép với tìm kiếm và trạng thái hiện hữu; số liệu giữ nguyên theo toàn bộ preview. Kết quả nhập dùng màu theo nhóm, còn lựa chọn Xuất dữ liệu không có StarCard và vẫn chỉ do cấu hình phạm vi xuất điều khiển. Bổ sung token stat light/dark trong globals.css. Kiểm tra: Frontend `accounts-import.test.tsx` 2/2, `member-profiles-import-export.test.tsx` 3/3 (bao gồm hồi quy phạm vi xuất), frontend typecheck đạt.
+
+## Chọn số dòng mỗi trang hồ sơ Đảng viên — 2026-11-07
+
+- Bổ sung Select “Số dòng mỗi trang” (10/20/50/100, mặc định 10) tại chân bảng hiện hữu. Kích thước trang nằm trong React Query key và request API; thay đổi kích thước đặt lại trang 1, các bộ lọc/từ khóa giữ nguyên. Tổng trang tính theo tổng kết quả sau lọc; nút trước/sau đồng bộ theo trang và tổng trang, kể cả không có kết quả.
+- Backend giữ nguyên API và thực hiện phân trang trong Prisma. DTO hiện có `@Min(10) @Max(100)` cho `gioiHan`; service kiểm tra Permission xem danh sách và lọc Scope trước truy vấn, không cần thay đổi backend.
+- Kiểm tra: Frontend `tests/member-profiles-pagination.test.tsx` đạt 4/4 (10/20/50/100, chuyển trang/reset khi đổi tại trang cuối, giữ từ khóa, 0 và dưới 10 kết quả); Frontend typecheck đạt; Backend `member-profiles.service.spec.ts` đạt 22/22, gồm truy vấn Scope; `git diff --check` đạt.
+
+## Hỗ trợ công thức cache trong bộ đọc Excel dùng chung — 2026-11-07
+
+- `DataTransferService.readCell` đọc giá trị công thức cache theo kiểu scalar gốc, không tính công thức; trả metadata nguồn và lỗi cho cache thiếu/lỗi, hyperlink, tham chiếu workbook ngoài, hàm truy cập/liên kết dữ liệu ngoài, và công thức dùng named range trỏ ngoài. Cơ chế dùng chung, không gắn với tên cột/feature.
+- Luồng Đảng viên dùng bộ đọc cho sheet hồ sơ và Địa chỉ; cache hợp lệ đi qua chuẩn hóa/validation/trùng/Permission + Scope như giá trị thường. CCCD nhận dạng chuỗi để giữ số 0; số cache không được tự thêm số 0 đã mất.
+- XML workbook được đọc bằng JSZip trong bộ đọc chung để phân biệt ô formula có `<v></v>` kiểu chuỗi rỗng với ô formula hoàn toàn thiếu cache; giá trị rỗng có cache được đưa qua validation như chuỗi rỗng. JSZip đã được khai báo trực tiếp vì đây là chi tiết cần để bảo toàn thông tin cache mà ExcelJS bỏ qua.
+- Bổ sung test nhiều kiểu, cùng sheet/khác sheet, thiếu/lỗi cache, external reference/hyperlink, trường cohort và 100 dòng công thức. Cập nhật `docs/architecture.md` để quy định mọi cột nhập dùng khả năng đọc cache chung.
+- Kiểm tra cuối sau phần đọc XML: `npm.cmd run test -- test/data-transfer.service.spec.ts test/member-profile-import-template.service.spec.ts` đạt 20/20; `npm.cmd run typecheck` và `git diff --check` đạt. Không đổi schema/migration.
+
 ## Khắc phục HTTP 500 hàng đợi cập nhật — 2026-11-05
 
 - Đọc PostgreSQL phát triển `quan_ly_dang_vien_dev`: hiện có 1 đợt cập nhật và 2 yêu cầu (1 `CHO_DUYET`, 1 `DA_DUYET`). Màn hình hiện trả lỗi khi tải API hàng đợi; các thẻ thống kê trước đây lấy mặc định 0 khi `query.data` chưa có, nên con số 0 trên ảnh không phản ánh dữ liệu thật.
@@ -13,6 +61,54 @@
 - Thêm `HoSoDangVien.khoaDangVien` kiểu chuỗi nullable (tối đa 50 ký tự) và migration mới `20261105010000_member_profile_party_cohort`; không sửa/xóa dữ liệu cũ và không suy ra từ khóa sinh viên. Đồng bộ nhập/sửa hồ sơ thủ công, trang chi tiết, Hồ sơ của tôi, danh sách trường mở đợt cập nhật và bước Chi bộ phê duyệt; audit ghi lại thay đổi. Trường sẵn sàng để ánh xạ khi triển khai nhập Excel, chưa xây tính năng Excel trong phạm vi này.
 - Kiểm tra: `backend npm.cmd run typecheck`, `backend npm.cmd run prisma:validate`, Backend tests hồ sơ và quy trình cập nhật (23/23), Frontend typecheck, Frontend tests validation/hồ sơ của tôi/chi tiết/đợt cập nhật (26/26), `git diff --check` đạt. `docker compose up` không thể mở thêm PostgreSQL vì container phát triển hiện hữu đã chiếm cổng 55432. Sau đó xác nhận CSDL `quan_ly_dang_vien_dev` đang hoạt động, áp dụng `npm.cmd run prisma:migrate:deploy` thành công và `npm.cmd run prisma:migrate:status` xác nhận schema cập nhật, đủ 14 migration. Đã bổ sung quy định vào `AGENTS.md`: migration mới phải được áp dụng vào PostgreSQL phát triển và xác minh trạng thái; không tự áp dụng vào production. Chưa kiểm tra ghi/duyệt trên PostgreSQL thật hoặc kiểm tra trực quan trình duyệt ở sáng/tối và màn hình nhỏ.
 # Bàn giao giữa phiên AI
+
+## Giới hạn truy cập Nhật ký hệ thống — 2026-11-07
+
+- Nhật ký hệ thống và các API lịch sử audit tài khoản/phân công nay yêu cầu Assignment đang được chọn trong phiên có Role code `QUAN_TRI_VIEN_TOAN_HE_THONG`, Role hệ thống/tài khoản hoạt động, thời hạn còn hiệu lực, chưa thu hồi và Scope `TOAN_HE_THONG`. Backend tiếp tục kiểm tra Permission xem/xóa tương ứng và Scope hiện hành; không tin Scope/Role do request hoặc frontend gửi.
+- Sidebar chỉ hiện mục nhật ký khi Assignment phiên thỏa mãn điều kiện và có Permission xem nhật ký. Trang chặn URL trực tiếp cho vai trò không hợp lệ, xóa query cache và trạng thái lựa chọn; AuthProvider vốn xóa các query phi xác thực khi đổi Assignment. Các nút xem lịch sử tài khoản/phân công cũng ẩn với người không phải quản trị viên toàn hệ thống.
+- Kiểm kê chỉ đọc PostgreSQL phát triển: Role `QUAN_TRI_KHOI_TAO_24H` đang có hai Permission xem nhật ký và 1 Assignment cũ nhưng không còn hiệu lực; Role `QUAN_TRI_VIEN_TOAN_HE_THONG` có hai Permission này và 1 Assignment hiện còn hiệu lực. Không tìm thấy Role thông thường nào đang được gán hai Permission xem; không thay đổi Permission/Role/Assignment hoặc lịch sử.
+- Kiểm tra Backend `npm.cmd run typecheck`; tests `authorization.service.spec.ts` + `system-logs.service.spec.ts` đạt 32/32. Frontend `npm.cmd run typecheck`; `tests/system-logs.test.tsx` + `tests/system-log-access.test.ts` đạt 13/13, gồm URL trực tiếp, vai trò/Scope sai và xóa cache khi đổi Role. `git diff --check` đạt. Không đổi schema/migration. Chưa thử HTTP trực tiếp qua phiên đăng nhập thật; API denial được xác minh ở service/policy test.
+- Sau phản hồi giao diện ngày 2026-11-07: bảng nhật ký hiển thị khu vực chọn bản ghi và nút `Xóa nhật ký` ở ngay phía trên bảng cho Quản trị viên toàn hệ thống. Nếu thiếu `NHAT_KY_XOA`, nút và checkbox hiển thị nhưng bị khóa kèm lý do; không tự cấp quyền và không kích hoạt xóa vật lý. Frontend typecheck, tests 13/13 và `git diff --check` chạy lại đạt.
+- Quyết định tiếp theo ngày 2026-11-07: cho phép phiên Quản trị viên toàn hệ thống có Assignment `TOAN_HE_THONG` hợp lệ và `VAI_TRO_GAN_QUYEN` sửa ma trận Permission của Role hệ thống. Backend kiểm tra Assignment phiên và tiếp tục kiểm tra Permission + Scope trên toàn bộ Assignment liên quan. Chỉ mở sửa ma trận; sửa tên/trạng thái, xóa Role và Assignment Role hệ thống vẫn khóa. Không cho gỡ `QUYEN_XEM_DANH_MUC`, `VAI_TRO_XEM`, `VAI_TRO_GAN_QUYEN` khỏi Role quản trị viên để tránh mất đường quản trị. `NHAT_KY_XOA` được thêm vào danh sách Permission quản trị thủ công, không tự cấp trong bootstrap/sync. Backend và Frontend typecheck đạt; không chạy tests, không đổi schema/migration.
+
+## Điều tra lỗi không tải được Nhật ký hệ thống — 2026-11-07
+
+ - Lỗi ban đầu là dependency `PhanQuyenService` chưa được inject tường minh trong `NhatKyHeThongService.context`; đã thêm token inject tường minh cho Prisma và Permission. Lỗi kế tiếp được tái hiện chính xác: query string `kichThuoc=20` đi vào `findMany.take` dưới dạng chuỗi. Vì `count()` và `findMany()` nằm trong `$transaction`, Prisma gắn lỗi vào lời gọi `count()` dù đối số không hợp lệ là `take` của thao tác tiếp theo. Thử `take: "20"` cho đúng `Expected Int, provided String`; cùng truy vấn với `take: 20` chạy được trên PostgreSQL phát triển.
+ - Service nay tự chuyển và kiểm tra `trang`, `kichThuoc` trước khi gọi Prisma (số nguyên dương, kích thước tối đa 100), không phụ thuộc riêng vào ValidationPipe. Bộ lọc lỗi ghi tên đối số và kiểu mong đợi/nhận được, không ghi giá trị truy vấn.
+ - Thống kê nay dùng một `groupBy(ketQua)` để tổng, thành công, thất bại và kết quả khác cùng được tính trên một tập dữ liệu. UI đổi thẻ “Sự kiện bảo mật” thành “Kết quả khác” và mô tả các nhóm; dữ liệu PostgreSQL dev hiện có 283 thao tác: 273 `THANH_CONG`, 0 `THAT_BAI`, 10 `TU_CHOI`. Nhật ký bảo mật được thống kê ở tab riêng.
+ - Xác nhận API thật trong Edge đang đăng nhập sau khi Backend khởi động lại: `GET /api/v1/nhat-ky-he-thong/thao-tac?trang=1&kichThuoc=20` trả HTTP 200, tổng 283, trang đầu 20 dòng. Permission/Scope giữ nguyên.
+ - Kiểm tra: Backend và Frontend typecheck đạt; Backend system-logs + HTTP exception filter 21/21; Frontend system-logs 5/5. Không đổi schema/migration.
+
+## Đề xuất kiểm soát xóa Nhật ký hệ thống — 2026-11-07
+
+- Rà soát quy định và hiện trạng: chưa tìm thấy chính sách lưu trữ nhật ký PTIT được phê duyệt trong repo; bảng `nhat_ky_kiem_toan` đang được bảo vệ bởi trigger append-only chặn UPDATE/DELETE. Vì vậy không xác định thời hạn tùy ý, không bỏ trigger, không tạo API xóa vật lý và không thay đổi schema/migration.
+- Thêm Permission `NHAT_KY_XOA` độc lập, trạng thái catalog `DA_CO_API` cho API xem trước; API xóa vật lý chưa có. Không tự gán cho Role nào. Endpoint `POST /api/v1/nhat-ky-he-thong/{thao-tac|bao-mat}/xoa/xem-truoc` kiểm tra quyền xóa, quyền xem loại nhật ký và Scope; chỉ trả số ID/khoảng ngày khớp, điều kiện xóa là chưa xác định, `coTheXoa=false`.
+- UI bổ sung checkbox chọn dòng, lựa chọn xem trước theo ID/khoảng ngày, lý do, AlertDialog có cảnh báo không thể khôi phục và nút xóa bị vô hiệu hóa. Không ghi audit xóa vì chưa có thao tác xóa; khi thiết kế xóa thực tế cần cơ chế audit tách khỏi dữ liệu bị dọn.
+- Kiểm tra: Backend typecheck đạt; Backend system-logs 12/12; Frontend typecheck đạt; Frontend system-logs 5/5. Đồng bộ metadata 77 Permission vào đúng PostgreSQL phát triển `quan_ly_dang_vien_dev`; script chỉ upsert `quyen`, không sửa Role/Assignment. Chưa kiểm thử SQL/HTTP preview qua DB hoặc xóa thật; chưa có dữ liệu audit được phép xóa. Không có migration.
+- Bước cần phê duyệt nghiệp vụ trước khi bật xóa: ban hành chính sách phân loại và thời hạn theo loại log, xác định legal hold/điều tra và ngoại lệ bảo toàn, cách audit/đối soát độc lập, quy trình chống lặp và khôi phục. Cập nhật đồng bộ permission chỉ ghi danh mục Permission, tuyệt đối không thêm Role/Assignment.
+
+## Sửa HTTP 500 khi kiểm tra Excel thiếu mã hồ sơ — 2026-11-06
+
+- Nguyên nhân: khi dòng Excel thiếu Mã hồ sơ nội bộ, DTO lỗi vẫn được giữ để trả lỗi theo dòng; bước dò trùng sau đó gọi `hoSoDangVien.findUnique` với selector `maHoSoNoiBo: undefined`, khiến Prisma Client 7 ném `PrismaClientValidationError` và endpoint kiểm tra trả HTTP 500.
+- Chỉ chạy truy vấn dò trùng mã hồ sơ khi giá trị đã có; dòng thiếu mã nay tiếp tục trả lỗi nghiệp vụ “Mã hồ sơ nội bộ là trường bắt buộc.”, không tạo phiên nhập và không gọi Prisma bằng selector thiếu.
+- Thêm hồi quy vào `backend/test/member-profile-import-template.service.spec.ts`.
+- Kiểm tra: `npm.cmd run test -- test/member-profile-import-template.service.spec.ts` đạt 15/15; `npm.cmd run typecheck` và `git diff --check` đạt. Không đổi schema/migration. Backend đang chạy cần nạp lại mã mới trước khi người dùng thử lại.
+
+## Hoàn thiện xuất dữ liệu Đảng viên — 2026-11-06
+
+- Dialog xuất dữ liệu có bốn cách chọn danh sách: hồ sơ đã chọn, toàn bộ kết quả lọc (không giới hạn trang), theo đơn vị tổ chức và toàn bộ phạm vi được giao. Bổ sung chọn Đảng ủy/Chi bộ/Tổ, tìm theo tên hoặc mã, nhóm trường có thể mở rộng, chọn/bỏ chọn toàn bộ và bộ đếm trường. Dialog giữ tiêu đề/chân cố định, cuộn nội dung và chặn đóng khi đang tạo tệp.
+- Tạo danh mục xuất từ các trường hiện có trong Prisma; cấu hình chỉ trả các trường được phân công quyền tương ứng và đơn vị nằm trong phạm vi quyền xuất. Backend không dùng quyền xem danh sách để truy vấn export; tự giao phạm vi hồ sơ hiện hành, lọc hồ sơ theo đơn vị, tái kiểm tra Permission + Scope xuất và quyền của từng nhóm trường trên từng hồ sơ. Trường bị hạn chế trên một số hồ sơ được để trống ở những dòng đó. Các trường lựa chọn quyết định chính xác cột/thứ tự cột. Địa chỉ được trải thành ba cột, tránh nhân bản dòng; mã/CCCD dạng văn bản, ngày `dd/mm/yyyy`, nhãn enum tiếng Việt, trung hòa chuỗi có thể thành công thức; ghi audit có số dòng, chế độ và trường đã xuất.
+- Thêm bộ chọn nhóm trường dùng chung tại `frontend/src/shared/components/data-transfer/ExportFieldSelector.tsx`; mapping và nghiệp vụ vẫn thuộc feature Hồ sơ Đảng viên. Không đổi Prisma schema/API nền, không đổi luồng nhập.
+- Kiểm tra trong lượt này: Backend typecheck đạt; Backend `member-profiles.service.spec.ts` đạt 22/22, gồm cột và thứ tự đã chọn, một hồ sơ duy nhất với địa chỉ trải cột, giữ số 0 CCCD, chống công thức Excel, trường không hợp lệ và đơn vị ngoài phạm vi; Frontend typecheck đạt; `member-profiles-import-export.test.tsx` đạt 2/2; `git diff --check` đạt. Chưa có kiểm thử tích hợp cho toàn bộ bốn chế độ, nhiều phạm vi phân quyền/tài khoản và phân trang dữ liệu thật; chưa kiểm tra HTTP/PostgreSQL/trình duyệt. Không chạy migration.
+
+## Module Nhập/Xuất Excel cho Hồ sơ Đảng viên — 2026-11-06
+
+- Thêm `exceljs` cho Backend; tạo `data-transfer` module dùng chung với đọc/ghi `.xlsx`. API Hồ sơ: `GET /nhap-xuat/mau`, `POST /nhap-xuat/kiem-tra`, `POST /nhap-xuat/xac-nhan`, `POST /nhap-xuat/xuat`.
+- Mẫu có sheet danh sách (phiên bản 1.0), Địa chỉ liên kết bằng mã hồ sơ, hướng dẫn và danh mục Chi bộ/Tổ theo phạm vi tạo hồ sơ. Nhập tối đa 5 MB/200 dòng; kiểm tra header, lỗi DTO, trạng thái, mã đơn vị, quyền tạo hồ sơ/tài khoản, trùng mã hồ sơ/CCCD/tên đăng nhập/email đăng nhập/mã sinh viên/số thẻ/số phiếu; từ chối công thức và hyperlink ở sheet danh sách/địa chỉ. CCCD/mã định danh được giữ dạng chuỗi theo định dạng ô mẫu. Phiên preview gắn tài khoản, TTL 10 phút, one-time khi xác nhận; xác nhận dùng transaction duy nhất và tái sử dụng mapping tạo hồ sơ, lịch sử sinh hoạt, quá trình vào Đảng, tài khoản liên kết và audit. Mật khẩu ngẫu nhiên riêng chỉ trả về một lần sau khi tạo.
+- Xuất sử dụng `HO_SO_XUAT_DU_LIEU`, bộ lọc trang hồ sơ hiện tại, phân trang toàn bộ, và chỉ ghi CCCD/ngày sinh nếu API danh sách xác nhận quyền trường cá nhân. Ghi audit lượt xuất.
+- Frontend thêm nút Nhập/Xuất ở trang hồ sơ, Sheet 4 bước, xem trước/lọc/tìm, chọn nhiều dòng để xuất, tải báo cáo lỗi Excel và màn hình bàn giao mật khẩu một lần. Không thêm Sidebar.
+- Preview hiện lưu trong Map bộ nhớ tiến trình, tối đa 100 phiên hoạt động; phù hợp một instance. Cần kho chia sẻ có TTL trước khi triển khai nhiều Backend instance. Giao diện chưa có xem chi tiết mở rộng cho từng dòng. Kiểm tra hyperlink/công thức hiện áp dụng cho sheet danh sách, cần rà soát bổ sung ở sheet địa chỉ. Không có quá trình Đảng ngoài sự kiện vào Đảng dự bị vì service tạo hồ sơ hiện tại chưa có quy tắc/API tạo các sự kiện khác.
+- Kiểm tra ở lượt này: Backend và Frontend typecheck đạt; targeted ESLint cho các tệp frontend liên quan đạt; unit test DataTransfer 2/2 và Backend hồ sơ/controller 20/20 đạt (tổng 22/22); `git diff --check` đạt. Full frontend lint không đạt do 5.480 lỗi/190 cảnh báo trên toàn repository, tập trung ở `frontend/public/tinymce` và component/test ngoài phạm vi; lint trực tiếp các tệp thay đổi sạch. Chưa kiểm thử HTTP/PostgreSQL thực hoặc luồng import đầu-cuối. Không thay đổi schema/migration. `npm install exceljs` báo 4 cảnh báo audit phụ thuộc (1 low, 3 moderate); chưa chạy `npm audit fix`.
 
 Cập nhật lần cuối: 2026-11-06
 
@@ -53,6 +149,12 @@ Cập nhật lần cuối: 2026-11-06
 - API hàng đợi chuyển sang nhận bộ lọc và phân trang Backend (mặc định 25, giới hạn mỗi trang 100), trả danh sách trang hiện tại, tổng số, tổng hợp trạng thái bằng truy vấn PostgreSQL và danh sách Chi bộ/đợt trong phạm vi được cấp. Tìm theo họ tên/mã hồ sơ, lọc trạng thái/Chi bộ/đợt/ngày gửi đều áp dụng trước khi phân trang; không lấy đủ 1.000 yêu cầu về Frontend.
 - Giao diện dùng trang 25 dòng mặc định, chọn 10/25/50, tổng số và số trang từ API; tìm kiếm có trễ 300ms; các bộ lọc và thẻ thống kê dùng số liệu Backend. Sửa lỗi trang bị đặt lại trong lúc truy vấn trang mới.
 - Không đổi schema hoặc migration. Kiểm tra Backend/Frontend typecheck; test Backend phân trang/thống kê 3/3; test giao diện hàng đợi 9/9, gồm 1.000 yêu cầu, chuyển trang và tìm kiếm phía máy chủ. Chưa chạy tích hợp ghi dữ liệu vào PostgreSQL thật hoặc kiểm tra trực quan trên trình duyệt.
+
+# Tái cấu trúc frontend theo feature — 2026-11-06
+
+- Tách các trang/hợp đồng API trước đây gom trong `features/accounts/` sang `accounts/`, `member-profiles/`, `my-profile/`, `profile-updates/` và `authorization/`; router giữ nguyên URL. Tách kiểu miền khỏi adapter API, đưa mapper/biến đổi biểu mẫu/định dạng phân công sang service và tách biểu mẫu hồ sơ Đảng viên sang component riêng. Avatar presentation dùng chung đặt tại `shared/components/`.
+- Cập nhật quy tắc feature-based trong `AGENTS.md`, `docs/architecture.md`, `docs/AI_CONTEXT.md`, `BASE_SOURCE_GUIDE.md`; quy hoạch Sidebar chính thức tại `docs/sidebar-module-conventions.md` tiếp tục là nơi tra cứu nhóm nghiệp vụ và cách hiển thị menu. Backend/schema không đổi.
+- Kiểm tra Frontend `npm.cmd run typecheck` và `npm.cmd run build` đạt; lint các thư mục/tệp liên quan đạt 0 lỗi, còn 4 cảnh báo hiện hữu. Lint toàn dự án chưa đạt do các lỗi lint nhiều trong tài sản TinyMCE vendored và tệp khác ngoài phạm vi. 5 test feature liên quan đạt 30/30; toàn bộ test đạt 43/44, test `rich-text-editor.test.tsx` có lỗi readonly trong mock TinyMCE, không liên quan các tệp thay đổi. `git diff --check` đạt. Chưa chạy E2E hoặc kiểm tra trực quan trên trình duyệt.
 
 ## Hoàn thiện nghiệp vụ quản lý đợt cập nhật hồ sơ — 2026-11-05
 
@@ -660,3 +762,87 @@ Cập nhật lần cuối: 2026-11-06
 - Nguyên nhân 403: endpoint `GET /ho-so-dang-vien/cua-toi` lấy đúng hồ sơ được liên kết với tài khoản, nhưng chuyển sang `chiTiet()` vốn luôn yêu cầu `HO_SO_DANG_VIEN_XEM_TONG_QUAN`. Menu Hồ sơ của tôi và mô tả quyền trong ma trận lại dùng `HO_SO_CA_NHAN_XEM`, vì vậy tài khoản có quyền xem hồ sơ cá nhân vẫn bị từ chối.
 - Endpoint hồ sơ của tôi nay kiểm tra `HO_SO_CA_NHAN_XEM` đối với hồ sơ máy chủ vừa tra theo tài khoản đăng nhập. Permission + Scope vẫn được đánh giá cùng Assignment hiện hành; Scope `CA_NHAN` chỉ khớp hồ sơ liên kết với chính tài khoản. API chi tiết hồ sơ thông thường vẫn yêu cầu `HO_SO_DANG_VIEN_XEM_TONG_QUAN` và phạm vi quản lý.
 - Kiểm tra đạt: Backend service tests hồ sơ 19/19; Backend typecheck; `git diff --check`. Không đổi schema, migration, dữ liệu hoặc quyền trong PostgreSQL. Chưa kiểm tra trực tiếp bằng phiên tài khoản trên giao diện người dùng.
+
+## Bổ sung quy tắc nhập Excel Đảng viên — 2026-11-06
+
+- Excel bắt buộc mã hồ sơ, họ tên, ngày sinh, CCCD 12 chữ số, giới tính `NAM`/`NU`, trạng thái Đảng viên, ngày vào Đảng, Chi bộ tồn tại trong phạm vi Permission + Scope, và Khóa Đảng viên do người nhập cung cấp dạng `Dxx`. Không suy luận giới tính/khóa; không tự tạo Chi bộ; CCCD được giữ dưới dạng văn bản để bảo toàn số 0 đầu. Hướng dẫn trong workbook và Dialog đã nêu rõ các trường này.
+- Ngày bắt đầu sinh hoạt không bắt buộc trong Excel. Với hồ sơ trống ngày, người quản trị bổ sung ngày thực tế từng dòng ở bản xem trước hoặc áp dụng cùng một ngày cho các dòng đang thiếu. Backend kiểm tra ngày lịch hợp lệ và Permission + Scope; API xác nhận từ chối nếu còn thiếu ngày. `TaoHoSoDto` dùng cho nhập Excel vẫn được kiểm tra các quy tắc còn lại; DTO và biểu mẫu tạo thủ công không đổi.
+- Theo lựa chọn người dùng, giữ `lich_su_don_vi_dang_vien.ngay_hieu_luc_tu` NOT NULL, không sửa schema/migration, không gán ngày hiện tại/ngày vào Đảng, và giữ nguyên truy vấn lịch sử/Scope.
+- Nhập và xuất chuyển sang shadcn `Dialog`; nhập có thanh tiêu đề/chân cố định, cuộn nội dung, cuộn ngang xem trước, xác nhận khi đóng bản nháp và chặn đóng trong lúc đang xử lý. Sheet của biểu mẫu tạo thủ công không bị đổi.
+- Kiểm tra đạt: Frontend và Backend typecheck; ESLint các tệp Frontend liên quan; Frontend test import-preview 1/1; Backend member-profile service tests 19/19; `git diff --check`. Không áp dụng migration hoặc sửa dữ liệu CSDL.
+
+## Hoàn thiện Wizard giao diện Nhập/Xuất — 2026-11-06
+
+- Tách giao diện thành `ImportDataDialog`, `ExportDataDialog`, `useMemberImport` và `useMemberExport`. Modal nhập có bốn bước, tiến trình, tải mẫu/tệp, kiểm tra API, bộ lọc tên/mã/CCCD và trạng thái, báo cáo lỗi, mở chi tiết dòng, bổ sung ngày sinh hoạt, tổng hợp và xác nhận, kết quả. Mật khẩu khởi tạo được che mặc định, người dùng chủ động bật xem; không sinh tệp mật khẩu. Thành công mới làm mới query danh sách/thống kê hiện có.
+- Dialog xuất dùng RadioGroup cho hồ sơ đã chọn, theo bộ lọc hoặc toàn bộ phạm vi. Backend hiện chỉ cung cấp bộ cột cố định; không có API chọn nhóm cột, đếm trước bản ghi hoặc trả metadata số lượng. Import preview chưa trả thông tin sinh viên hay username/email từng tài khoản; API chưa hỗ trợ đặt mật khẩu riêng. Không thêm nghiệp vụ giả; mô tả các giới hạn tại `docs/architecture.md`.
+- Kiểm tra: Frontend typecheck; ESLint các component/hook/test liên quan; test wizard nhập 1/1. Chưa chạy trực tiếp kiểm tra giao diện trên trình duyệt.
+
+## Hoàn thiện định dạng và hướng dẫn mẫu Excel Đảng viên — 2026-11-06
+
+- Định nghĩa một cấu hình metadata duy nhất cho 38 cột dùng để sinh tiêu đề, dấu `(*)`, màu phân loại, format, dropdown, bảng hướng dẫn và danh sách required dùng trong backend preview. Phiên bản mẫu nâng lên 1.1; tiêu đề nằm ở dòng 3, chú thích bắt buộc nằm ngay trên bảng ở dòng 2.
+- Cột bắt buộc có tiêu đề đậm/nền đỏ nhạt; cột bắt buộc có điều kiện nền vàng nhạt; cột tùy chọn nền trung tính. Sheet `Hướng dẫn nhập` liệt kê trường, mức bắt buộc, định dạng, giá trị hợp lệ và ví dụ. Dropdown Excel có cho trạng thái hồ sơ/Đảng viên, giới tính, lựa chọn tạo tài khoản, loại địa chỉ và phân loại nơi sinh. CCCD cùng mã định danh lưu dạng Text; ngày hiển thị `dd/mm/yyyy`.
+- Parser kiểm tra header theo cùng metadata và báo thiếu trường với số dòng, khóa trường cùng thông báo tiếng Việt. Dòng kiểm tra chỉ đếm dòng có dữ liệu, không tính vùng trống đã gắn validation cho 200 hồ sơ. Ngày bắt đầu sinh hoạt vẫn có thể trống khi kiểm tra tệp, nhưng hướng dẫn nêu rõ phải bổ sung trước khi xác nhận nhập.
+- Kiểm tra: Backend typecheck; test tạo/đọc workbook và validation thiếu dữ liệu 2/2; `git diff --check`. Không đổi schema/migration hay cơ chế nghiệp vụ/phân quyền.
+
+## Xóa vật lý hồ sơ Đảng viên tạo nhầm — 2026-11-06
+
+- Theo quyết định người dùng: cho phép xóa vật lý hồ sơ tạo nhầm cùng dữ liệu ban đầu về sinh hoạt/quá trình; nếu có tài khoản liên kết thì giữ tài khoản, khóa đăng nhập, thu hồi Assignment và phiên. Không sửa schema/migration.
+- Thêm `DELETE /ho-so-dang-vien/:maHoSo` có kiểm tra `HO_SO_DANG_VIEN_XOA` + Scope ở guard/service, khóa bản ghi trong transaction, kiểm tra audit và dữ liệu lịch sử. Chỉ xóa bản ghi ban đầu có thể xác minh; từ chối nếu có lịch sử phát sinh, chức vụ hoặc yêu cầu cập nhật cần bảo toàn. Audit không bị xóa; thao tác cũng bảo vệ Quản trị viên toàn hệ thống hợp lệ cuối cùng.
+- Bổ sung hành động xóa có xác nhận trong danh sách hồ sơ và đồng bộ mô tả/trạng thái `DA_CO_API` trên Permission catalog cùng tài liệu quy hoạch.
+- Kiểm tra đạt: Backend delete service tests 12/12; Frontend delete tests 2/2; Backend và Frontend typecheck. Không đổi schema/migration. Các test này là phạm vi tập trung; chưa chạy toàn bộ test suite.
+
+## Chuẩn hóa ánh xạ và validation nhập Excel Đảng viên — 2026-11-06
+
+- Phiên bản mẫu tăng lên 1.2; dropdown trạng thái dùng nhãn tiếng Việt, sheet Hướng dẫn ghi rõ nhãn và mã enum được chấp nhận.
+- Thêm bộ chuẩn hóa trạng thái Đảng viên và ngày dd/mm/yyyy, ISO date-only, Excel serial/Date. Ngày được kiểm tra thực tế (ví dụ loại 31/02) và không đổi ngày theo timezone.
+- Backend phân giải mã định danh Chi bộ/Tổ trước DTO, chuyển thành UUID nội bộ, không tạo đơn vị. Với mã hợp lệ, kiểm Permission + Scope sau validation; mã rỗng/không tồn tại nhận lỗi dữ liệu cụ thể và không gọi kiểm quyền theo Chi bộ chưa xác định.
+- Thông báo `class-validator` được ánh xạ sang câu tiếng Việt theo dòng/trường; lỗi gốc và lỗi phụ cùng trường được gộp, tránh lộ thông báo ISO/UUID/enum.
+- Kiểm tra đạt: test nhập Excel 6/6, Backend typecheck. Không đổi Prisma schema/migration hoặc luồng xác nhận/tạo tài khoản/giao dịch.
+
+## Bổ sung chẩn đoán Prisma khi xác nhận nhập — 2026-11-06
+
+- Bộ lọc lỗi ghi `prismaCode` và metadata giới hạn ở tên model/trường/constraint/target; không ghi query values hoặc SQL tùy ý. Metadata mới xác định `P2007` ở `NhatKyKiemToan`.
+- Nguyên nhân: audit tổng kết nhập truyền nhãn `NHAP_HANG_LOAT` vào `maDoiTuong`, nhưng cột là UUID. Audit xuất cũng truyền `DANH_SACH` vào cột này. Cả hai luồng nay ghi `maDoiTuong: null` cho sự kiện tổng hợp; audit từng hồ sơ vẫn lưu UUID tương ứng. Transaction nhập tiếp tục nguyên tử.
+- Kiểm tra đạt: Backend typecheck; test import/xác nhận 8/8, test chẩn đoán log 1/1. Không đổi schema/migration.
+
+## Sửa phiên nhập bị báo hết hạn sau lỗi ghi — 2026-11-06
+
+- Ảnh mới cho thấy thông báo “Phiên kiểm tra đã hết hạn” ngay sau lỗi ghi trước đó. Nguyên nhân: `xacNhanNhap` xóa session preview trước khi mở transaction, nên lần ghi lỗi làm lần thử tiếp theo mất session dù chưa hết TTL.
+- Chỉ xóa session sau khi transaction thành công; giữ session còn hạn khi ghi thất bại và thêm khóa theo session để từ chối xác nhận đồng thời. Giao dịch vẫn nguyên tử; không đổi schema.
+- Kiểm tra đạt: Backend typecheck; test import 7/7, gồm ghi lỗi lặp lại không bị đổi nhầm thành lỗi session hết hạn.
+- Lỗi Prisma ban đầu vẫn cần mã `prismaCode`/`meta` từ log sau khi Backend nạp bộ lọc đã cập nhật để xác định ràng buộc gây 500.
+
+## Tinh gọn mẫu Excel theo yêu cầu — 2026-11-06
+
+- Bỏ toàn bộ màu phân loại nền trong workbook; tiêu đề trường bắt buộc tiếp tục có dấu `(*)` và in đậm. Sheet Hướng dẫn giải thích trường bắt buộc có điều kiện bằng chữ, không tham chiếu màu.
+- Bỏ nhãn phiên bản hiển thị. Chú thích bắt buộc đặt ở dòng 1, header ở dòng 2, dữ liệu từ dòng 3. Parser vẫn kiểm tra đúng tên/thứ tự header và nhận cả bố cục cũ header dòng 3 để không buộc người dùng mất tệp đã điền.
+- Kiểm tra đạt: Backend typecheck; test mẫu/nhập Excel 8/8. Không đổi schema/migration.
+
+## Tinh chỉnh trường Giới tính và nhãn mã Chi bộ nhập Excel — 2026-11-06
+
+- Giới tính đổi thành không bắt buộc trong cấu hình nhập Excel; danh mục `NAM`/`NU` và Data Validation vẫn áp dụng khi nhập giá trị. DTO hiện đã optional và cột CSDL là nullable; không cần schema/migration. Không thay đổi yêu cầu của biểu mẫu tạo thủ công.
+- Đổi tiêu đề/hướng dẫn thành `Mã Chi bộ sinh hoạt`, nêu rõ nhập mã như `CB-01` từ sheet tham chiếu, không nhập tên Chi bộ; hướng dẫn trong Modal nhập cũng đã đồng bộ.
+- Kiểm tra đạt: Backend typecheck, Frontend typecheck, Backend tests liên quan 9/9. Test xác nhận hồ sơ hợp lệ khi bỏ trống giới tính.
+
+## Chặn ô công thức và hyperlink gây lỗi nhập Excel — 2026-11-06
+
+- ExcelJS trả ô công thức dưới dạng object `{ formula, result }`; trước đây bộ đọc ép object thành chuỗi `[object Object]` rồi vẫn trả thêm lỗi công thức chung. Nay cell text extractor chỉ đọc primitive/rich text an toàn; formula/hyperlink không bị stringify và mỗi lỗi được gắn dòng/trường.
+- Tiếp tục từ chối mọi ô công thức, kể cả có `result` cache: Backend không thực thi/tính công thức và không thể chứng minh cached result còn đồng bộ với ô nguồn hay không có liên kết ngoài. Trả hướng dẫn Paste Special → Values. Hyperlink và công thức trong sheet Địa chỉ cũng bị chặn; không đưa công thức vào validation/DTO.
+- Kiểm tra đạt: test Excel 14/14 (cache có/không, formula error, external formula, hyperlink, mã hồ sơ và khóa Dxx); không đổi Prisma/schema hoặc nghiệp vụ nhập.
+## Trang Nhật ký hệ thống — 2026-11-06
+
+- Triển khai feature `frontend/src/features/system-logs/` và API `backend/src/modules/system-logs/`, tái sử dụng bảng append-only `nhat_ky_kiem_toan`; không đổi schema/migration, không ghi/xóa dữ liệu lịch sử.
+- Backend có danh sách phân trang, lọc theo từ khóa/người thực hiện/tài khoản/hành động/kết quả/khoảng ngày/đơn vị, danh mục hành động thực có, danh mục đơn vị trong Scope, thống kê và chi tiết. Từng API yêu cầu Permission riêng `NHAT_KY_KIEM_TOAN_XEM` hoặc `NHAT_KY_BAO_MAT_XEM` trên Assignment hiện hành. Scope đơn vị lọc theo hồ sơ/tài khoản/đơn vị thuộc scope; Scope cá nhân chỉ xem hoạt động tài khoản hiện tại; chỉ Assignment `TOAN_HE_THONG` mới xem toàn hệ thống. Không cấp Permission cho Role.
+- Auth thực tế ghi đăng nhập thành công/thất bại, đăng xuất, đổi mật khẩu, đổi trạng thái tài khoản và khóa tài khoản do xóa hồ sơ. Audit thao tác hiện có từ hồ sơ (tạo/sửa/xóa/nhập/xuất), tài khoản, tổ chức, Role/Assignment, năm học và yêu cầu cập nhật hồ sơ. Chưa có nhật ký cho từ chối API do thiếu Permission/Scope; các module khác chưa có cơ chế audit không được giả định có log.
+- API chi tiết không trả `duLieuTruoc`/`duLieuSau`; cần quyền dữ liệu nghiệp vụ riêng trước khi mở snapshot. Không cấp Permission mới. Xuất nhật ký chưa triển khai.
+- Cập nhật trạng thái catalog hai Permission xem nhật ký sang `DA_CO_API`; quyền xuất nhật ký giữ `CHUA_CO_API`. Sidebar đổi thành “Nhật ký hệ thống” và route `/nhat-ky-he-thong`; frontend ẩn tab/phần không được cấp quyền.
+- Kiểm tra đạt: Backend typecheck; 8 test service nhật ký; Frontend typecheck; 3 test permission UI. `npm run prisma:migrate:status` kết nối được PostgreSQL phát triển `quan_ly_dang_vien_dev` tại `127.0.0.1:55432`, 16 migration và schema hiện tại up to date. Chưa chạy E2E/API nhật ký qua server với dữ liệu thật. Không migration.
+
+## Bộ component chọn ngày và thời gian dùng chung — 2026-11-08
+
+- Tạo `frontend/src/shared/components/date-time/` gồm DatePicker, MonthPicker, YearPicker, DateTimePicker, DateRangePicker, DateTimeRangePicker; dùng `react-day-picker`, `date-fns` và shared UI primitives hiện hữu, không thêm dependency.
+- Giá trị ngày `yyyy-MM-dd`, tháng `yyyy-MM`, năm number và ngày giờ địa phương `yyyy-MM-dd'T'HH:mm`; không convert date-only qua UTC. Các picker khoảng dùng chung RangeCalendar với preview hover trong lúc chọn đầu cuối và giữ cố định dải màu sau khi chọn ngày kết thúc.
+- Trang thư viện thành phần có sáu demo tương tác với mô tả, đường dẫn, trạng thái, ví dụ dùng và thuộc tính chính. Chưa thay thế các form hiện tại.
+- Bổ sung kiểm thử date-only, nhập trực tiếp, ngày nhuận/ngày sai, chọn ngày/tháng/năm và preview/freeze khoảng ngày.
+- Không thay đổi Backend, CSDL, Sidebar hoặc dependency.
+- Kiểm tra cuối: Frontend typecheck đạt; ESLint các file picker, thư viện component và test đạt; `date-time-components.test.tsx` đạt 7/7 (ngày nhuận/không hợp lệ, nhập trực tiếp, chọn ngày/tháng/năm, keyboard giờ, khoảng hover/freeze và xác nhận khoảng ngày giờ); `git diff --check` đạt. Đã xem thư viện component trong Edge và xác nhận sáu demo tương tác được hiển thị; chưa chạy kiểm tra thủ công mọi kích thước viewport hoặc toàn bộ bộ test frontend.

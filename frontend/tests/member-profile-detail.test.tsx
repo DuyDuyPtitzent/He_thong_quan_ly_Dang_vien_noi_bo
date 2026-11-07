@@ -3,7 +3,7 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MemberProfileDetailPage } from '@/features/accounts/MemberProfileDetailPage'
+import { MemberProfileDetailPage } from '@/features/member-profiles/pages/MemberProfileDetailPage'
 
 const mocks = vi.hoisted(() => ({
   detail: vi.fn(), membershipHistory: vi.fn(), partyProcess: vi.fn(), positionAssignments: vi.fn(), changeHistory: vi.fn(),
@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/core/auth/auth-context', () => ({ useAuth: () => ({ taiKhoan: { quyenDangHoatDong: mocks.permissions } }) }))
-vi.mock('@/features/accounts/member-profiles.api', () => ({ memberProfilesApi: {
+vi.mock('@/features/member-profiles/api/member-profiles.api', () => ({ memberProfilesApi: {
   detail: mocks.detail, membershipHistory: mocks.membershipHistory, partyProcess: mocks.partyProcess,
   positionAssignments: mocks.positionAssignments, changeHistory: mocks.changeHistory,
 } }))

@@ -2,9 +2,12 @@
 
 ## Trạng thái thực tế
 
-Repository tách riêng `frontend/` (React/Vite) và `backend/` (NestJS/Prisma/PostgreSQL). Database phát triển đã áp dụng Prisma migration tạo 20 bảng theo `docs/THIET_KE_CSDL_TONG_THE.md`; có cấu hình, logging request, exception filter, endpoint sức khỏe, API xác thực và bootstrap tài khoản đầu tiên bằng CLI thủ công. Backend đã có nền RBAC Permission + Assignment + Scope, API quản trị Role/Assignment và API cây tổ chức; chưa có API hồ sơ Đảng viên. Chưa có dữ liệu tổ chức/PTIT được tạo theo đặc tả. Không mô tả mục tiêu chưa triển khai là đã hoàn thành.
+Repository tách riêng `frontend/` (React/Vite) và `backend/` (NestJS/Prisma/PostgreSQL). Database phát triển đã áp dụng Prisma migration tạo 20 bảng theo `docs/THIET_KE_CSDL_TONG_THE.md`; có cấu hình, logging request, exception filter, endpoint sức khỏe, API xác thực và bootstrap tài khoản đầu tiên bằng CLI thủ công. Backend đã có nền RBAC Permission + Assignment + Scope, API quản trị Role/Assignment và API cây tổ chức. Frontend hiện tích hợp một số API hồ sơ Đảng viên/cập nhật hồ sơ; cần kiểm tra module Backend và hợp đồng hiện tại trước khi kết luận phạm vi nghiệp vụ đã có phía máy chủ. Chưa có dữ liệu tổ chức/PTIT được tạo theo đặc tả. Không mô tả mục tiêu chưa triển khai là đã hoàn thành.
 
 ## Quyết định đã duyệt
+
+- Nhập/Xuất Excel dùng chung xử lý kỹ thuật workbook; quy tắc nghiệp vụ thuộc feature sở hữu dữ liệu. Preview phải có hạn dùng, gắn người thao tác, được Backend kiểm tra lại và xác nhận trong transaction; bắt buộc Permission + Scope và audit. Không đưa mật khẩu/secret vào file hoặc log.
+- Riêng nhập Excel Đảng viên, ngày bắt đầu sinh hoạt không bắt buộc trong workbook nhưng bắt buộc được người quản trị nhập hợp lệ trong bước xem trước trước khi ghi lịch sử. Không tự gán ngày hiện tại/ngày vào Đảng; giữ nguyên `ngay_hieu_luc_tu` NOT NULL, lịch sử và truy vấn Scope, không đổi schema/migration.
 
 - Sản phẩm quản lý nội bộ PTIT miền Bắc.
 - Máy chủ mục tiêu: NestJS + Prisma + PostgreSQL, ứng dụng nguyên khối chia mô-đun.
@@ -26,6 +29,10 @@ Repository tách riêng `frontend/` (React/Vite) và `backend/` (NestJS/Prisma/P
 - Giai đoạn thiết kế A–F và roadmap đã được duyệt. Các mặc định về đăng nhập, khởi tạo quản trị, hiệu lực thay đổi, backup và audit được ghi trong ADR.
 
 ## Hướng dẫn khôi phục ngữ cảnh
+
+### Cấu trúc frontend hiện tại
+
+Frontend được tổ chức theo feature nghiệp vụ. Các feature hiện có gồm `accounts/`, `member-profiles/`, `my-profile/`, `profile-updates/`, `authorization/`, `organizations/`, `dashboard/`, `settings/`, `auth/` và `developer/`. Trong từng feature, dùng `pages/`, `components/`, `api/`, `types/`, `validation/`, `constants/`, `services/`, `hooks/` khi cần; không bắt buộc tạo đủ các lớp. Router ở `app/` chỉ lắp ghép trang. `shared/`, `core/`, `layouts/` không phụ thuộc feature và các feature không tạo chu trình phụ thuộc. Tham chiếu `docs/architecture.md` để biết ranh giới lớp và `docs/sidebar-module-conventions.md` để biết quy hoạch menu. Trước khi tạo feature/chức năng mới, phải đọc tài liệu quy hoạch Sidebar và xác định nhóm phù hợp.
 
 1. Đọc `AGENTS.md` và `docs/SESSION_HANDOFF.md`.
 2. Đọc ADR `docs/adr/0001-kien-truc-nen-tang.md` khi thay đổi kiến trúc, mô hình dữ liệu, auth hoặc phân quyền.

@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { Check, ChevronDown, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/core/auth/auth-context'
+import { coQuyenTruyCapNhatKyToanHeThong } from '@/core/auth/system-log-access'
 import { appConfig } from '@/core/config/app.config'
 import { navigationConfig } from '@/core/config/navigation.config'
 import {
@@ -64,6 +65,7 @@ export function AppSidebar() {
     !permission || (Array.isArray(permission)
       ? permission.some((code) => permissions.has(code))
       : permissions.has(permission))
+  const canAccessSystemLogs = coQuyenTruyCapNhatKyToanHeThong(taiKhoan)
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -87,7 +89,7 @@ export function AppSidebar() {
                   ...item,
                   children: item.children?.filter((child) => !child.hidden && hasPermission(child.permission)),
                 }))
-                .filter((item) => !item.hidden && hasPermission(item.permission) && (!item.children || item.children.length > 0))
+                  .filter((item) => !item.hidden && (!item.systemAdministratorOnly || canAccessSystemLogs) && hasPermission(item.permission) && (!item.children || item.children.length > 0))
                   .map((item) => {
                     const Icon = item.icon
                     if (!Icon) return null

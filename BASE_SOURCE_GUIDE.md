@@ -4,6 +4,14 @@ Repository: https://github.com/DuyDuyPtitzent/He_thong_quan_ly_Dang_vien_noi_bo
 
 > Tài liệu phản ánh mã nguồn tại commit `39676b831c773d46764aea2aa8b52b2af7b26474` (nhánh `main`, kiểm tra 30/10/2026). Khi dự án phát triển, hãy cập nhật tài liệu theo mã nguồn thực tế. Không coi các nguyên tắc hiện tại là danh sách đóng.
 
+## Cập nhật kiến trúc repository — 2026-11-06
+
+Quy tắc nhập/xuất dữ liệu Excel dùng chung được bổ sung tại `AGENTS.md` và `docs/architecture.md`: lớp kỹ thuật đọc/ghi workbook tách khỏi validation nghiệp vụ; Backend kiểm tra quyền/phạm vi, preview có TTL, transaction nguyên tử và audit. Mỗi feature tự khai báo mẫu và cấu hình cột xuất.
+
+Phần mô tả snapshot bên dưới phản ánh trạng thái ngày 30/10/2026. Mã nguồn hiện tại đã phát triển theo feature-based architecture; dùng [`docs/architecture.md`](docs/architecture.md) và [`docs/sidebar-module-conventions.md`](docs/sidebar-module-conventions.md) làm căn cứ hiện hành. Các feature nghiệp vụ được tách thành `accounts/`, `member-profiles/`, `my-profile/`, `profile-updates/`, `authorization/`, `organizations/`, `school-years/`, `dashboard/`, `settings/`, `auth/` và `developer/`. Mỗi feature chỉ tạo các lớp `pages/`, `components/`, `api/`, `types/`, `validation/`, `constants/`, `services/`, `hooks/` khi có nhu cầu. Router tập trung vẫn giữ nguyên URL; `shared/`, `core/`, `layouts/` không phụ thuộc vào feature và các feature không được tạo chu trình phụ thuộc.
+
+Trước khi thêm module/chức năng, phải đọc tài liệu quy hoạch Sidebar, xác định nhóm phù hợp và chỉ thêm mục menu đã được duyệt. Nếu không phù hợp nhóm hiện có, đề xuất phương án và chờ phê duyệt.
+
 ## 1. Mục đích
 
 Đây là React Admin Starter dùng để tái sử dụng phần giao diện và hạ tầng frontend cho những dự án quản trị khác nhau. Các module hiện tại là ví dụ, không phải chức năng quản lý đảng viên hoàn chỉnh. Mục tiêu là mở rộng theo module mà không phải viết lại Sidebar, Layout, Router hay các thành phần UI dùng chung.
@@ -137,4 +145,22 @@ Khi nhận nhiệm vụ mới:
 5. Nếu một nguyên tắc hiện tại cản trở giải pháp tốt hơn, giải thích trade-off và đề xuất cập nhật nguyên tắc; **không tự ý phá quy tắc bắt buộc**.
 6. Báo cáo các file đã sửa, tác động tới kiến trúc, kết quả test và các giới hạn còn tồn tại.
 
+## Hiện trạng Nhật ký hệ thống (2026-11-06)
+
+- Nguồn dữ liệu là bảng append-only `nhat_ky_kiem_toan`; không tạo bảng mới. API tra cứu nằm trong `backend/src/modules/system-logs/`, UI trong `frontend/src/features/system-logs/`.
+- API lọc loại sự kiện, kết quả, tài khoản, từ khóa, khoảng ngày và đơn vị được cấp; phân trang phía PostgreSQL; có thống kê, danh mục hành động/đơn vị thực có và chi tiết. Mỗi loại nhật ký kiểm tra Permission + Assignment + Scope riêng. Scope đơn vị giới hạn theo hồ sơ/tài khoản/đơn vị được giao; Scope cá nhân chỉ xem sự kiện của tài khoản hiện tại; không mặc định toàn hệ thống.
+- Auth đã ghi nhận đăng nhập thành công/thất bại, đăng xuất, đổi mật khẩu, đổi trạng thái tài khoản và khóa tài khoản liên quan xóa hồ sơ. Audit thao tác đã có ở hồ sơ, tài khoản, tổ chức, Role/Assignment, năm học, nhập/xuất và yêu cầu cập nhật hồ sơ. Chưa có bản ghi từ chối API do thiếu Permission/Scope.
+- API chi tiết không trả JSON trước/sau do chưa có kiểm tra quyền dữ liệu bên trong; quyền xuất nhật ký vẫn chưa có API. Các module không nằm trong danh sách đã xác minh không được xem là có audit.
+
+### Rà soát kiểm soát xóa (2026-11-07)
+
+- Thêm Permission độc lập `NHAT_KY_XOA`, không cấp mặc định cho Role. API `POST /api/v1/nhat-ky-he-thong/{thao-tac|bao-mat}/xoa/xem-truoc` chỉ đếm ID đã chọn hoặc khoảng ngày trong giao của Permission xóa, Permission xem loại nhật ký và Scope; chưa xóa, chưa xác định số bản ghi đủ điều kiện.
+- UI có checkbox, AlertDialog, khoảng ngày, lý do, kết quả xem trước; nút xóa thực tế bị khóa.
+- Chưa có chính sách lưu trữ PTIT được phê duyệt. Trigger append-only hiện tại tiếp tục chặn DELETE. Chưa có cơ chế audit độc lập cho xóa vì chưa triển khai xóa.
+
 > **Nguyên tắc quan trọng:** Đây là tài liệu sống (*living document*). Sau mỗi thay đổi kiến trúc, dependency hoặc public component, cập nhật lại để phản ánh mã nguồn thật.
+## Bộ component ngày và thời gian dùng chung — 2026-11-08
+
+- Sáu component picker nằm trong `frontend/src/shared/components/date-time/`, dùng lại `react-day-picker`, `date-fns` và UI primitives có sẵn. Không thêm dependency.
+- Ngày và tháng dùng giá trị date-only; ngày giờ dùng chuỗi giờ địa phương không gắn UTC. Hai picker khoảng dùng chung `RangeCalendar` và giữ khoảng đã hoàn thành cố định khi con trỏ di chuyển.
+- Hướng dẫn API và quy tắc sử dụng chi tiết: `docs/architecture.md`, `docs/design-system.md`, `AGENTS.md`.

@@ -22,17 +22,18 @@ const ChangePasswordPage = lazy(() =>
     default: module.ChangePasswordPage,
   })),
 )
-const PermissionCatalogPage = lazy(() => import('@/features/authorization/PermissionCatalogPage').then((module) => ({ default: module.PermissionCatalogPage })))
-const RoleListPage = lazy(() => import('@/features/authorization/RoleListPage').then((module) => ({ default: module.RoleListPage })))
-const RoleDetailPage = lazy(() => import('@/features/authorization/RoleDetailPage').then((module) => ({ default: module.RoleDetailPage })))
+const PermissionCatalogPage = lazy(() => import('@/features/authorization/pages/PermissionCatalogPage').then((module) => ({ default: module.PermissionCatalogPage })))
+const RoleListPage = lazy(() => import('@/features/authorization/pages/RoleListPage').then((module) => ({ default: module.RoleListPage })))
+const RoleDetailPage = lazy(() => import('@/features/authorization/pages/RoleDetailPage').then((module) => ({ default: module.RoleDetailPage })))
 const OrganizationsPage = lazy(() => import('@/features/organizations/OrganizationsPage').then((module) => ({ default: module.OrganizationsPage })))
-const AccountsPage = lazy(() => import('@/features/accounts/AccountsPage').then((module) => ({ default: module.AccountsPage })))
-const AccountAssignmentsPage = lazy(() => import('@/features/accounts/AccountAssignmentsPage').then((module) => ({ default: module.AccountAssignmentsPage })))
-const MemberProfilesPage = lazy(() => import('@/features/accounts/MemberProfilesPage').then((module) => ({ default: module.MemberProfilesPage })))
-const MemberProfileDetailPage = lazy(() => import('@/features/accounts/MemberProfileDetailPage').then((module) => ({ default: module.MemberProfileDetailPage })))
-const MyMemberProfilePage = lazy(() => import('@/features/accounts/MyMemberProfilePage').then((module) => ({ default: module.MyMemberProfilePage })))
-const MemberProfileUpdatesPage = lazy(() => import('@/features/accounts/MemberProfileUpdatesPage').then((module) => ({ default: module.MemberProfileUpdatesPage })))
+const AccountsPage = lazy(() => import('@/features/accounts/pages/AccountsPage').then((module) => ({ default: module.AccountsPage })))
+const AccountAssignmentsPage = lazy(() => import('@/features/authorization/pages/AccountAssignmentsPage').then((module) => ({ default: module.AccountAssignmentsPage })))
+const MemberProfilesPage = lazy(() => import('@/features/member-profiles/pages/MemberProfilesPage').then((module) => ({ default: module.MemberProfilesPage })))
+const MemberProfileDetailPage = lazy(() => import('@/features/member-profiles/pages/MemberProfileDetailPage').then((module) => ({ default: module.MemberProfileDetailPage })))
+const MyMemberProfilePage = lazy(() => import('@/features/my-profile/pages/MyMemberProfilePage').then((module) => ({ default: module.MyMemberProfilePage })))
+const MemberProfileUpdatesPage = lazy(() => import('@/features/profile-updates/pages/MemberProfileUpdatesPage').then((module) => ({ default: module.MemberProfileUpdatesPage })))
 const SchoolYearsPage = lazy(() => import('@/features/school-years/SchoolYearsPage').then((module) => ({ default: module.SchoolYearsPage })))
+const SystemLogsPage = lazy(() => import('@/features/system-logs/pages/SystemLogsPage').then((module) => ({ default: module.SystemLogsPage })))
 const ComponentLibraryPage = import.meta.env.DEV
   ? lazy(() => import('@/features/developer/ComponentLibraryPage').then((module) => ({ default: module.ComponentLibraryPage })))
   : null
@@ -65,6 +66,7 @@ export const router = createBrowserRouter([
       { index: true, element: loadPage(<DashboardPage />), handle: { title: 'Tổng quan' } },
       { path: 'to-chuc', element: loadPage(<OrganizationsPage />), handle: { title: 'Cơ cấu tổ chức' } },
       { path: 'nam-hoc', element: loadPage(<SchoolYearsPage />), handle: { title: 'Quản lý năm học' } },
+      { path: 'nhat-ky-he-thong', element: loadPage(<SystemLogsPage />), handle: { title: 'Nhật ký hệ thống' } },
       { path: 'ho-so-dang-vien', element: loadPage(<MemberProfilesPage />), handle: { title: 'Hồ sơ Đảng viên' } },
       { path: 'ho-so-cua-toi', element: loadPage(<MyMemberProfilePage />), handle: { title: 'Hồ sơ của tôi' } },
       { path: 'ho-so-cua-toi/cap-nhat', element: <Navigate to="/ho-so-cua-toi" replace />, handle: { title: 'Hồ sơ của tôi' } },

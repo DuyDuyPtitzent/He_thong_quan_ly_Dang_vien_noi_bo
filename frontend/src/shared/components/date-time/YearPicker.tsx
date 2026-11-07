@@ -1,0 +1,14 @@
+import { useState } from 'react'
+import { Button } from '@/shared/components/ui/button'
+import { Input } from '@/shared/components/ui/input'
+import { Popover, PopoverAnchor, PopoverContent } from '@/shared/components/ui/popover'
+import { PickerTrigger } from './components/PickerTrigger'
+import type { PickerProps } from './types'
+
+export function YearPicker({ value, onChange, disabled, readOnly, clearable = true, placeholder = 'yyyy', minDate, maxDate, className, required, name, id, 'aria-label': ariaLabel }: PickerProps<number>) {
+  const initial = value ?? new Date().getFullYear(); const [open, setOpen] = useState(false); const [start, setStart] = useState(Math.floor((initial - 1) / 12) * 12 + 1); const [draft, setDraft] = useState(''); const [error, setError] = useState('')
+  const min = minDate ? Number(minDate.slice(0, 4)) : -Infinity; const max = maxDate ? Number(maxDate.slice(0, 4)) : Infinity
+  const choose = (year: number) => { if (year < min || year > max) return; onChange(year); setOpen(false) }
+  const direct = () => { const year = Number(draft); if (!/^\d{4}$/.test(draft) || year < min || year > max) { setError('Năm không hợp lệ hoặc nằm ngoài giới hạn.'); return } choose(year); setError('') }
+  return <div className="space-y-1"><Popover open={open} onOpenChange={setOpen}><PopoverAnchor asChild><PickerTrigger id={id} ariaLabel={ariaLabel} value={value == null ? '' : String(value)} placeholder={placeholder} disabled={disabled} readOnly={readOnly} clearable={clearable} required={required} onClear={() => onChange(undefined)} onClick={() => !readOnly && setOpen(!open)} className={className} /></PopoverAnchor><PopoverContent align="start" className="w-64 space-y-3"><div className="flex items-center justify-between"><Button variant="ghost" size="sm" onClick={() => setStart(start - 12)} aria-label="Nhóm năm trước">‹</Button><span className="font-medium">{start}–{start + 11}</span><Button variant="ghost" size="sm" onClick={() => setStart(start + 12)} aria-label="Nhóm năm sau">›</Button></div><div className="grid grid-cols-3 gap-2">{Array.from({ length: 12 }, (_, i) => start + i).map((year) => <Button key={year} type="button" variant={value === year ? 'default' : 'outline'} disabled={year < min || year > max} onClick={() => choose(year)}>{year}</Button>)}</div><div className="space-y-1"><label className="text-xs font-medium">Nhập năm</label><div className="flex gap-2"><Input value={draft} onChange={(e) => { setDraft(e.target.value); setError('') }} placeholder="yyyy" inputMode="numeric" maxLength={4} onKeyDown={(e) => e.key === 'Enter' && direct()} /><Button variant="secondary" onClick={direct}>Áp dụng</Button></div>{error && <p role="alert" className="text-xs text-destructive">{error}</p>}</div></PopoverContent></Popover>{name && <input type="hidden" name={name} value={value ?? ''} />}</div>
+}

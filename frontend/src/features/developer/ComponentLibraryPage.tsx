@@ -26,12 +26,12 @@ import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 import { StatisticCard } from '@/shared/components/StatisticCard'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { PageContainer } from '@/shared/components/PageContainer'
+import { DatePicker, DateTimePicker } from '@/shared/components/date-time'
 import { NotFoundPage } from '@/shared/components/NotFoundPage'
 import { Calendar } from '@/shared/components/ui/calendar'
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/shared/components/ui/input-otp'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/components/ui/dropdown-menu'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/shared/components/ui/alert-dialog'
-import { NativeSelect, NativeSelectOption } from '@/shared/components/ui/native-select'
 import { Toggle } from '@/shared/components/ui/toggle'
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@/shared/components/ui/input-group'
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from '@/shared/components/ui/combobox'
@@ -58,7 +58,7 @@ import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarTrigger } fro
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuList, NavigationMenuTrigger } from '@/shared/components/ui/navigation-menu'
 import { Item, ItemContent, ItemDescription, ItemTitle } from '@/shared/components/ui/item'
 import { Attachment, AttachmentContent, AttachmentDescription, AttachmentMedia, AttachmentTitle } from '@/shared/components/ui/attachment'
-import { StatusBadge } from '@/features/accounts/AccountSheets'
+import { StatusBadge } from '@/features/accounts/components/AccountSheets'
 import { ChartContainer, type ChartConfig } from '@/shared/components/ui/chart'
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from '@/shared/components/ui/sidebar'
@@ -71,6 +71,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/aler
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/shared/components/ui/accordion'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/shared/components/ui/sheet'
+import { DateTimeLibrarySection } from './DateTimeLibrarySection'
 
 type Entry = { file: string; path: string; group: string; description: string }
 
@@ -87,7 +88,7 @@ const demoRows: DemoRow[] = [
 const chartConfig: ChartConfig = { soLuong: { label: 'Số lượng', color: 'var(--primary)' } }
 
 const files = Object.keys(import.meta.glob('/src/**/*.tsx'))
-  .filter((file) => !['/src/features/developer/ComponentLibraryPage.tsx', '/src/main.tsx', '/src/app/router/router.tsx'].includes(file))
+  .filter((file) => !['/src/features/developer/ComponentLibraryPage.tsx', '/src/features/developer/DateTimeLibrarySection.tsx', '/src/main.tsx', '/src/app/router/router.tsx'].includes(file) && !file.startsWith('/src/shared/components/date-time/'))
   .sort()
 
 const groupFor = (path: string) => {
@@ -95,10 +96,10 @@ const groupFor = (path: string) => {
     const file = path.split('/').pop() ?? ''
     if (/button|toggle/.test(file)) return 'Nút bấm và thao tác'
     if (/input|textarea|label|field|input-otp/.test(file)) return 'Nhập liệu và biểu mẫu'
-    if (/checkbox|radio|switch|select|combobox|calendar|slider/.test(file)) return 'Lựa chọn và bộ lọc'
+    if (/checkbox|radio|switch|select|combobox|calendar|slider|command/.test(file)) return 'Lựa chọn và bộ lọc'
     if (/table|pagination|chart/.test(file)) return 'Bảng dữ liệu và phân trang'
     if (/dialog|sheet|drawer|popover|alert-dialog/.test(file)) return 'Hộp thoại và bảng trượt'
-    if (/navigation|breadcrumb|menubar|dropdown|command|context-menu|tabs|accordion|collapsible/.test(file)) return 'Điều hướng'
+    if (/navigation|breadcrumb|menubar|dropdown|context-menu|tabs|accordion|collapsible/.test(file)) return 'Điều hướng'
     if (/card|badge|avatar|item|statistic/.test(file)) return 'Thẻ thông tin và thống kê'
     if (/alert|message|bubble|attachment|empty|kbd|marker|progress|skeleton|spinner|sonner/.test(file)) return 'Thông báo và trạng thái'
     return 'Thành phần dùng chung'
@@ -146,7 +147,7 @@ function Preview({ file }: { file: string }) {
   if (file === 'button.tsx') return <div className="flex flex-wrap items-center gap-2"><Button onClick={() => setEnabled(!enabled)}>{enabled ? 'Nút chính' : 'Đã bấm'}</Button><Button variant="secondary">Phụ</Button><Button variant="outline">Viền</Button><Button variant="destructive">Cảnh báo</Button><Button variant="ghost">Nhẹ</Button><Button variant="link">Liên kết</Button><Button disabled>Vô hiệu hóa</Button><Button disabled><Spinner/>Đang xử lý</Button></div>
   if (file === 'toggle.tsx') return <div className="flex gap-2"><Toggle pressed={enabled} onPressedChange={setEnabled}>Bật / tắt</Toggle><Toggle variant="outline" pressed={!enabled} onPressedChange={(pressed) => setEnabled(!pressed)}>Có viền</Toggle></div>
   if (file === 'badge.tsx') return <div className="flex flex-wrap gap-2"><Badge>Đang hoạt động</Badge><Badge variant="secondary">Bản nháp</Badge><Badge variant="success">Thành công</Badge><Badge variant="destructive">Lỗi</Badge><Badge variant="outline">Viền</Badge></div>
-  if (file === 'input.tsx') return <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="demo-input">Ô văn bản</Label><Input id="demo-input" placeholder="Nhập tên minh họa" /></div><div className="space-y-2"><Label htmlFor="demo-password">Mật khẩu</Label><Input id="demo-password" type="password" placeholder="Nhập mật khẩu mẫu" /></div><div className="space-y-2"><Label htmlFor="demo-date">Ngày</Label><Input id="demo-date" type="date" /></div><div className="space-y-2"><Label htmlFor="demo-datetime">Ngày và giờ</Label><Input id="demo-datetime" type="datetime-local" /></div></div>
+  if (file === 'input.tsx') return <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="demo-input">Ô văn bản</Label><Input id="demo-input" placeholder="Nhập tên minh họa" /></div><div className="space-y-2"><Label htmlFor="demo-password">Mật khẩu</Label><Input id="demo-password" type="password" placeholder="Nhập mật khẩu mẫu" /></div><div className="space-y-2"><Label htmlFor="demo-date">Ngày</Label><DatePicker id="demo-date" aria-label="Ngày minh họa" onChange={() => undefined} /></div><div className="space-y-2"><Label htmlFor="demo-datetime">Ngày và giờ</Label><DateTimePicker id="demo-datetime" aria-label="Ngày giờ minh họa" onChange={() => undefined} /></div></div>
   if (file === 'input-group.tsx') return <InputGroup><InputGroupAddon><InputGroupText>Mã mẫu</InputGroupText></InputGroupAddon><InputGroupInput aria-label="Giá trị mẫu" placeholder="Nhập giá trị"/><InputGroupAddon align="inline-end"><InputGroupText>ký tự</InputGroupText></InputGroupAddon></InputGroup>
   if (file === 'textarea.tsx') return <Textarea aria-label="Nội dung minh họa" placeholder="Nhập nội dung nhiều dòng" />
   if (file === 'checkbox.tsx') return <label className="flex items-center gap-2"><Checkbox checked={checked} onCheckedChange={(v) => setChecked(v === true)} /><span>Chọn tùy chọn minh họa</span></label>
@@ -198,7 +199,7 @@ function Preview({ file }: { file: string }) {
   if (file === 'DataTable.tsx') return <div className="space-y-3"><div className="flex justify-end"><Button size="sm" variant="outline" onClick={() => setShowRows(!showRows)}>{showRows ? 'Thử trạng thái trống' : 'Hiện dữ liệu mẫu'}</Button></div><DataTable columns={demoColumns} rows={showRows ? demoRows : []} getRowId={(row) => row.id} emptyTitle="Chưa có dữ liệu minh họa" /></div>
   if (file === 'EmptyState.tsx') return <EmptyState title="Chưa có hồ sơ minh họa" description="Khi có dữ liệu, danh sách sẽ xuất hiện tại đây." />
   if (file === 'LoadingState.tsx') return <div className="rounded-md border p-4"><LoadingState /></div>
-  if (file === 'StandardSheet.tsx') return <><Button onClick={() => setSheetOpen(true)}>Mở bảng trượt</Button><StandardSheet open={sheetOpen} onOpenChange={setSheetOpen} title="Thêm Đảng viên · khung minh họa" description="Bố cục dùng tại biểu mẫu thêm mới Đảng viên." size="wide" footer={<><Button variant="outline" onClick={() => setSheetOpen(false)}>Hủy</Button><Button onClick={() => setSheetOpen(false)}>Lưu minh họa</Button></>}><div className="space-y-6"><Card><CardHeader><CardTitle>Thông tin cá nhân</CardTitle><CardDescription>Dữ liệu mẫu, không gửi đi.</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Họ và tên</Label><Input defaultValue="Nguyễn An" /></div><div className="space-y-2"><Label>Ngày sinh</Label><Input type="date" defaultValue="2000-01-15" /></div><div className="space-y-2 sm:col-span-2"><Label>Ghi chú</Label><Textarea placeholder="Nhập nội dung minh họa" /></div></CardContent></Card><Card><CardHeader><CardTitle>Cuộn nội dung</CardTitle></CardHeader><CardContent className="space-y-3">{Array.from({ length: 5 }, (_, index) => <p key={index} className="rounded-md border p-4 text-sm">Nội dung mẫu {index + 1} để kiểm tra vùng cuộn của bảng trượt.</p>)}</CardContent></Card></div></StandardSheet></>
+  if (file === 'StandardSheet.tsx') return <><Button onClick={() => setSheetOpen(true)}>Mở bảng trượt</Button><StandardSheet open={sheetOpen} onOpenChange={setSheetOpen} title="Thêm Đảng viên · khung minh họa" description="Bố cục dùng tại biểu mẫu thêm mới Đảng viên." size="wide" footer={<><Button variant="outline" onClick={() => setSheetOpen(false)}>Hủy</Button><Button onClick={() => setSheetOpen(false)}>Lưu minh họa</Button></>}><div className="space-y-6"><Card><CardHeader><CardTitle>Thông tin cá nhân</CardTitle><CardDescription>Dữ liệu mẫu, không gửi đi.</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Họ và tên</Label><Input defaultValue="Nguyễn An" /></div><div className="space-y-2"><Label>Ngày sinh</Label><DatePicker aria-label="Ngày sinh minh họa" value="2000-01-15" onChange={() => undefined} /></div><div className="space-y-2 sm:col-span-2"><Label>Ghi chú</Label><Textarea placeholder="Nhập nội dung minh họa" /></div></CardContent></Card><Card><CardHeader><CardTitle>Cuộn nội dung</CardTitle></CardHeader><CardContent className="space-y-3">{Array.from({ length: 5 }, (_, index) => <p key={index} className="rounded-md border p-4 text-sm">Nội dung mẫu {index + 1} để kiểm tra vùng cuộn của bảng trượt.</p>)}</CardContent></Card></div></StandardSheet></>
   if (file === 'ConfirmDialog.tsx') return <ConfirmDialog trigger={<Button variant="destructive">Mở hộp thoại xác nhận</Button>} title="Xác nhận thao tác minh họa" description="Đây chỉ là thao tác thử tại thư viện. Không có dữ liệu nào bị xóa hoặc cập nhật." confirmLabel="Xác nhận thử" destructive onConfirm={() => setEnabled(false)} />
   if (file === 'StatisticCard.tsx') return <StatisticCard label="Hồ sơ minh họa" value="128" description="Số liệu mẫu tại thư viện" icon={<Component className="size-4" />} />
   if (file === 'AccountSheets.tsx') return <div className="flex flex-wrap items-center gap-3"><StatusBadge status="DANG_HOAT_DONG"/><StatusBadge status="TAM_KHOA"/><StatusBadge status="NGUNG_HOAT_DONG"/><p className="w-full text-xs text-muted-foreground">Các biểu mẫu còn lại trong tệp gọi API tìm hồ sơ khi mở nên không được kích hoạt tại thư viện.</p></div>
@@ -208,7 +209,6 @@ function Preview({ file }: { file: string }) {
   if (file === 'calendar.tsx') return <Calendar locale={vi} mode="single" selected={date} onSelect={setDate} className="mx-auto rounded-md border" />
   if (file === 'input-otp.tsx') return <InputOTP maxLength={6} defaultValue="123456"><InputOTPGroup><InputOTPSlot index={0}/><InputOTPSlot index={1}/><InputOTPSlot index={2}/></InputOTPGroup><InputOTPSeparator/><InputOTPGroup><InputOTPSlot index={3}/><InputOTPSlot index={4}/><InputOTPSlot index={5}/></InputOTPGroup></InputOTP>
   if (file === 'dropdown-menu.tsx') return <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline">Mở danh sách thao tác</Button></DropdownMenuTrigger><DropdownMenuContent align="start"><DropdownMenuItem onSelect={() => setEnabled(true)}>Xem chi tiết</DropdownMenuItem><DropdownMenuItem onSelect={() => setEnabled(true)}>Chỉnh sửa</DropdownMenuItem><DropdownMenuItem onSelect={() => setEnabled(false)}>Xóa minh họa</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
-  if (file === 'native-select.tsx') return <div className="space-y-2"><Label htmlFor="native-demo">Chọn một mục</Label><NativeSelect id="native-demo" defaultValue="mot"><NativeSelectOption value="mot">Lựa chọn thứ nhất</NativeSelectOption><NativeSelectOption value="hai">Lựa chọn thứ hai</NativeSelectOption></NativeSelect></div>
   if (file === 'skeleton.tsx') return <div className="space-y-3"><Skeleton className="h-5 w-2/3"/><Skeleton className="h-4 w-full"/><Skeleton className="h-16 w-full"/></div>
   const reasons: Record<string, string> = {
     'App.tsx': 'Điểm ghép RouterProvider cùng toàn bộ provider ứng dụng; render lần nữa sẽ khởi tạo phiên và truy vấn thật.',
@@ -250,5 +250,6 @@ export function ComponentLibraryPage() {
       <p className="text-sm text-muted-foreground">Đang hiển thị <span className="font-medium text-foreground">{filtered.length}</span> / {entries.length} thành phần · Tương tác trên trang chỉ dùng dữ liệu minh họa.</p>
     </header>
     {grouped.length ? grouped.map(([name, items]) => <section key={name} className="space-y-4"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{name}</h2><Badge variant="secondary">{items.length}</Badge></div><div className="grid gap-4 lg:grid-cols-2">{items.map((item) => <Card key={item.path} className="min-w-0 overflow-hidden"><CardHeader className="gap-3"><div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0"><CardTitle className="font-mono text-sm">{item.file}</CardTitle><CardDescription className="mt-2">{item.description}</CardDescription></div><Badge variant="outline">{item.group}</Badge></div><code className="block break-all rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">{item.path}</code></CardHeader><CardContent><div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Minh họa trực tiếp</div><div className="min-h-20 rounded-lg border bg-background p-4"><Preview file={item.file}/></div></CardContent></Card>)}</div></section>) : <div className="rounded-xl border border-dashed p-12 text-center"><p className="font-medium">Không tìm thấy thành phần phù hợp</p><p className="mt-1 text-sm text-muted-foreground">Thử từ khóa khác hoặc đặt lại bộ lọc.</p></div>}
+    <DateTimeLibrarySection />
   </main>
 }
