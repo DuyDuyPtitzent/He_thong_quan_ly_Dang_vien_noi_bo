@@ -5,8 +5,12 @@ import { permissionCatalog, type MaPermission } from './permission-catalog'
 export const systemAdministratorRoleCode = 'QUAN_TRI_VIEN_TOAN_HE_THONG'
 export const systemAdministratorRoleDescription = 'Được cấp toàn bộ Permission trong danh mục hệ thống; thao tác vẫn ghi nhật ký và tuân thủ ràng buộc an toàn.'
 
-/** The full-system administrator receives every Permission defined by the system catalog. */
-export const systemAdministratorPermissionCodes: readonly MaPermission[] = permissionCatalog
+/** Permission codes assigned by controlled bootstrap/synchronization. */
+/** Delete-log access is never auto-granted; an authorized matrix edit is required. */
+export const systemAdministratorManuallyManagedPermissionCodes: readonly MaPermission[] = ['NHAT_KY_XOA']
+export const systemAdministratorPermissionCodes: readonly MaPermission[] = permissionCatalog.filter(
+  (code) => !systemAdministratorManuallyManagedPermissionCodes.includes(code),
+)
 
 export async function demQuanTriVienToanHeThongHopLe(
   tx: Prisma.TransactionClient,

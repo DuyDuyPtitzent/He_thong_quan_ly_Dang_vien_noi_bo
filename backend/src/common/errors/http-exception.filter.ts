@@ -84,14 +84,30 @@ export class BoLocLoiHttp implements ExceptionFilter {
   }
 
   private chiTietPrisma(ngoaiLe: unknown) {
-    if (!(ngoaiLe instanceof Error) || ngoaiLe.name !== 'PrismaClientValidationError') return undefined
+    if (!(ngoaiLe instanceof Error)) return undefined
+    if (ngoaiLe.name === 'PrismaClientKnownRequestError') {
+      const known = ngoaiLe as Error & { code?: unknown; meta?: unknown }
+      const meta = typeof known.meta === 'object' && known.meta !== null ? known.meta as Record<string, unknown> : {}
+      const safeMeta: Record<string, string | number | boolean | (string | number | boolean)[]> = {}
+      // Known-request metadata describes the failing model/constraint. Exclude arbitrary values and SQL text.
+      for (const key of ['modelName', 'field_name', 'target', 'constraint', 'relation_name', 'column']) {
+        const value = meta[key]
+        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') safeMeta[key] = value
+        else if (Array.isArray(value) && value.every((item) => ['string', 'number', 'boolean'].includes(typeof item))) safeMeta[key] = value as (string | number | boolean)[]
+      }
+      return { prismaCode: typeof known.code === 'string' ? known.code : undefined, meta: safeMeta }
+    }
+    if (ngoaiLe.name !== 'PrismaClientValidationError') return undefined
     const invocation = ngoaiLe.message.match(/Invalid `([^`]+)` invocation/)
     const unknown = ngoaiLe.message.match(/Unknown (argument|field)\s+[`'\"]([^`'\"]+)[`'\"]/i)
+    const invalidValue = ngoaiLe.message.match(/Argument\s+[`'\"]([^`'\"]+)[`'\"]:\s*Invalid value provided\. Expected ([^,\r\n]+), provided ([^.\r\n]+)\./i)
     const invalidArgument = ngoaiLe.message.match(/Argument\s+[`'\"]([^`'\"]+)[`'\"]\s+(is missing|is invalid|has invalid)/i)
     return {
       invocation: invocation?.[1],
       validationIssue: unknown ? `${unknown[1]}:${unknown[2]}` : undefined,
-      invalidArgument: invalidArgument ? `${invalidArgument[1]}:${invalidArgument[2]}` : undefined,
+      invalidArgument: invalidValue?.[1] && invalidValue[2] && invalidValue[3]
+        ? `${invalidValue[1]}:expected ${invalidValue[2].trim()}, received ${invalidValue[3].trim()}`
+        : invalidArgument ? `${invalidArgument[1]}:${invalidArgument[2]}` : undefined,
     }
   }
 

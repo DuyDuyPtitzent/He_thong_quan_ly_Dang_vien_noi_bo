@@ -1,5 +1,4 @@
 import { Body, Controller, Delete, Get, Headers, Inject, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common'
-import { FileInterceptor } from '@nestjs/platform-express'
 import type { Request, Response } from 'express'
 import type { YeuCauDaXacThuc } from '../auth/auth.types'
 import { XacThucGuard } from '../auth/auth.guard'
@@ -8,11 +7,19 @@ import { DanhSachHoSoDto, SuaHoSoDto, TaoHoSoDto } from './member-profiles.dto'
 import { HoSoDangVienService } from './member-profiles.service'
 import { YeuCauCapNhatHoSoService } from './member-profile-updates.service'
 import { DanhSachDotCapNhatDto, DanhSachYeuCauCapNhatDto, GuiYeuCauCapNhatDto, SuaDotCapNhatDto, TaoDotCapNhatDto, TuChoiYeuCauDto } from './member-profile-updates.dto'
+import { FileInterceptor } from '@nestjs/platform-express'
 
 @Controller('ho-so-dang-vien')
 @UseGuards(XacThucGuard)
 export class HoSoDangVienController {
   constructor(@Inject(HoSoDangVienService) private readonly service: HoSoDangVienService, @Inject(YeuCauCapNhatHoSoService) private readonly updates: YeuCauCapNhatHoSoService) {}
+  @Get('nhap-xuat/mau') async mau(@Req() req: YeuCauDaXacThuc, @Res() res: Response) { const file = await this.service.taoMauNhap(req.taiKhoanDaXacThuc); res.set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': 'attachment; filename="mau-nhap-ho-so-dang-vien.xlsx"', 'Cache-Control': 'private, no-store' }).send(file) }
+  @Post('nhap-xuat/kiem-tra') @UseInterceptors(FileInterceptor('tep', { limits: { fileSize: 5 * 1024 * 1024, files: 1 } })) async kiemTraNhap(@Req() req: YeuCauDaXacThuc, @UploadedFile() file?: { buffer: Buffer; originalname: string; size: number }) { return this.service.kiemTraNhap(req.taiKhoanDaXacThuc, file) }
+  @Post('nhap-xuat/cap-nhat-ngay-sinh-hoat') capNhatNgaySinhHoatNhap(@Req() req: YeuCauDaXacThuc, @Body() body: { maPhienNhap: string; ngaySinhHoat: { dong: number; ngaySinhHoatTu: string }[] }) { return this.service.capNhatNgaySinhHoatNhap(req.taiKhoanDaXacThuc, body?.maPhienNhap, body?.ngaySinhHoat) }
+  @Post('nhap-xuat/xac-nhan') xacNhanNhap(@Req() req: YeuCauDaXacThuc, @Body() body: { maPhienNhap: string }, @Headers('x-forwarded-for') _forwarded?: string) { return this.service.xacNhanNhap(req.taiKhoanDaXacThuc, body?.maPhienNhap, req.ip ?? null) }
+  @Post('nhap-xuat/bao-cao-loi') async baoCaoLoi(@Req() req: YeuCauDaXacThuc, @Body() body: { loi: { row: number; field: string; message: string }[] }, @Res() res: Response) { const file = await this.service.taoBaoCaoLoi(req.taiKhoanDaXacThuc, body?.loi); res.set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': 'attachment; filename="bao-cao-loi-nhap-ho-so.xlsx"', 'Cache-Control': 'private, no-store' }).send(file) }
+  @Get('nhap-xuat/xuat/cau-hinh') cauHinhXuat(@Req() req: YeuCauDaXacThuc) { return this.service.cauHinhXuat(req.taiKhoanDaXacThuc) }
+  @Post('nhap-xuat/xuat') async xuat(@Req() req: YeuCauDaXacThuc, @Body() body: { cheDo?: string; maDonVi?: string; maHoSo?: string[]; tuKhoa?: string; maChiBo?: string; maTo?: string; trangThaiDangVien?: string; truong?: string[] }, @Res() res: Response) { const file = await this.service.xuatExcel(req.taiKhoanDaXacThuc, body); res.set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': 'attachment; filename="danh-sach-ho-so-dang-vien.xlsx"', 'Cache-Control': 'private, no-store' }).send(file) }
   @Get('cua-toi') cuaToi(@Req() req: YeuCauDaXacThuc) { return this.service.hoSoCuaToi(req.taiKhoanDaXacThuc) }
   @Get('cua-toi/dot-cap-nhat') dotCuaToi(@Req() req: YeuCauDaXacThuc) { return this.updates.dotHienHanhCuaToi(req.taiKhoanDaXacThuc) }
   @Get('cua-toi/yeu-cau-cap-nhat') yeuCauCuaToi(@Req() req: YeuCauDaXacThuc) { return this.updates.yeuCauCuaToi(req.taiKhoanDaXacThuc) }
@@ -42,4 +49,5 @@ export class HoSoDangVienController {
   @Get(':maHoSo') @RequirePermission('HO_SO_DANG_VIEN_XEM_TONG_QUAN') chiTiet(@Req() req: YeuCauDaXacThuc, @Param('maHoSo', ParseUUIDPipe) id: string) { return this.service.chiTiet(req.taiKhoanDaXacThuc, id) }
   @Post() @RequirePermission('HO_SO_DANG_VIEN_TAO') tao(@Req() req: YeuCauDaXacThuc, @Body() dto: TaoHoSoDto) { return this.service.tao(req.taiKhoanDaXacThuc, dto, req.ip ?? null) }
   @Patch(':maHoSo') @RequirePermission('HO_SO_DANG_VIEN_SUA_THONG_TIN_CO_BAN') sua(@Req() req: YeuCauDaXacThuc, @Param('maHoSo', ParseUUIDPipe) id: string, @Body() dto: SuaHoSoDto) { return this.service.sua(req.taiKhoanDaXacThuc, id, dto, req.ip ?? null) }
+  @Delete(':maHoSo') @RequirePermission('HO_SO_DANG_VIEN_XOA') xoa(@Req() req: YeuCauDaXacThuc, @Param('maHoSo', ParseUUIDPipe) id: string) { return this.service.xoa(req.taiKhoanDaXacThuc, id, req.ip ?? null) }
 }

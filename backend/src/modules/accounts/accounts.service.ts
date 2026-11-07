@@ -1,10 +1,14 @@
-import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common'
+import ExcelJS from 'exceljs'
+import { validate } from 'class-validator'
+import { plainToInstance } from 'class-transformer'
 import { randomUUID } from 'node:crypto'
 import { Prisma } from '../../infrastructure/database/generated/prisma/client'
 import { DichVuPrisma } from '../../infrastructure/database/prisma.service'
 import { BamMatKhauService } from '../auth/password-hasher'
 import type { TaiKhoanDaXacThuc } from '../auth/auth.types'
 import { PhanQuyenService } from '../authorization/authorization.service'
+import { DataTransferService } from '../data-transfer/data-transfer.service'
 import { demQuanTriVienToanHeThongHopLe, khoaKiemTraQuanTriVienCuoi, systemAdministratorRoleCode } from '../authorization/system-administrator.policy'
 import { DanhSachTaiKhoanDto, DoiTrangThaiTaiKhoanDto, LienKetHoSoDto, SuaTaiKhoanDto, TaoTaiKhoanDto, TimHoSoChuaLienKetDto } from './accounts.dto'
 
@@ -14,10 +18,13 @@ const activeAssignmentFilter = (now: Date) => ({ ...nowFilter(now), thuHoiLuc: n
 
 @Injectable()
 export class TaiKhoanService {
+  private readonly importSessions = new Map<string, { actor: string; expiresAt: number; mode: 'LIEN_KET_HO_SO' | 'DOC_LAP'; rows: { row: number; dto: Omit<TaoTaiKhoanDto, 'matKhauBanDau'>; passwordHash: string; login: string; email: string | null }[] }>()
+  private readonly importsInProgress = new Set<string>()
   constructor(
     @Inject(DichVuPrisma) private readonly prisma: DichVuPrisma,
     @Inject(PhanQuyenService) private readonly phanQuyen: PhanQuyenService,
     @Inject(BamMatKhauService) private readonly bamMatKhau: BamMatKhauService,
+    @Inject(DataTransferService) private readonly transfer: DataTransferService,
   ) {}
 
   async danhSach(actor: TaiKhoanDaXacThuc, query: DanhSachTaiKhoanDto) {
@@ -40,7 +47,8 @@ export class TaiKhoanService {
         { email: { contains: query.tuKhoa.trim(), mode: 'insensitive' } },
         { hoSoDangVien: { is: { hoVaTen: { contains: query.tuKhoa.trim(), mode: 'insensitive' } } } },
       ] })
-    if (query.trangThai) accountConditions.push({ trangThai: query.trangThai })
+    if (query.trangThai === 'TAM_KHOA_HOAC_NGUNG_HOAT_DONG') accountConditions.push({ trangThai: { in: ['TAM_KHOA', 'NGUNG_HOAT_DONG'] } })
+    else if (query.trangThai) accountConditions.push({ trangThai: query.trangThai })
     if (query.tinhTrangLienKet === 'DA_LIEN_KET') accountConditions.push({ hoSoDangVien: { isNot: null } })
     if (query.tinhTrangLienKet === 'CHUA_LIEN_KET') accountConditions.push({ hoSoDangVien: { is: null } })
     if (query.maChiBo) accountConditions.push({ hoSoDangVien: { is: { lichSuDonVi: { some: { AND: [nowFilter(now), { maChiBo: query.maChiBo }] } } } } })
@@ -166,10 +174,224 @@ export class TaiKhoanService {
     }
     let phienDangNhap: { ngayTao: Date; hetHanLuc: Date; diaChiIp: string | null }[] = []
     try {
+      await this.phanQuyen.kiemTraQuanTriVienToanHeThong(actor.maTaiKhoan, actor.maPhien)
       await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'NHAT_KY_BAO_MAT_XEM', {}, actor.maPhien)
       phienDangNhap = await this.prisma.phienDangNhap.findMany({ where: { maTaiKhoan, thuHoiLuc: null, hetHanLuc: { gt: new Date() } }, orderBy: { ngayTao: 'desc' }, take: 20, select: { ngayTao: true, hetHanLuc: true, diaChiIp: true } })
     } catch (error) { if (!(error instanceof ForbiddenException)) throw error }
     return { ...account, maTaiKhoan: account.ma, daLienKetHoSo: Boolean(account.hoSoDangVien), hoSoDangVien, phienDangNhap }
+  }
+
+  async taoMauNhap(actor: TaiKhoanDaXacThuc, mode: 'LIEN_KET_HO_SO' | 'DOC_LAP') {
+    await this.phanQuyen.kiemTraQuyenDuocPhanCong(actor.maTaiKhoan, 'TAI_KHOAN_TAO', actor.maPhien)
+    const workbook = this.transfer.createWorkbook()
+    const sheet = workbook.addWorksheet('Tài khoản')
+    const headers = [...(mode === 'LIEN_KET_HO_SO' ? ['Mã hồ sơ nội bộ'] : []), 'Tên đăng nhập', 'Email đăng nhập', 'Mật khẩu khởi tạo', 'Trạng thái ban đầu']
+    sheet.addRow(headers)
+    sheet.getRow(1).font = { bold: true }
+    sheet.views = [{ state: 'frozen', ySplit: 1 }]
+    sheet.columns = headers.map((header) => ({ header, key: header, width: header.includes('Mật khẩu') ? 24 : 28, style: { numFmt: '@' } }))
+    sheet.addRow(headers.map(() => null))
+    if (headers.includes('Trạng thái ban đầu')) {
+      const column = headers.indexOf('Trạng thái ban đầu') + 1
+      for (let row = 2; row <= 201; row++) sheet.getCell(row, column).dataValidation = { type: 'list', allowBlank: true, formulae: ['"DANG_HOAT_DONG,TAM_KHOA,NGUNG_HOAT_DONG"'] }
+    }
+    const guide = workbook.addWorksheet('Hướng dẫn nhập')
+    guide.addRows([
+      ['Trường', 'Bắt buộc', 'Định dạng / giá trị hợp lệ', 'Ví dụ'],
+      ...(mode === 'LIEN_KET_HO_SO' ? [['Mã hồ sơ nội bộ', 'Có', 'Mã hồ sơ đã tồn tại, chưa liên kết và thuộc phạm vi được cấp', 'DV0001']] : []),
+      ['Tên đăng nhập', 'Có', '3–100 ký tự; không trùng hệ thống hoặc trong tệp', 'canbo.ptit'],
+      ['Email đăng nhập', 'Không', 'Email hợp lệ; duy nhất nếu có nhập', 'canbo@example.edu.vn'],
+      ['Mật khẩu khởi tạo', 'Có', '12–128 ký tự; không được ghi vào báo cáo lỗi', 'Nhập mật khẩu do quản trị viên thiết lập'],
+      ['Trạng thái ban đầu', 'Không', 'DANG_HOAT_DONG, TAM_KHOA, NGUNG_HOAT_DONG; mặc định DANG_HOAT_DONG', 'DANG_HOAT_DONG'],
+      ['Lưu ý bảo mật', '', 'Không chia sẻ tệp có mật khẩu; xóa tệp sau khi nhập xong.', ''],
+    ])
+    guide.getRow(1).font = { bold: true }
+    guide.columns = [{ width: 28 }, { width: 14 }, { width: 76 }, { width: 36 }]
+    return this.transfer.write(workbook)
+  }
+
+  async kiemTraNhap(actor: TaiKhoanDaXacThuc, file: { buffer: Buffer; originalname: string; size: number } | undefined, mode: 'LIEN_KET_HO_SO' | 'DOC_LAP') {
+    for (const [key, session] of this.importSessions) if (session.expiresAt < Date.now()) this.importSessions.delete(key)
+    await this.phanQuyen.kiemTraQuyenDuocPhanCong(actor.maTaiKhoan, 'TAI_KHOAN_TAO', actor.maPhien)
+    if (!file || file.size > 5 * 1024 * 1024 || !file.originalname.toLocaleLowerCase('vi-VN').endsWith('.xlsx')) throw new BadRequestException({ maLoi: 'TEP_KHONG_HOP_LE', thongBao: 'Chọn tệp .xlsx hợp lệ, tối đa 5 MB.' })
+    const workbook = await this.transfer.read(file.buffer)
+    const sheet = workbook.getWorksheet('Tài khoản')
+    if (!sheet) throw new BadRequestException({ maLoi: 'SAI_MAU_EXCEL', thongBao: 'Thiếu sheet “Tài khoản”. Hãy sử dụng đúng tệp Excel mẫu.' })
+    const headers = [...(mode === 'LIEN_KET_HO_SO' ? ['Mã hồ sơ nội bộ'] : []), 'Tên đăng nhập', 'Email đăng nhập', 'Mật khẩu khởi tạo', 'Trạng thái ban đầu']
+    const actual = headers.map((_, index) => String(this.transfer.readCell(sheet.getRow(1).getCell(index + 1)).value ?? '').trim())
+    if (actual.length !== headers.length || headers.some((header, index) => actual[index] !== header)) throw new BadRequestException({ maLoi: 'SAI_MAU_EXCEL', thongBao: 'Tiêu đề cột không khớp mẫu đã chọn.' })
+    if (sheet.rowCount < 2 || sheet.rowCount > 202) throw new BadRequestException({ maLoi: 'SO_DONG_KHONG_HOP_LE', thongBao: 'Tệp phải có từ 1 đến 200 dòng tài khoản.' })
+
+    const errors: { row: number; field: string; message: string }[] = []
+    const candidates: { row: number; dto: TaoTaiKhoanDto; login: string; email: string | null; trangThaiNhap: string }[] = []
+    const clean = (value: string) => value.trim().toLocaleLowerCase('vi-VN')
+    const cellText = (row: ExcelJS.Row, index: number, field: string) => {
+      const cell = row.getCell(index)
+      const read = this.transfer.readCell(cell)
+      const message = this.transfer.cellReadError(read, cell)
+      if (message) { errors.push({ row: row.number, field, message: message.replace(/^Dòng \d+, cột [A-Z]+: /, '') }); return '' }
+      if (read.value === null || read.value === '') return ''
+      if (typeof read.value === 'string') return read.value.trim()
+      if (typeof read.value === 'number' || typeof read.value === 'boolean') return String(read.value)
+      if (read.value instanceof Date) return read.value.toISOString()
+      return ''
+    }
+    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber++) {
+      const row = sheet.getRow(rowNumber)
+      if (headers.every((_, index) => row.getCell(index + 1).value === null || row.getCell(index + 1).value === undefined || row.getCell(index + 1).value === '')) continue
+      const offset = mode === 'LIEN_KET_HO_SO' ? 1 : 0
+      const profileCode = mode === 'LIEN_KET_HO_SO' ? cellText(row, 1, 'Mã hồ sơ nội bộ') : ''
+      const login = cellText(row, offset + 1, 'Tên đăng nhập')
+      const emailInput = cellText(row, offset + 2, 'Email đăng nhập')
+      const password = cellText(row, offset + 3, 'Mật khẩu khởi tạo')
+      const statusRaw = cellText(row, offset + 4, 'Trạng thái ban đầu').toLocaleUpperCase('en-US')
+      if (mode === 'LIEN_KET_HO_SO' && !profileCode) errors.push({ row: rowNumber, field: 'Mã hồ sơ nội bộ', message: 'Nhập mã hồ sơ Đảng viên cần liên kết.' })
+      if (!login) errors.push({ row: rowNumber, field: 'Tên đăng nhập', message: 'Chưa nhập tên đăng nhập.' })
+      if (!password) errors.push({ row: rowNumber, field: 'Mật khẩu khởi tạo', message: 'Chưa nhập mật khẩu khởi tạo.' })
+      if (statusRaw && !statusValues.includes(statusRaw as typeof statusValues[number])) errors.push({ row: rowNumber, field: 'Trạng thái ban đầu', message: 'Trạng thái không hợp lệ. Chọn DANG_HOAT_DONG, TAM_KHOA hoặc NGUNG_HOAT_DONG.' })
+      const dto = plainToInstance(TaoTaiKhoanDto, { tenDangNhap: login, ...(emailInput ? { email: emailInput } : {}), matKhauBanDau: password, ...(statusRaw ? { trangThai: statusRaw } : {}) })
+      const dtoErrors = await validate(dto)
+      for (const issue of dtoErrors) {
+        const field = issue.property === 'tenDangNhap' ? 'Tên đăng nhập' : issue.property === 'email' ? 'Email đăng nhập' : issue.property === 'matKhauBanDau' ? 'Mật khẩu khởi tạo' : issue.property === 'trangThai' ? 'Trạng thái ban đầu' : issue.property
+        if (issue.property === 'email' && !emailInput) continue
+        if (errors.some((error) => error.row === rowNumber && error.field === field)) continue
+        errors.push({ row: rowNumber, field, message: issue.property === 'tenDangNhap' ? 'Tên đăng nhập phải có từ 3 đến 100 ký tự.' : issue.property === 'email' ? 'Email đăng nhập không đúng định dạng.' : 'Mật khẩu khởi tạo phải có từ 12 đến 128 ký tự.' })
+      }
+      if (dto.trangThai && dto.trangThai !== 'DANG_HOAT_DONG') {
+        try { await this.phanQuyen.kiemTraQuyenDuocPhanCong(actor.maTaiKhoan, 'TAI_KHOAN_KHOA_MO_KHOA', actor.maPhien) }
+        catch (error) { if (error instanceof ForbiddenException) errors.push({ row: rowNumber, field: 'Trạng thái ban đầu', message: 'Bạn không có quyền tạo tài khoản ở trạng thái bị khóa hoặc ngừng hoạt động.' }); else throw error }
+      }
+      candidates.push({ row: rowNumber, dto: { ...dto, ...(mode === 'LIEN_KET_HO_SO' ? { maHoSoNoiBo: profileCode } : {}) } as TaoTaiKhoanDto & { maHoSoNoiBo?: string }, login, email: emailInput || null, trangThaiNhap: statusRaw })
+    }
+    const fileErrors = !candidates.length && !errors.length
+      ? [{ field: 'Tệp', message: 'Tệp chưa có dòng tài khoản.' }]
+      : []
+
+    const loginRows = new Map<string, number[]>(), emailRows = new Map<string, number[]>()
+    const existingRows = new Set<number>()
+    for (const candidate of candidates) {
+      const key = clean(candidate.login); if (key) loginRows.set(key, [...(loginRows.get(key) ?? []), candidate.row])
+      const email = candidate.email ? clean(candidate.email) : ''; if (email) emailRows.set(email, [...(emailRows.get(email) ?? []), candidate.row])
+    }
+    for (const [value, rows] of loginRows) if (rows.length > 1) for (const row of rows) errors.push({ row, field: 'Tên đăng nhập', message: 'Tên đăng nhập bị trùng trong tệp.' })
+    for (const [, rows] of emailRows) if (rows.length > 1) for (const row of rows) errors.push({ row, field: 'Email đăng nhập', message: 'Email bị trùng trong tệp.' })
+    const [existingLogins, existingEmails] = await Promise.all([
+      this.prisma.taiKhoanNguoiDung.findMany({ where: { tenDangNhap: { in: [...loginRows.keys()] } }, select: { tenDangNhap: true } }),
+      this.prisma.taiKhoanNguoiDung.findMany({ where: { email: { in: [...emailRows.keys()] } }, select: { email: true } }),
+    ])
+    for (const account of existingLogins) for (const row of loginRows.get(clean(account.tenDangNhap)) ?? []) { errors.push({ row, field: 'Tên đăng nhập', message: 'Tên đăng nhập đã tồn tại trong hệ thống.' }); existingRows.add(row) }
+    for (const account of existingEmails) if (account.email) for (const row of emailRows.get(clean(account.email)) ?? []) { errors.push({ row, field: 'Email đăng nhập', message: 'Email đã tồn tại trong hệ thống.' }); existingRows.add(row) }
+
+    const profilesByCode = new Map<string, string>()
+    if (mode === 'LIEN_KET_HO_SO') {
+      const codes = [...new Set(candidates.map((item) => (item.dto as TaoTaiKhoanDto & { maHoSoNoiBo?: string }).maHoSoNoiBo).filter((item): item is string => Boolean(item)))]
+      const codeRows = new Map<string, number[]>()
+      for (const candidate of candidates) {
+        const code = (candidate.dto as TaoTaiKhoanDto & { maHoSoNoiBo?: string }).maHoSoNoiBo
+        if (code) codeRows.set(code, [...(codeRows.get(code) ?? []), candidate.row])
+      }
+      for (const rows of codeRows.values()) if (rows.length > 1) for (const row of rows) errors.push({ row, field: 'Mã hồ sơ nội bộ', message: 'Mã hồ sơ bị lặp trong tệp; mỗi hồ sơ chỉ được liên kết với một tài khoản.' })
+      const profiles = await this.prisma.hoSoDangVien.findMany({ where: { maHoSoNoiBo: { in: codes } }, select: { ma: true, maHoSoNoiBo: true, maTaiKhoan: true } })
+      for (const profile of profiles) profilesByCode.set(profile.maHoSoNoiBo, profile.ma)
+      for (const candidate of candidates) {
+        const code = (candidate.dto as TaoTaiKhoanDto & { maHoSoNoiBo?: string }).maHoSoNoiBo ?? ''
+        const profileId = profilesByCode.get(code)
+        if (!profileId) errors.push({ row: candidate.row, field: 'Mã hồ sơ nội bộ', message: 'Không tìm thấy hồ sơ Đảng viên tương ứng.' })
+        else {
+          const profile = profiles.find(({ ma }) => ma === profileId)
+          if (profile?.maTaiKhoan) { errors.push({ row: candidate.row, field: 'Mã hồ sơ nội bộ', message: 'Hồ sơ Đảng viên này đã được liên kết với tài khoản khác.' }); existingRows.add(candidate.row) }
+          else try { await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'TAI_KHOAN_LIEN_KET_HO_SO', { maHoSo: profileId }, actor.maPhien) }
+            catch (error) { if (error instanceof ForbiddenException) errors.push({ row: candidate.row, field: 'Mã hồ sơ nội bộ', message: 'Bạn không có quyền liên kết tài khoản với hồ sơ này.' }); else throw error }
+        }
+      }
+    }
+    const loiTheoDong = new Map<number, typeof errors>()
+    for (const error of errors) loiTheoDong.set(error.row, [...(loiTheoDong.get(error.row) ?? []), error])
+    const duLieuXemTruoc = candidates.map(({ row, login, email, dto, trangThaiNhap }) => {
+      const loi = loiTheoDong.get(row) ?? []
+      return {
+        dong: row,
+        maHoSoNoiBo: (dto as TaoTaiKhoanDto & { maHoSoNoiBo?: string }).maHoSoNoiBo ?? null,
+        tenDangNhap: login,
+        email,
+        trangThai: dto.trangThai ?? (trangThaiNhap || 'DANG_HOAT_DONG'),
+        lienKetHoSo: mode === 'LIEN_KET_HO_SO',
+        hopLe: loi.length === 0,
+        daTonTai: existingRows.has(row),
+        trangThaiTonTai: existingRows.has(row) ? 'DA_TON_TAI' as const : 'CHUA_TON_TAI' as const,
+        trangThaiKiemTra: loi.length === 0 ? 'HOP_LE' as const : 'CO_LOI' as const,
+        loi,
+      }
+    })
+    const soDongCoLoi = duLieuXemTruoc.filter((row) => row.trangThaiKiemTra === 'CO_LOI').length
+    if (errors.length || fileErrors.length) return {
+      maPhienNhap: null,
+      hetHanSauGiay: 0,
+      tongSo: candidates.length,
+      hopLe: candidates.length - soDongCoLoi,
+      coLoi: soDongCoLoi,
+      soDaTonTai: existingRows.size,
+      soDongChuaKiemTra: 0,
+      soTaiKhoanLienKet: mode === 'LIEN_KET_HO_SO' ? candidates.length : 0,
+      soTaiKhoanDocLap: mode === 'DOC_LAP' ? candidates.length : 0,
+      loi: errors,
+      loiTep: fileErrors,
+      duLieu: duLieuXemTruoc,
+    }
+
+    const rows: { row: number; dto: Omit<TaoTaiKhoanDto, 'matKhauBanDau'>; passwordHash: string; login: string; email: string | null }[] = []
+    for (let start = 0; start < candidates.length; start += 4) {
+      const batch = await Promise.all(candidates.slice(start, start + 4).map(async ({ row, dto, login, email }) => {
+        const { matKhauBanDau, ...safeDto } = dto
+        return { row, dto: { ...safeDto, ...(mode === 'LIEN_KET_HO_SO' ? { maHoSo: profilesByCode.get((dto as TaoTaiKhoanDto & { maHoSoNoiBo?: string }).maHoSoNoiBo ?? '') } : {}) }, passwordHash: await this.bamMatKhau.tao(matKhauBanDau), login, email }
+      }))
+      rows.push(...batch)
+    }
+    const id = randomUUID()
+    this.importSessions.set(id, { actor: actor.maTaiKhoan, expiresAt: Date.now() + 10 * 60_000, mode, rows })
+    return { maPhienNhap: id, hetHanSauGiay: 600, tongSo: rows.length, hopLe: rows.length, coLoi: 0, soDaTonTai: 0, soDongChuaKiemTra: 0, soTaiKhoanLienKet: mode === 'LIEN_KET_HO_SO' ? rows.length : 0, soTaiKhoanDocLap: mode === 'DOC_LAP' ? rows.length : 0, loi: [], loiTep: [], duLieu: rows.map(({ row, login, email, dto }) => ({ dong: row, tenDangNhap: login, email, trangThai: dto.trangThai ?? 'DANG_HOAT_DONG', lienKetHoSo: mode === 'LIEN_KET_HO_SO', hopLe: true, daTonTai: false, trangThaiTonTai: 'CHUA_TON_TAI' as const, trangThaiKiemTra: 'HOP_LE' as const, loi: [] })) }
+  }
+
+  async xacNhanNhap(actor: TaiKhoanDaXacThuc, sessionId: string, ip: string | null) {
+    const session = this.importSessions.get(sessionId)
+    if (!session || session.actor !== actor.maTaiKhoan || session.expiresAt < Date.now()) throw new BadRequestException({ maLoi: 'PHIEN_NHAP_HET_HAN', thongBao: 'Phiên kiểm tra đã hết hạn. Vui lòng tải và kiểm tra lại tệp.' })
+    if (this.importsInProgress.has(sessionId)) throw new ConflictException({ maLoi: 'PHIEN_NHAP_DANG_XU_LY', thongBao: 'Phiên nhập này đang được xử lý. Vui lòng chờ kết quả.' })
+    this.importsInProgress.add(sessionId)
+    try {
+      await this.phanQuyen.kiemTraQuyenDuocPhanCong(actor.maTaiKhoan, 'TAI_KHOAN_TAO', actor.maPhien)
+      if (session.rows.some(({ dto }) => dto.trangThai && dto.trangThai !== 'DANG_HOAT_DONG')) await this.phanQuyen.kiemTraQuyenDuocPhanCong(actor.maTaiKhoan, 'TAI_KHOAN_KHOA_MO_KHOA', actor.maPhien)
+      const logins = session.rows.map(({ login }) => login.toLocaleLowerCase('vi-VN'))
+      const emails = session.rows.flatMap(({ email }) => email ? [email.toLocaleLowerCase('vi-VN')] : [])
+      if (await this.prisma.taiKhoanNguoiDung.count({ where: { OR: [{ tenDangNhap: { in: logins } }, ...(emails.length ? [{ email: { in: emails } }] : [])] } })) throw new ConflictException({ maLoi: 'DU_LIEU_NHAP_DA_THAY_DOI', thongBao: 'Tên đăng nhập hoặc email đã được sử dụng sau bước kiểm tra. Hãy tải và kiểm tra lại tệp.' })
+      if (session.mode === 'LIEN_KET_HO_SO') {
+        for (const row of session.rows) if (row.dto.maHoSo) {
+          await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'TAI_KHOAN_LIEN_KET_HO_SO', { maHoSo: row.dto.maHoSo }, actor.maPhien)
+          await this.kiemTraHoSoChuaLienKet(row.dto.maHoSo)
+        }
+      }
+      const created = await this.prisma.$transaction(async (tx) => {
+        const result: { ma: string; tenDangNhap: string; email: string | null; trangThai: string; lienKetHoSo: boolean; dong: number }[] = []
+        for (const row of session.rows) {
+          const account = await tx.taiKhoanNguoiDung.create({ data: { tenDangNhap: row.dto.tenDangNhap.trim(), email: row.dto.email?.trim() || null, matKhauBam: row.passwordHash, trangThai: row.dto.trangThai ?? 'DANG_HOAT_DONG', doiMatKhauLanDau: false, ...(row.dto.maHoSo ? { hoSoDangVien: { connect: { ma: row.dto.maHoSo } } } : {}) }, select: { ma: true, tenDangNhap: true, email: true, trangThai: true } })
+          await this.audit(tx, actor, account.ma, 'TAI_KHOAN_TAO', ip, undefined, { tenDangNhap: account.tenDangNhap, emailDaThietLap: Boolean(account.email), nhapHangLoat: true, lienKetHoSo: Boolean(row.dto.maHoSo) })
+          result.push({ ...account, lienKetHoSo: Boolean(row.dto.maHoSo), dong: row.row })
+        }
+        return result
+      })
+      this.importSessions.delete(sessionId)
+      return { tongSo: created.length, soTaiKhoanLienKet: created.filter((item) => item.lienKetHoSo).length, soTaiKhoanDocLap: created.filter((item) => !item.lienKetHoSo).length, duLieu: created.map((item) => ({ dong: item.dong, tenDangNhap: item.tenDangNhap, email: item.email, trangThai: item.trangThai, lienKetHoSo: item.lienKetHoSo, hopLe: true, daTonTai: true, trangThaiTonTai: 'DA_TON_TAI' as const, trangThaiKiemTra: 'HOP_LE' as const, loi: [] })) }
+    } catch (error) { this.mapError(error) }
+    finally { this.importsInProgress.delete(sessionId) }
+  }
+
+  async taoBaoCaoLoiNhap(actor: TaiKhoanDaXacThuc, errors: { row: number; field: string; message: string }[] = []) {
+    await this.phanQuyen.kiemTraQuyenDuocPhanCong(actor.maTaiKhoan, 'TAI_KHOAN_TAO', actor.maPhien)
+    if (!Array.isArray(errors) || errors.length > 1000) throw new BadRequestException({ maLoi: 'BAO_CAO_KHONG_HOP_LE', thongBao: 'Danh sách lỗi không hợp lệ.' })
+    const workbook = this.transfer.createWorkbook(), sheet = workbook.addWorksheet('Lỗi nhập tài khoản')
+    sheet.addRow(['Dòng Excel', 'Trường', 'Chi tiết lỗi'])
+    const safe = (value: unknown) => String(value ?? '').slice(0, 500).replace(/^[=+\-@]/, '’$&')
+    for (const error of errors) sheet.addRow([Number.isInteger(error.row) ? error.row : '', safe(error.field).slice(0, 150), safe(error.message)])
+    return this.transfer.write(workbook)
   }
 
   async tao(actor: TaiKhoanDaXacThuc, dto: TaoTaiKhoanDto, ip: string | null) {
@@ -319,6 +541,7 @@ export class TaiKhoanService {
   }
 
   async lichSu(actor: TaiKhoanDaXacThuc, maTaiKhoan: string) {
+    await this.phanQuyen.kiemTraQuanTriVienToanHeThong(actor.maTaiKhoan, actor.maPhien)
     await this.kiemTraTaiKhoanTrongPhamVi(actor, maTaiKhoan)
     await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'NHAT_KY_KIEM_TOAN_XEM', {}, actor.maPhien)
     return this.prisma.nhatKyKiemToan.findMany({

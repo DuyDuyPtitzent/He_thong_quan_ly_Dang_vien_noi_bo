@@ -4,7 +4,7 @@ import { IsDateString, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, 
 export class DanhSachTaiKhoanDto {
   @IsOptional() @IsUUID('4') maTaiKhoan?: string
   @IsOptional() @IsString() @MaxLength(150) tuKhoa?: string
-  @IsOptional() @IsIn(['DANG_HOAT_DONG', 'TAM_KHOA', 'NGUNG_HOAT_DONG']) trangThai?: string
+  @IsOptional() @IsIn(['DANG_HOAT_DONG', 'TAM_KHOA', 'NGUNG_HOAT_DONG', 'TAM_KHOA_HOAC_NGUNG_HOAT_DONG']) trangThai?: string
   @IsOptional() @IsIn(['DA_LIEN_KET', 'CHUA_LIEN_KET']) tinhTrangLienKet?: string
   @IsOptional() @IsUUID('4') maChiBo?: string
   @IsOptional() @IsUUID('4') maVaiTro?: string

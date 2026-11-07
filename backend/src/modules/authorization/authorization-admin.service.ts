@@ -133,7 +133,7 @@ export class QuanTriPhanQuyenService {
       where: { ma: maVaiTro }, include: { quyen: { include: { quyen: true } } },
     })
     if (!role) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_VAI_TRO', thongBao: 'Không tìm thấy vai trò.' })
-    if (role.laVaiTroHeThong) throw forbidden()
+    if (role.laVaiTroHeThong) await this.phanQuyen.kiemTraQuanTriVienToanHeThong(actor.maTaiKhoan, actor.maPhien)
     if (dto.themMaQuyen.some((id) => dto.boMaQuyen.includes(id))) throw new ConflictException({ maLoi: 'QUYEN_TRUNG_LAP', thongBao: 'Không thể thêm và gỡ cùng một Permission trong một yêu cầu.' })
     const codes = await this.prisma.quyen.findMany({ where: { ma: { in: dto.themMaQuyen } }, select: { ma: true, maDinhDanh: true } })
     if (codes.length !== dto.themMaQuyen.length) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_QUYEN', thongBao: 'Danh mục có Permission không tồn tại.' })
@@ -141,6 +141,10 @@ export class QuanTriPhanQuyenService {
       ...role.quyen.map(({ quyen }) => quyen).filter(({ ma }) => !dto.boMaQuyen.includes(ma)).map(({ maDinhDanh }) => maDinhDanh),
       ...codes.map(({ maDinhDanh }) => maDinhDanh),
     ]
+    const protectedSystemAdministratorPermissions = ['QUYEN_XEM_DANH_MUC', 'VAI_TRO_XEM', 'VAI_TRO_GAN_QUYEN']
+    if (role.maDinhDanh === systemAdministratorRoleCode && protectedSystemAdministratorPermissions.some((code) => !resultingCodes.includes(code))) {
+      throw new ConflictException({ maLoi: 'KHONG_THE_GO_QUYEN_QUAN_TRI_COT_LOI', thongBao: 'Không thể gỡ các quyền cần thiết để quản trị viên toàn hệ thống tiếp tục quản lý ma trận quyền.' })
+    }
     await this.kiemTraCoTheSuaQuyenVaiTro(actor, resultingCodes, maVaiTro)
     await this.prisma.$transaction(async (tx) => {
       if (dto.boMaQuyen.length) await tx.vaiTroQuyen.deleteMany({ where: { maVaiTro, maQuyen: { in: dto.boMaQuyen } } })
@@ -231,6 +235,7 @@ export class QuanTriPhanQuyenService {
   }
 
   async lichSuPhanCongTaiKhoan(actor: TaiKhoanDaXacThuc, maTaiKhoan: string) {
+    await this.phanQuyen.kiemTraQuanTriVienToanHeThong(actor.maTaiKhoan, actor.maPhien)
     await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'NHAT_KY_KIEM_TOAN_XEM', {}, actor.maPhien)
     const assignments = await this.danhSachPhanCong(actor, maTaiKhoan)
     if (!assignments.length) return []

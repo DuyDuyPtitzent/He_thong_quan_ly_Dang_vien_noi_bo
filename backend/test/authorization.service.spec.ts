@@ -18,7 +18,7 @@ const grant = (scope: string, maDonViGoc: string | null = null, permissions = ['
   loaiPhamVi: scope,
   maDonViGoc,
   phamViDonViChiDinh: [{ maDonVi: 'unit-1' }],
-  vaiTro: { quyen: permissions.map((maDinhDanh) => ({ quyen: { maDinhDanh } })) },
+  vaiTro: { maDinhDanh: 'ROLE_THUONG', laVaiTroHeThong: false, quyen: permissions.map((maDinhDanh) => ({ quyen: { maDinhDanh } })) },
 })
 
 describe('PhanQuyenService', () => {
@@ -59,6 +59,36 @@ describe('PhanQuyenService', () => {
     await expect(service.kiemTra('account-1', 'NAM_HOC_XEM', { maDonVi: 'unit-1' }, 'session-1')).resolves.toBeUndefined()
     await expect(service.kiemTra('account-1', 'NAM_HOC_TAO', { maDonVi: 'unit-1' }, 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
     expect(prisma.phanCongVaiTro.findMany.mock.calls[0][0].where.ma).toBe('assignment-active')
+  })
+
+  it('allows only the current valid full-system administrator Assignment for system-log access', async () => {
+    const adminAssignment = {
+      ...grant('TOAN_HE_THONG', null, ['NHAT_KY_KIEM_TOAN_XEM']),
+      ma: 'assignment-active',
+      vaiTro: { ...grant('TOAN_HE_THONG').vaiTro, maDinhDanh: 'QUAN_TRI_VIEN_TOAN_HE_THONG', laVaiTroHeThong: true },
+    }
+    const { service, prisma } = setup([adminAssignment])
+    await expect(service.kiemTraQuanTriVienToanHeThong('account-1', 'session-1')).resolves.toBeUndefined()
+    expect(prisma.phanCongVaiTro.findMany.mock.calls[0][0].where).toMatchObject({
+      ma: 'assignment-active', thuHoiLuc: null, taiKhoan: { trangThai: 'DANG_HOAT_DONG' },
+      ngayHieuLucTu: { lte: expect.any(Date) }, vaiTro: { trangThai: 'DANG_HOAT_DONG' },
+    })
+    expect(prisma.phanCongVaiTro.findMany.mock.calls[0][0].where.OR[1].ngayHieuLucDen.gt).toBeInstanceOf(Date)
+  })
+
+  it.each([
+    ['ordinary permission administrator', { ...grant('TOAN_HE_THONG', null, ['NHAT_KY_KIEM_TOAN_XEM']), ma: 'assignment-active' }],
+    ['organization tree assignment', { ...grant('CAY_DON_VI', 'root', ['NHAT_KY_KIEM_TOAN_XEM']), ma: 'assignment-active', vaiTro: { ...grant('CAY_DON_VI').vaiTro, maDinhDanh: 'QUAN_TRI_VIEN_TOAN_HE_THONG', laVaiTroHeThong: true } }],
+    ['a role with the display name but a different identifier', { ...grant('TOAN_HE_THONG', null, ['NHAT_KY_KIEM_TOAN_XEM']), ma: 'assignment-active', vaiTro: { ...grant('TOAN_HE_THONG').vaiTro, ten: 'Quản trị viên toàn hệ thống' } }],
+  ])('denies system-log access to %s', async (_label, assignment) => {
+    const { service } = setup([assignment])
+    await expect(service.kiemTraQuanTriVienToanHeThong('account-1', 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it('denies system-log access when the administrator Assignment is expired, revoked, absent, or no session is selected', async () => {
+    const { service } = setup([])
+    await expect(service.kiemTraQuanTriVienToanHeThong('account-1', 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+    await expect(service.kiemTraQuanTriVienToanHeThong('account-1')).rejects.toBeInstanceOf(ForbiddenException)
   })
 
   it('allows only an explicitly selected unit for DON_VI_CHI_DINH', async () => {

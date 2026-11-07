@@ -19,7 +19,7 @@ export const permissionCatalog = [
   'VAI_TRO_SUA', 'VAI_TRO_XOA', 'VAI_TRO_GAN_QUYEN', 'PHAN_CONG_VAI_TRO_XEM',
   'PHAN_CONG_VAI_TRO_TAO', 'PHAN_CONG_VAI_TRO_SUA', 'PHAN_CONG_VAI_TRO_THU_HOI',
   'QUYEN_XEM_DANH_MUC', 'NHAT_KY_KIEM_TOAN_XEM', 'NHAT_KY_BAO_MAT_XEM',
-  'NHAT_KY_KIEM_TOAN_XUAT', 'HO_SO_CA_NHAN_TU_CAP_NHAT', 'HO_SO_CA_NHAN_MO_DOT_CAP_NHAT',
+  'NHAT_KY_KIEM_TOAN_XUAT', 'NHAT_KY_XOA', 'HO_SO_CA_NHAN_TU_CAP_NHAT', 'HO_SO_CA_NHAN_MO_DOT_CAP_NHAT',
   'HO_SO_CA_NHAN_XEM_YEU_CAU_CAP_NHAT', 'HO_SO_CA_NHAN_DUYET_CAP_NHAT',
   'CAU_HINH_HE_THONG_XEM', 'CAU_HINH_HE_THONG_SUA', 'VAN_HANH_HE_THONG',
   'NAM_HOC_XEM', 'NAM_HOC_TAO', 'NAM_HOC_SUA', 'NAM_HOC_XOA',
@@ -46,7 +46,7 @@ function nhom(
   return Object.fromEntries(entries.map(([code, ten, moTa, trangThai]) => [code, { ten, moTa, maNhom, tenNhom, tinhTrangApi: trangThai ?? tinhTrangApi }]))
 }
 
-/** Tên nhóm và diễn giải hiển thị trên ma trận; được lưu đồng bộ vào PostgreSQL. */
+/** Metadata hiển thị trên ma trận; khi API được triển khai, cập nhật trạng thái quyền tại đây cùng thay đổi endpoint. */
 export const permissionMetadata = ({
   ...nhom('TO_CHUC', 'Tổ chức Đảng', 'DA_CO_API', [
     ['TO_CHUC_XEM', 'Xem đơn vị', 'Xem danh sách, sơ đồ cây và thông tin chi tiết của các đơn vị nằm trong phạm vi được giao.'],
@@ -65,14 +65,14 @@ export const permissionMetadata = ({
     ['HO_SO_DANG_VIEN_XEM_TONG_QUAN', 'Xem tổng quan hồ sơ', 'Xem phần thông tin chung của hồ sơ Đảng viên mà tài khoản được phép truy cập.', 'DA_CO_API'],
     ['HO_SO_DANG_VIEN_TAO', 'Tạo hồ sơ Đảng viên', 'Lập hồ sơ Đảng viên mới theo quy trình tiếp nhận và các trường bắt buộc của hệ thống.', 'DA_CO_API'],
     ['HO_SO_DANG_VIEN_SUA_THONG_TIN_CO_BAN', 'Sửa thông tin cơ bản', 'Cập nhật các thông tin cơ bản được quy trình nghiệp vụ cho phép; quyền này không tự cho phép đổi sinh hoạt, trạng thái hoặc phân quyền.', 'DA_CO_API'],
-    ['HO_SO_DANG_VIEN_XOA', 'Xóa hồ sơ Đảng viên', 'Xóa hồ sơ chỉ khi không có lịch sử, quan hệ hoặc dữ liệu nghiệp vụ cần bảo toàn.'],
+    ['HO_SO_DANG_VIEN_XOA', 'Xóa hồ sơ Đảng viên', 'Xóa vật lý hồ sơ tạo nhầm cùng các bản ghi ban đầu sau khi kiểm tra Scope và điều kiện bảo toàn lịch sử.', 'DA_CO_API'],
     ['HO_SO_CA_NHAN_XEM', 'Xem hồ sơ cá nhân', 'Xem hồ sơ được liên kết với chính tài khoản đang đăng nhập; không dùng quyền này để tra cứu hồ sơ người khác.', 'DA_CO_API'],
     ['HO_SO_CA_NHAN_SUA', 'Đề nghị sửa thông tin cá nhân', 'Cho phép Đảng viên gửi đề nghị thay đổi thông tin cá nhân trong đợt còn hiệu lực; dữ liệu chính thức chỉ đổi sau khi được duyệt.', 'DA_CO_API'],
     ['HO_SO_DIA_CHI_XEM', 'Xem địa chỉ', 'Xem các địa chỉ có trong hồ sơ của những Đảng viên nằm trong phạm vi được giao.', 'DA_CO_API'],
     ['HO_SO_DIA_CHI_SUA', 'Đề nghị sửa địa chỉ', 'Cho phép gửi đề nghị thay đổi địa chỉ theo đợt cập nhật và quy trình phê duyệt; không sửa trực tiếp dữ liệu chính thức.', 'DA_CO_API'],
     ['HO_SO_SINH_VIEN_XEM', 'Xem thông tin sinh viên', 'Xem thông tin sinh viên đã được lưu và liên kết với hồ sơ Đảng viên trong phạm vi được giao.', 'DA_CO_API'],
     ['HO_SO_SINH_VIEN_SUA', 'Sửa thông tin sinh viên', 'Cập nhật thông tin sinh viên theo quy trình được phê duyệt; không tự kết nối hoặc sửa dữ liệu tại hệ thống đào tạo nguồn.', 'DA_CO_API'],
-    ['HO_SO_XUAT_DU_LIEU', 'Xuất dữ liệu hồ sơ', 'Tải dữ liệu hồ sơ trong phạm vi được giao; dữ liệu xuất phải tuân theo quyền xem từng nhóm thông tin.'],
+    ['HO_SO_XUAT_DU_LIEU', 'Xuất dữ liệu hồ sơ', 'Tải dữ liệu hồ sơ trong phạm vi được giao; dữ liệu xuất phải tuân theo quyền xem từng nhóm thông tin.', 'DA_CO_API'],
     ['HO_SO_XEM_LICH_SU_THAY_DOI', 'Xem lịch sử hồ sơ', 'Xem các lần thay đổi hồ sơ, người thực hiện, thời điểm và kết quả trong phạm vi được giao.', 'DA_CO_API'],
   ]),
   ...nhom('SINH_HOAT', 'Sinh hoạt Đảng', 'CHUA_CO_API', [
@@ -132,10 +132,11 @@ export const permissionMetadata = ({
   ...nhom('DANH_MUC_QUYEN', 'Danh mục quyền', 'DA_CO_API', [
     ['QUYEN_XEM_DANH_MUC', 'Xem danh mục quyền', 'Tra cứu mã, tên, ý nghĩa và trạng thái chức năng của các quyền do hệ thống định nghĩa; không tạo quyền mới.'],
   ]),
-  ...nhom('NHAT_KY', 'Nhật ký', 'CHUA_CO_API', [
-    ['NHAT_KY_KIEM_TOAN_XEM', 'Xem nhật ký kiểm toán', 'Tra cứu người thực hiện, hành động, thời điểm và kết quả thao tác trong phạm vi được giao.', 'DA_CO_API'],
-    ['NHAT_KY_BAO_MAT_XEM', 'Xem nhật ký bảo mật', 'Tra cứu sự kiện đăng nhập và sự kiện bảo vệ tài khoản trong phạm vi được phép.', 'DA_CO_API'],
+  ...nhom('NHAT_KY', 'Nhật ký', 'DA_CO_API', [
+    ['NHAT_KY_KIEM_TOAN_XEM', 'Xem nhật ký kiểm toán', 'Tra cứu thao tác toàn hệ thống; chỉ Quản trị viên toàn hệ thống có phân công TOAN_HE_THONG hợp lệ được sử dụng quyền này.', 'DA_CO_API'],
+    ['NHAT_KY_BAO_MAT_XEM', 'Xem nhật ký bảo mật', 'Tra cứu sự kiện bảo mật toàn hệ thống; chỉ Quản trị viên toàn hệ thống có phân công TOAN_HE_THONG hợp lệ được sử dụng quyền này.', 'DA_CO_API'],
     ['NHAT_KY_KIEM_TOAN_XUAT', 'Xuất nhật ký kiểm toán', 'Tải nhật ký kiểm toán trong phạm vi được phép, theo định dạng và thời hạn lưu trữ đã quy định.'],
+    ['NHAT_KY_XOA', 'Quản lý xóa nhật ký', 'Quyền riêng cho bước xem trước xóa nhật ký theo Scope; API xóa thực tế chưa có và chỉ được bổ sung sau khi chính sách lưu trữ được phê duyệt.', 'DA_CO_API'],
   ]),
   ...nhom('CAP_NHAT_CA_NHAN', 'Yêu cầu cập nhật cá nhân', 'CHUA_CO_API', [
     ['HO_SO_CA_NHAN_TU_CAP_NHAT', 'Đề nghị cập nhật hồ sơ cá nhân', 'Gửi thông tin cá nhân và ảnh đại diện cần thay đổi trong thời gian mở đợt; yêu cầu phải được Chi bộ duyệt trước khi áp dụng.', 'DA_CO_API'],

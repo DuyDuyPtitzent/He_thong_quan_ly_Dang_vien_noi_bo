@@ -1,8 +1,48 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ForbiddenException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException } from '@nestjs/common'
 import { HoSoDangVienService } from '../src/modules/member-profiles/member-profiles.service'
 
 describe('HoSoDangVienService', () => {
+  it('exports only requested fields without calling the list-view service', async () => {
+    const addRow = vi.fn()
+    const sheet = { addRow, getColumn: vi.fn(() => ({})), views: [], autoFilter: undefined as unknown }
+    const workbook = { addWorksheet: vi.fn(() => sheet) }
+    const write = vi.fn().mockResolvedValue(Buffer.from('xlsx'))
+    const prisma = { hoSoDangVien: { findMany: vi.fn().mockResolvedValue([{
+      ma: 'profile-1', maHoSoNoiBo: 'HS-001', hoVaTen: '=Nguyễn An', trangThai: 'DANG_HOAT_DONG', trangThaiDangVien: 'DU_BI',
+      ngayVaoDang: new Date('2020-01-02T00:00:00.000Z'), ngayChinhThuc: null, soPhieuLyLich: null, soTheDangVien: null, khoaDangVien: 'D23',
+      thongTinCaNhan: { ngaySinh: null, gioiTinh: null, soCccd: '001234567890', ngayCapCccd: null, noiCapCccd: null, quocTich: null, danToc: null, tonGiao: null, soDienThoai: null, emailLienHe: null },
+      diaChi: [{ loaiDiaChi: 'NOI_SINH', quocGia: 'Việt Nam', tinhThanhPho: 'Hà Nội', quanHuyen: null, xaPhuong: null, diaChiChiTiet: 'Số 1' }],
+      thongTinSinhVien: null, taiKhoan: null, quaTrinh: [], lichSuDonVi: [],
+    }]) }, nhatKyKiemToan: { create: vi.fn() } }
+    const permissions = {
+      kiemTraQuyenDuocPhanCong: vi.fn().mockResolvedValue({ coQuyen: true, toanHeThong: true, maDonVi: [] }),
+      layDonViTrongPhamVi: vi.fn().mockResolvedValue({ coQuyen: true, toanHeThong: true, maDonVi: [] }),
+      kiemTra: vi.fn().mockResolvedValue(undefined),
+    }
+    const service = new HoSoDangVienService(prisma as never, permissions as never, {} as never, { createWorkbook: () => workbook, write } as never)
+
+    await expect(service.xuatExcel({ maTaiKhoan: 'actor', maPhien: 'session' } as never, { cheDo: 'all', truong: ['hoVaTen', 'soCccd', 'noiSinh', 'ngayVaoDang'] })).resolves.toEqual(Buffer.from('xlsx'))
+    expect(addRow).toHaveBeenNthCalledWith(1, ['Họ và tên', 'Số CCCD', 'Nơi sinh', 'Ngày vào Đảng'])
+    expect(addRow).toHaveBeenNthCalledWith(2, ['’=Nguyễn An', '001234567890', 'Số 1, Hà Nội, Việt Nam', new Date('2020-01-02T00:00:00.000Z')])
+    expect(prisma.hoSoDangVien.findMany).toHaveBeenCalledOnce()
+    expect(permissions.kiemTraQuyenDuocPhanCong).toHaveBeenCalledWith('actor', 'HO_SO_XUAT_DU_LIEU', 'session')
+  })
+
+  it('rejects a selected field that is not in the export catalog', async () => {
+    const permissions = { kiemTraQuyenDuocPhanCong: vi.fn().mockResolvedValue({ coQuyen: true, toanHeThong: true, maDonVi: [] }) }
+    const service = new HoSoDangVienService({} as never, permissions as never, {} as never, {} as never)
+    await expect(service.xuatExcel({ maTaiKhoan: 'actor' } as never, { cheDo: 'all', truong: ['matKhauBam'] })).rejects.toBeInstanceOf(BadRequestException)
+  })
+
+  it('rejects organization export outside the export assignment scope', async () => {
+    const outsideUnit = '00000000-0000-4000-8000-000000000001'
+    const findUnique = vi.fn().mockResolvedValue({ ma: outsideUnit, loaiDonVi: 'TO' })
+    const permissions = { kiemTraQuyenDuocPhanCong: vi.fn().mockResolvedValue({ coQuyen: true, toanHeThong: false, maDonVi: ['allowed'] }), layDonViTrongPhamVi: vi.fn().mockResolvedValue({ coQuyen: true, toanHeThong: false, maDonVi: ['allowed'] }) }
+    const service = new HoSoDangVienService({ donViToChuc: { findUnique } } as never, permissions as never, {} as never, {} as never)
+    await expect(service.xuatExcel({ maTaiKhoan: 'actor' } as never, { cheDo: 'organization', maDonVi: outsideUnit, truong: ['maHoSoNoiBo'] })).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
   it('returns no profile for an account without a link and never searches by a client supplied profile id', async () => {
     const findUnique = vi.fn().mockResolvedValue(null)
     const prisma = { hoSoDangVien: { findUnique } }

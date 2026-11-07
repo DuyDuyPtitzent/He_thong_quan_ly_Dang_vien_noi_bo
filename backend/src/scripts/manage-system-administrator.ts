@@ -10,6 +10,7 @@ import { BamMatKhauService } from '../modules/auth/password-hasher'
 import {
   demQuanTriVienToanHeThongHopLe,
   khoaKiemTraQuanTriVienCuoi,
+  systemAdministratorManuallyManagedPermissionCodes,
   systemAdministratorPermissionCodes,
   systemAdministratorRoleDescription,
   systemAdministratorRoleCode,
@@ -145,7 +146,7 @@ async function grant(prisma: PrismaClient, operator: string, reference: string, 
     } })
     if (!role.laVaiTroHeThong || role.trangThai !== active) throw new Error('Role quản trị toàn hệ thống hiện có không đúng trạng thái hệ thống.')
     const existingLinks = await tx.vaiTroQuyen.findMany({ where: { maVaiTro: role.ma }, include: { quyen: { select: { maDinhDanh: true } } } })
-    const expected = new Set<string>(systemAdministratorPermissionCodes)
+    const expected = new Set<string>([...systemAdministratorPermissionCodes, ...systemAdministratorManuallyManagedPermissionCodes])
     if (existingLinks.some(({ quyen }) => !expected.has(quyen.maDinhDanh))) throw new Error('Role hệ thống có Permission ngoài danh sách được duyệt; từ chối tự ý mở rộng.')
     const linked = new Set(existingLinks.map(({ quyen }) => quyen.maDinhDanh))
     const missing = permissionRows.filter(({ maDinhDanh }) => !linked.has(maDinhDanh))
@@ -265,7 +266,7 @@ async function syncPermissions(prisma: PrismaClient, operator: string, reference
     const permissionRows = await tx.quyen.findMany({ where: { maDinhDanh: { in: [...systemAdministratorPermissionCodes] } }, select: { ma: true, maDinhDanh: true } })
     if (permissionRows.length !== systemAdministratorPermissionCodes.length) throw new SafeAdminOperationError('Cần đồng bộ đầy đủ danh mục Permission trước khi đồng bộ Role.')
     const existingLinks = await tx.vaiTroQuyen.findMany({ where: { maVaiTro: role.ma }, include: { quyen: { select: { maDinhDanh: true } } } })
-    const expected = new Set<string>(systemAdministratorPermissionCodes)
+    const expected = new Set<string>([...systemAdministratorPermissionCodes, ...systemAdministratorManuallyManagedPermissionCodes])
     if (existingLinks.some(({ quyen }) => !expected.has(quyen.maDinhDanh))) throw new SafeAdminOperationError('Role hệ thống có Permission ngoài danh mục hiện hành; từ chối đồng bộ để cần rà soát.')
     const linked = new Set(existingLinks.map(({ quyen }) => quyen.maDinhDanh))
     const missing = permissionRows.filter(({ maDinhDanh }) => !linked.has(maDinhDanh))

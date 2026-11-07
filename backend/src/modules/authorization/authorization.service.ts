@@ -1,12 +1,32 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common'
 import { DichVuPrisma } from '../../infrastructure/database/prisma.service'
 import type { YeuCauPhamVi } from './authorization.types'
+import { systemAdministratorRoleCode } from './system-administrator.policy'
 
 const trangThaiHoatDong = 'DANG_HOAT_DONG'
 
 @Injectable()
 export class PhanQuyenService {
   constructor(@Inject(DichVuPrisma) private readonly prisma: DichVuPrisma) {}
+
+  /** Requires the current session's active, full-system assignment for special system-log access. */
+  async kiemTraQuanTriVienToanHeThong(maTaiKhoan: string, maPhien?: string): Promise<void> {
+    if (!maPhien) throw this.khongDuQuyen()
+    const assignments = await this.layAssignments(maTaiKhoan, maPhien)
+    if (assignments.some(({ loaiPhamVi, vaiTro }) =>
+      loaiPhamVi === 'TOAN_HE_THONG' &&
+      vaiTro.maDinhDanh === systemAdministratorRoleCode &&
+      vaiTro.laVaiTroHeThong,
+    )) return
+    throw this.khongDuQuyen()
+  }
+
+  private khongDuQuyen() {
+    return new ForbiddenException({
+      maLoi: 'KHONG_DU_QUYEN',
+      thongBao: 'Chỉ Quản trị viên toàn hệ thống có phân công hợp lệ mới được truy cập nhật ký hệ thống.',
+    })
+  }
 
   async kiemTra(
     maTaiKhoan: string,
@@ -60,6 +80,18 @@ export class PhanQuyenService {
     return { coQuyen: phuHop.length > 0, toanHeThong: false, maDonVi: [...ids] }
   }
 
+  /** Checks an active permission assignment for non-resource operations; callers must still scope any data they access. */
+  async kiemTraQuyenDuocPhanCong(maTaiKhoan: string, maQuyen: string, maPhien?: string) {
+    const access = await this.layDonViTrongPhamVi(maTaiKhoan, maQuyen, maPhien)
+    if (!access.coQuyen) {
+      throw new ForbiddenException({
+        maLoi: 'KHONG_DU_QUYEN',
+        thongBao: 'Tài khoản không được phân công quyền thực hiện thao tác này.',
+      })
+    }
+    return access
+  }
+
   private async layAssignments(maTaiKhoan: string, maPhien?: string) {
     let activeAssignmentId: string | undefined
     if (maPhien) {
@@ -78,6 +110,7 @@ export class PhanQuyenService {
         ngayHieuLucTu: { lte: hienTai },
         OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: hienTai } }],
         thuHoiLuc: null,
+        taiKhoan: { trangThai: 'DANG_HOAT_DONG' },
         vaiTro: { trangThai: trangThaiHoatDong },
       },
       include: {
