@@ -22,6 +22,42 @@ const grant = (scope: string, maDonViGoc: string | null = null, permissions = ['
 })
 
 describe('PhanQuyenService', () => {
+  it.each(['CAY_DON_VI', 'DON_VI_CHI_DINH', 'TOAN_HE_THONG'])('allows %s Assignment with its NAM_HOC permission for the shared catalog', async (scope) => {
+    const { service } = setup([{ ...grant(scope, null, ['NAM_HOC_TAO']), ma: 'assignment-active' }])
+    await expect(service.kiemTraQuyenDanhMucNamHoc('account-1', 'NAM_HOC_TAO', 'session-1')).resolves.toBeUndefined()
+  })
+
+  it('rejects a personal Scope, missing Permission, or no selected active Assignment for the catalog', async () => {
+    const personal = setup([{ ...grant('CA_NHAN', null, ['NAM_HOC_XEM']), ma: 'assignment-active' }])
+    await expect(personal.service.kiemTraQuyenDanhMucNamHoc('account-1', 'NAM_HOC_XEM', 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+    const missingPermission = setup([{ ...grant('CAY_DON_VI', null, ['NAM_HOC_XEM']), ma: 'assignment-active' }])
+    await expect(missingPermission.service.kiemTraQuyenDanhMucNamHoc('account-1', 'NAM_HOC_TAO', 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+    const noAssignment = setup([])
+    await expect(noAssignment.service.kiemTraQuyenDanhMucNamHoc('account-1', 'NAM_HOC_XEM', 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it('uses the selected Assignment and live Role-Permission rows for the shared catalog', async () => {
+    let active = 'assignment-a'
+    let permission = 'NAM_HOC_TAO'
+    const assignments = [
+      { ...grant('CAY_DON_VI', null, ['NAM_HOC_TAO']), ma: 'assignment-a' },
+      { ...grant('DON_VI_CHI_DINH', null, ['NAM_HOC_SUA']), ma: 'assignment-b' },
+    ]
+    const prisma = {
+      phienDangNhap: { findFirst: vi.fn(async () => ({ maPhanCongVaiTroDangHoatDong: active })) },
+      phanCongVaiTro: { findMany: vi.fn(({ where }: { where?: { ma?: string } }) => Promise.resolve(assignments.filter(item => item.ma === where?.ma).map(item => ({ ...item, vaiTro: { ...item.vaiTro, quyen: item.vaiTro.quyen.filter(({ quyen }: any) => quyen.maDinhDanh === permission) } })))) },
+      hoSoDangVien: { findFirst: vi.fn() }, lichSuDonViDangVien: { findFirst: vi.fn() }, $queryRaw: vi.fn(),
+    }
+    const service = new PhanQuyenService(prisma as never)
+    await expect(service.kiemTraQuyenDanhMucNamHoc('account-1', 'NAM_HOC_TAO', 'session-1')).resolves.toBeUndefined()
+    await expect(service.kiemTraQuyenDanhMucNamHoc('account-1', 'NAM_HOC_SUA', 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+    active = 'assignment-b'
+    permission = 'NAM_HOC_SUA'
+    await expect(service.kiemTraQuyenDanhMucNamHoc('account-1', 'NAM_HOC_SUA', 'session-1')).resolves.toBeUndefined()
+    permission = 'NAM_HOC_TAO'
+    await expect(service.kiemTraQuyenDanhMucNamHoc('account-1', 'NAM_HOC_TAO', 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
   it('requires Permission and Scope on the same Assignment', async () => {
     const { service } = setup([
       grant('TOAN_HE_THONG', null, ['P_OTHER']),

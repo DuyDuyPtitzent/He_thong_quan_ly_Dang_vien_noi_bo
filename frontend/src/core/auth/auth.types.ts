@@ -1,6 +1,7 @@
 export type TaiKhoanXacThuc = {
   maTaiKhoan: string
   tenDangNhap: string
+  hoVaTen?: string | null
   doiMatKhauLanDau: boolean
 }
 

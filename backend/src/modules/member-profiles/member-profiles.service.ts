@@ -9,7 +9,7 @@ import { BamMatKhauService } from '../auth/password-hasher'
 import type { TaiKhoanDaXacThuc } from '../auth/auth.types'
 import { PhanQuyenService } from '../authorization/authorization.service'
 import { demQuanTriVienToanHeThongHopLe, khoaKiemTraQuanTriVienCuoi, systemAdministratorRoleCode } from '../authorization/system-administrator.policy'
-import { DanhSachHoSoDto, SuaHoSoDto, TaoHoSoDto } from './member-profiles.dto'
+import { DanhSachHoSoDto, SuaHoSoDto, TaoChuyenSinhHoatNgoaiDto, TaoDaoTaoDangDto, TaoHoSoDto } from './member-profiles.dto'
 import { DataTransferService } from '../data-transfer/data-transfer.service'
 import { importValidationMessage, normalizeExcelDate, normalizeMemberStatus } from './member-profile-import-normalization'
 
@@ -58,6 +58,8 @@ const MEMBER_PROFILE_IMPORT_FIELDS: MemberProfileImportField[] = [
   { key:'chuyenNganh', label:'Chuyên ngành', column:36, requirement:'optional', format:'Văn bản, tối đa 200 ký tự', validValues:'Tự do', example:'Hệ thống thông tin' },
   { key:'lopHanhChinh', label:'Lớp hành chính', column:37, requirement:'optional', format:'Văn bản, tối đa 100 ký tự', validValues:'Tự do', example:'D24CQCN01-B' },
   { key:'trangThaiHocTap', label:'Trạng thái học tập', column:38, requirement:'optional', format:'Văn bản, tối đa 50 ký tự', validValues:'Tự do', example:'DANG_HOC' },
+  { key:'soDienThoaiBoNguoiNuoiDuong', label:'Số điện thoại bố/người nuôi dưỡng', column:39, requirement:'optional', format:'Văn bản, tối đa 30 ký tự', validValues:'Số điện thoại hợp lệ nếu nhập; không yêu cầu duy nhất', example:'0912345678', text:true },
+  { key:'soDienThoaiMeNguoiNuoiDuong', label:'Số điện thoại mẹ/người nuôi dưỡng', column:40, requirement:'optional', format:'Văn bản, tối đa 30 ký tự', validValues:'Số điện thoại hợp lệ nếu nhập; không yêu cầu duy nhất', example:'0987654321', text:true },
 ]
 
 const importHeader = (field: MemberProfileImportField) => `${field.label}${field.requirement === 'required' ? ' (*)' : ''}`
@@ -151,7 +153,7 @@ export class HoSoDangVienService {
     addresses.addRow(['Mã hồ sơ nội bộ','Loại địa chỉ','Phân loại nơi sinh','Quốc gia','Tỉnh/Thành phố','Quận/Huyện','Xã/Phường','Địa chỉ chi tiết'])
     addresses.getColumn(1).numFmt='@'
     for (let row = 2; row <= 201; row++) {
-      addresses.getCell(row, 2).dataValidation = { type: 'list', allowBlank: false, formulae: ['"NOI_SINH,QUE_QUAN,THUONG_TRU"'], showErrorMessage: true, errorTitle: 'Loại địa chỉ không hợp lệ', error: 'Chọn NOI_SINH, QUE_QUAN hoặc THUONG_TRU.' }
+      addresses.getCell(row, 2).dataValidation = { type: 'list', allowBlank: false, formulae: ['"NOI_SINH,QUE_QUAN,THUONG_TRU,NOI_O_HIEN_NAY"'], showErrorMessage: true, errorTitle: 'Loại địa chỉ không hợp lệ', error: 'Chọn một loại địa chỉ trong danh sách.' }
       addresses.getCell(row, 3).dataValidation = { type: 'list', allowBlank: true, formulae: ['"TRONG_NUOC,NUOC_NGOAI"'], showErrorMessage: true, errorTitle: 'Phân loại nơi sinh không hợp lệ', error: 'Chọn TRONG_NUOC hoặc NUOC_NGOAI.' }
     }
     return this.transfer.write(workbook)
@@ -164,7 +166,8 @@ export class HoSoDangVienService {
     const sheet = workbook.getWorksheet('Danh sách Đảng viên')
     if (!sheet || !workbook.getWorksheet('Hướng dẫn nhập') || !workbook.getWorksheet('Danh mục tham chiếu') || !workbook.getWorksheet('Địa chỉ')) throw new BadRequestException({ maLoi: 'SAI_MAU_EXCEL', thongBao: 'Thiếu sheet trong tệp mẫu. Hãy sử dụng đúng tệp Excel nhập hồ sơ Đảng viên.' })
     const headers = MEMBER_PROFILE_IMPORT_FIELDS.map(importHeader)
-    const headerRow = [2, 3].find((candidate) => sheet.getRow(candidate).cellCount >= headers.length && headers.every((header, i) => sheet.getCell(candidate, i + 1).text === header))
+    const legacyHeaders = MEMBER_PROFILE_IMPORT_FIELDS.filter((field) => field.column <= 38).map(importHeader)
+    const headerRow = [2, 3].find((candidate) => headers.every((header, i) => sheet.getCell(candidate, i + 1).text === header) || legacyHeaders.every((header, i) => sheet.getCell(candidate, i + 1).text === header))
     if (!headerRow) throw new BadRequestException({ maLoi: 'SAI_COT_EXCEL', thongBao: 'Tên hoặc thứ tự cột không đúng với tệp mẫu nhập hồ sơ Đảng viên.' })
     const dataRowNumbers: number[] = []
     for (let rowNumber = headerRow + 1; rowNumber <= sheet.rowCount; rowNumber++) {
@@ -193,16 +196,16 @@ export class HoSoDangVienService {
     const addressHeaders=['Mã hồ sơ nội bộ','Loại địa chỉ','Phân loại nơi sinh','Quốc gia','Tỉnh/Thành phố','Quận/Huyện','Xã/Phường','Địa chỉ chi tiết']
     if(addressHeaders.some((header,index)=>addressSheet.getCell(1,index+1).text!==header))throw new BadRequestException({maLoi:'SAI_COT_EXCEL',thongBao:'Cấu trúc sheet Địa chỉ không khớp mẫu mới nhất.'})
     const addressRows=new Map<string, NonNullable<TaoHoSoDto['diaChi']>>()
-    const addressTypes=new Set(['NOI_SINH','QUE_QUAN','THUONG_TRU'])
+    const addressTypes=new Set(['NOI_SINH','QUE_QUAN','THUONG_TRU','NOI_O_HIEN_NAY'])
     for(let index=2;index<=addressSheet.rowCount;index++){
       const addressRow=addressSheet.getRow(index);const profileCode=text(addressRow,1).toLocaleLowerCase();if(!profileCode&&!addressRow.hasValues)continue
       let hasUnsupportedCell=false
       for(let column=1;column<=addressHeaders.length;column++){const cell=addressRow.getCell(column);const result=this.transfer.readCell(cell);const message=this.transfer.cellReadError(result,cell);if(message){errors.push({row:index,field:addressHeaders[column-1]??'unknown',message});hasUnsupportedCell=true}}
       if(hasUnsupportedCell)continue
-      const type=text(addressRow,2).toLocaleUpperCase();if(!profileCode||!addressTypes.has(type)){errors.push({row:index,field:'maHoSoNoiBo/loaiDiaChi',message:'Địa chỉ cần mã hồ sơ và loại NOI_SINH, QUE_QUAN hoặc THUONG_TRU.'});continue}
+      const type=text(addressRow,2).toLocaleUpperCase();if(!profileCode||!addressTypes.has(type)){errors.push({row:index,field:'maHoSoNoiBo/loaiDiaChi',message:'Địa chỉ cần mã hồ sơ và loại NOI_SINH, QUE_QUAN, THUONG_TRU hoặc NOI_O_HIEN_NAY.'});continue}
       const list=addressRows.get(profileCode)??[]
       if(list.some((item)=>item.loaiDiaChi===type)){errors.push({row:index,field:'loaiDiaChi',message:'Mỗi hồ sơ chỉ được khai báo một địa chỉ cho từng loại.'});continue}
-      list.push({loaiDiaChi:type as 'NOI_SINH'|'QUE_QUAN'|'THUONG_TRU',...(text(addressRow,3)?{phanLoaiNoiSinh:text(addressRow,3).toLocaleUpperCase() as 'TRONG_NUOC'|'NUOC_NGOAI'}:{}),...(text(addressRow,4)?{quocGia:text(addressRow,4)}:{}),...(text(addressRow,5)?{tinhThanhPho:text(addressRow,5)}:{}),...(text(addressRow,6)?{quanHuyen:text(addressRow,6)}:{}),...(text(addressRow,7)?{xaPhuong:text(addressRow,7)}:{}),...(text(addressRow,8)?{diaChiChiTiet:text(addressRow,8)}:{})})
+      list.push({loaiDiaChi:type as 'NOI_SINH'|'QUE_QUAN'|'THUONG_TRU'|'NOI_O_HIEN_NAY',...(text(addressRow,3)?{phanLoaiNoiSinh:text(addressRow,3).toLocaleUpperCase() as 'TRONG_NUOC'|'NUOC_NGOAI'}:{}),...(text(addressRow,4)?{quocGia:text(addressRow,4)}:{}),...(text(addressRow,5)?{tinhThanhPho:text(addressRow,5)}:{}),...(text(addressRow,6)?{quanHuyen:text(addressRow,6)}:{}),...(text(addressRow,7)?{xaPhuong:text(addressRow,7)}:{}),...(text(addressRow,8)?{diaChiChiTiet:text(addressRow,8)}:{})})
       addressRows.set(profileCode,list)
     }
     for (const n of dataRowNumbers) {
@@ -239,7 +242,7 @@ export class HoSoDangVienService {
         }
         if (value && field.key === 'gioiTinh' && field.choices && !field.choices.includes(value)) addError(field.key, `${field.label} không hợp lệ. Vui lòng chọn giá trị trong danh mục.`)
       }
-      const dto = plainToInstance(TaoHoSoDto, { maHoSoNoiBo:v(1), hoVaTen:v(2), trangThai:v(3)||'DANG_HOAT_DONG', trangThaiDangVien:status ?? v(4), maChiBo:branch?.ma, maTo:unit?.ma, ngaySinhHoatTu:v(7)||undefined, ngayVaoDang:v(8)||undefined, ngayChinhThuc:v(9)||undefined, soPhieuLyLich:v(10)||undefined, soTheDangVien:v(11)||undefined, khoaDangVien:cohort||undefined, soQuyetDinhKetNap:v(13)||undefined, ngayQuyetDinhKetNap:v(14)||undefined, donViBanHanhQuyetDinh:v(15)||undefined, nguoiGioiThieuThuNhat:v(16)||undefined, nguoiGioiThieuThuHai:v(17)||undefined, ngaySinh:v(18)||undefined, gioiTinh:gender||undefined, soCccd:v(20)||undefined, ngayCapCccd:v(21)||undefined, noiCapCccd:v(22)||undefined, quocTich:v(23)||undefined, danToc:v(24)||undefined, tonGiao:v(25)||undefined, soDienThoai:v(26)||undefined, emailLienHe:v(27)||undefined, ...(addressRows.get(v(1).toLocaleLowerCase())?.length?{diaChi:addressRows.get(v(1).toLocaleLowerCase())}:{}), ...(createAccount ? { taiKhoanMoi:{ tenDangNhap:v(29), email:v(30)||undefined, matKhau:randomBytes(24).toString('base64url') } } : {}), ...(v(31) ? { thongTinSinhVien:{ maSinhVien:v(31), khoaHoc:v(32)||undefined, donViPhuTrach:v(33)||undefined, chuongTrinhDaoTao:v(34)||undefined, nganh:v(35)||undefined, chuyenNganh:v(36)||undefined, lopHanhChinh:v(37)||undefined, trangThaiHocTap:v(38)||undefined } } : {}) })
+      const dto = plainToInstance(TaoHoSoDto, { maHoSoNoiBo:v(1), hoVaTen:v(2), trangThai:v(3)||'DANG_HOAT_DONG', trangThaiDangVien:status ?? v(4), maChiBo:branch?.ma, maTo:unit?.ma, ngaySinhHoatTu:v(7)||undefined, ngayVaoDang:v(8)||undefined, ngayChinhThuc:v(9)||undefined, soPhieuLyLich:v(10)||undefined, soTheDangVien:v(11)||undefined, khoaDangVien:cohort||undefined, soQuyetDinhKetNap:v(13)||undefined, ngayQuyetDinhKetNap:v(14)||undefined, donViBanHanhQuyetDinh:v(15)||undefined, nguoiGioiThieuThuNhat:v(16)||undefined, nguoiGioiThieuThuHai:v(17)||undefined, ngaySinh:v(18)||undefined, gioiTinh:gender||undefined, soCccd:v(20)||undefined, ngayCapCccd:v(21)||undefined, noiCapCccd:v(22)||undefined, quocTich:v(23)||undefined, danToc:v(24)||undefined, tonGiao:v(25)||undefined, soDienThoai:v(26)||undefined, emailLienHe:v(27)||undefined, soDienThoaiBoNguoiNuoiDuong:v(39)||undefined, soDienThoaiMeNguoiNuoiDuong:v(40)||undefined, ...(addressRows.get(v(1).toLocaleLowerCase())?.length?{diaChi:addressRows.get(v(1).toLocaleLowerCase())}:{}), ...(createAccount ? { taiKhoanMoi:{ tenDangNhap:v(29), email:v(30)||undefined, matKhau:randomBytes(24).toString('base64url') } } : {}), ...(v(31) ? { thongTinSinhVien:{ maSinhVien:v(31), khoaHoc:v(32)||undefined, donViPhuTrach:v(33)||undefined, chuongTrinhDaoTao:v(34)||undefined, nganh:v(35)||undefined, chuyenNganh:v(36)||undefined, lopHanhChinh:v(37)||undefined, trangThaiHocTap:v(38)||undefined } } : {}) })
       for (const err of await validate(dto)) {
         if (err.property === 'ngaySinhHoatTu' && !dto.ngaySinhHoatTu) continue
         if ((err.property === 'maChiBo' && !branch) || (err.property === 'maTo' && (!unit || !branch))) continue
@@ -378,10 +381,13 @@ export class HoSoDangVienService {
     { key:'danToc', label:'Dân tộc', group:'Thông tin cá nhân', permission:'HO_SO_CA_NHAN_XEM' },
     { key:'tonGiao', label:'Tôn giáo', group:'Thông tin cá nhân', permission:'HO_SO_CA_NHAN_XEM' },
     { key:'soDienThoai', label:'Số điện thoại', group:'Thông tin cá nhân', permission:'HO_SO_CA_NHAN_XEM', text:true },
+    { key:'soDienThoaiBoNguoiNuoiDuong', label:'Số điện thoại bố/người nuôi dưỡng', group:'Thông tin cá nhân', permission:'HO_SO_CA_NHAN_XEM', text:true },
+    { key:'soDienThoaiMeNguoiNuoiDuong', label:'Số điện thoại mẹ/người nuôi dưỡng', group:'Thông tin cá nhân', permission:'HO_SO_CA_NHAN_XEM', text:true },
     { key:'emailLienHe', label:'Email liên hệ', group:'Thông tin cá nhân', permission:'HO_SO_CA_NHAN_XEM' },
     { key:'noiSinh', label:'Nơi sinh', group:'Địa chỉ', permission:'HO_SO_DIA_CHI_XEM' },
     { key:'queQuan', label:'Quê quán', group:'Địa chỉ', permission:'HO_SO_DIA_CHI_XEM' },
     { key:'thuongTru', label:'Địa chỉ thường trú', group:'Địa chỉ', permission:'HO_SO_DIA_CHI_XEM' },
+    { key:'noiOHienNay', label:'Nơi ở hiện nay', group:'Địa chỉ', permission:'HO_SO_DIA_CHI_XEM' },
     { key:'maSinhVien', label:'Mã sinh viên', group:'Thông tin sinh viên', permission:'HO_SO_SINH_VIEN_XEM', text:true },
     { key:'khoaHoc', label:'Khóa học', group:'Thông tin sinh viên', permission:'HO_SO_SINH_VIEN_XEM' },
     { key:'donViPhuTrach', label:'Đơn vị phụ trách', group:'Thông tin sinh viên', permission:'HO_SO_SINH_VIEN_XEM' },
@@ -444,7 +450,7 @@ export class HoSoDangVienService {
       select: {
         ma: true, maHoSoNoiBo: true, hoVaTen: true, trangThai: true, trangThaiDangVien: true,
         ngayVaoDang: true, ngayChinhThuc: true, soPhieuLyLich: true, soTheDangVien: true, khoaDangVien: true,
-        thongTinCaNhan: { select: { ngaySinh: true, gioiTinh: true, soCccd: true, ngayCapCccd: true, noiCapCccd: true, quocTich: true, danToc: true, tonGiao: true, soDienThoai: true, emailLienHe: true } },
+        thongTinCaNhan: { select: { ngaySinh: true, gioiTinh: true, soCccd: true, ngayCapCccd: true, noiCapCccd: true, quocTich: true, danToc: true, tonGiao: true, soDienThoai: true, soDienThoaiBoNguoiNuoiDuong: true, soDienThoaiMeNguoiNuoiDuong: true, emailLienHe: true } },
         diaChi: { select: { loaiDiaChi: true, quocGia: true, tinhThanhPho: true, quanHuyen: true, xaPhuong: true, diaChiChiTiet: true } },
         thongTinSinhVien: true,
         quaTrinh: { where: { loaiSuKien: 'VAO_DANG_DU_BI' }, orderBy: { ngaySuKien: 'asc' }, take: 1, select: { soQuyetDinh: true, ngayQuyetDinh: true, donViBanHanhQuyetDinh: true, nguoiGioiThieuThuNhat: true, nguoiGioiThieuThuHai: true } },
@@ -473,7 +479,7 @@ export class HoSoDangVienService {
       const membership = row.lichSuDonVi[0]
       const addresses = new Map(row.diaChi.map((address) => [address.loaiDiaChi, [address.diaChiChiTiet, address.xaPhuong, address.quanHuyen, address.tinhThanhPho, address.quocGia].filter(Boolean).join(', ')]))
       const entryProcess = row.quaTrinh[0]
-      const values: Record<string, unknown> = { maHoSoNoiBo: row.maHoSoNoiBo, hoVaTen: row.hoVaTen, trangThai: statusLabel[row.trangThai] ?? row.trangThai, trangThaiDangVien: row.trangThaiDangVien ? statusLabel[row.trangThaiDangVien] ?? row.trangThaiDangVien : null, ngayVaoDang: row.ngayVaoDang, ngayChinhThuc: row.ngayChinhThuc, soPhieuLyLich: row.soPhieuLyLich, soTheDangVien: row.soTheDangVien, khoaDangVien: row.khoaDangVien, soQuyetDinhKetNap: entryProcess?.soQuyetDinh, ngayQuyetDinhKetNap: entryProcess?.ngayQuyetDinh, donViBanHanhQuyetDinh: entryProcess?.donViBanHanhQuyetDinh, nguoiGioiThieuThuNhat: entryProcess?.nguoiGioiThieuThuNhat, nguoiGioiThieuThuHai: entryProcess?.nguoiGioiThieuThuHai, ...row.thongTinCaNhan, noiSinh: addresses.get('NOI_SINH'), queQuan: addresses.get('QUE_QUAN'), thuongTru: addresses.get('THUONG_TRU'), ...row.thongTinSinhVien, dangUy: membership?.chiBo.quanHeCha[0]?.donViCha.tenDonVi[0]?.ten ?? null, chiBo: membership?.chiBo.tenDonVi[0]?.ten ?? null, to: membership?.to?.tenDonVi[0]?.ten ?? null, ngaySinhHoatTu: membership?.ngayHieuLucTu, tenDangNhap: row.taiKhoan?.tenDangNhap, emailTaiKhoan: row.taiKhoan?.email, trangThaiTaiKhoan: row.taiKhoan ? statusLabel[row.taiKhoan.trangThai] ?? row.taiKhoan.trangThai : null, tinhTrangLienKet: row.taiKhoan ? 'Đã liên kết' : 'Chưa liên kết' }
+      const values: Record<string, unknown> = { maHoSoNoiBo: row.maHoSoNoiBo, hoVaTen: row.hoVaTen, trangThai: statusLabel[row.trangThai] ?? row.trangThai, trangThaiDangVien: row.trangThaiDangVien ? statusLabel[row.trangThaiDangVien] ?? row.trangThaiDangVien : null, ngayVaoDang: row.ngayVaoDang, ngayChinhThuc: row.ngayChinhThuc, soPhieuLyLich: row.soPhieuLyLich, soTheDangVien: row.soTheDangVien, khoaDangVien: row.khoaDangVien, soQuyetDinhKetNap: entryProcess?.soQuyetDinh, ngayQuyetDinhKetNap: entryProcess?.ngayQuyetDinh, donViBanHanhQuyetDinh: entryProcess?.donViBanHanhQuyetDinh, nguoiGioiThieuThuNhat: entryProcess?.nguoiGioiThieuThuNhat, nguoiGioiThieuThuHai: entryProcess?.nguoiGioiThieuThuHai, ...row.thongTinCaNhan, noiSinh: addresses.get('NOI_SINH'), queQuan: addresses.get('QUE_QUAN'), thuongTru: addresses.get('THUONG_TRU'), noiOHienNay: addresses.get('NOI_O_HIEN_NAY'), ...row.thongTinSinhVien, dangUy: membership?.chiBo.quanHeCha[0]?.donViCha.tenDonVi[0]?.ten ?? null, chiBo: membership?.chiBo.tenDonVi[0]?.ten ?? null, to: membership?.to?.tenDonVi[0]?.ten ?? null, ngaySinhHoatTu: membership?.ngayHieuLucTu, tenDangNhap: row.taiKhoan?.tenDangNhap, emailTaiKhoan: row.taiKhoan?.email, trangThaiTaiKhoan: row.taiKhoan ? statusLabel[row.taiKhoan.trangThai] ?? row.taiKhoan.trangThai : null, tinhTrangLienKet: row.taiKhoan ? 'Đã liên kết' : 'Chưa liên kết' }
       const authorizedKeys = new Set<string>()
       for (const permission of fieldPermissions) { try { await this.phanQuyen.kiemTra(actor.maTaiKhoan, permission, { maHoSo: row.ma }, actor.maPhien); for (const field of selectedFields.filter((item) => item.permission === permission)) authorizedKeys.add(field.key) } catch { /* Keep field blank when this profile is outside that information permission's scope. */ } }
       sheet.addRow(selectedFields.map((field) => safeCell(authorizedKeys.has(field.key) ? values[field.key] ?? null : null)))
@@ -498,7 +504,7 @@ export class HoSoDangVienService {
   private columnName(n:number){let out='';while(n){const rem=(n-1)%26;out=String.fromCharCode(65+rem)+out;n=Math.floor((n-1)/26)}return out}
   private unitLabel(units: Map<string,{ma:string;maDinhDanh:string|null}>, id?:string){return id ? [...units.values()].find((unit)=>unit.ma===id)?.maDinhDanh ?? id : null}
   private async createProfileInTransaction(tx:Prisma.TransactionClient,actor:TaiKhoanDaXacThuc,dto:TaoHoSoDto,donVi:{chiBo:string;to?:string},hash?:string,ip:string|null=null){
-    const profile=await tx.hoSoDangVien.create({data:{maHoSoNoiBo:dto.maHoSoNoiBo.trim(),soPhieuLyLich:dto.soPhieuLyLich?.trim()||null,soTheDangVien:dto.soTheDangVien?.trim()||null,khoaDangVien:dto.khoaDangVien?.trim()||null,hoVaTen:dto.hoVaTen.trim(),trangThai:dto.trangThai,trangThaiDangVien:dto.trangThaiDangVien,ngayVaoDang:dateOnly(dto.ngayVaoDang),ngayChinhThuc:dateOnly(dto.ngayChinhThuc),thongTinCaNhan:{create:{ngaySinh:dateOnly(dto.ngaySinh),gioiTinh:dto.gioiTinh,soCccd:dto.soCccd?.trim(),ngayCapCccd:dateOnly(dto.ngayCapCccd),noiCapCccd:dto.noiCapCccd,quocTich:dto.quocTich,danToc:dto.danToc,tonGiao:dto.tonGiao,soDienThoai:dto.soDienThoai,emailLienHe:dto.emailLienHe}},diaChi:{create:(dto.diaChi??[]).map(a=>({loaiDiaChi:a.loaiDiaChi,phanLoaiNoiSinh:a.phanLoaiNoiSinh as never,quocGia:a.quocGia,tinhThanhPho:a.tinhThanhPho,quanHuyen:a.quanHuyen,xaPhuong:a.xaPhuong,diaChiChiTiet:a.diaChiChiTiet}))},...(dto.thongTinSinhVien?{thongTinSinhVien:{create:dto.thongTinSinhVien}}:{}),...(dto.ngayVaoDang?{quaTrinh:{create:{loaiSuKien:'VAO_DANG_DU_BI',ngaySuKien:dateOnly(dto.ngayVaoDang)!,soQuyetDinh:dto.soQuyetDinhKetNap?.trim(),ngayQuyetDinh:dateOnly(dto.ngayQuyetDinhKetNap),donViBanHanhQuyetDinh:dto.donViBanHanhQuyetDinh?.trim(),nguoiGioiThieuThuNhat:dto.nguoiGioiThieuThuNhat?.trim(),nguoiGioiThieuThuHai:dto.nguoiGioiThieuThuHai?.trim(),maNguoiGhiNhan:actor.maTaiKhoan}}}:{})},select:{ma:true,maHoSoNoiBo:true,hoVaTen:true}})
+    const profile=await tx.hoSoDangVien.create({data:{maHoSoNoiBo:dto.maHoSoNoiBo.trim(),soPhieuLyLich:dto.soPhieuLyLich?.trim()||null,soTheDangVien:dto.soTheDangVien?.trim()||null,khoaDangVien:dto.khoaDangVien?.trim()||null,hoVaTen:dto.hoVaTen.trim(),trangThai:dto.trangThai,trangThaiDangVien:dto.trangThaiDangVien,ngayVaoDang:dateOnly(dto.ngayVaoDang),ngayChinhThuc:dateOnly(dto.ngayChinhThuc),thongTinCaNhan:{create:{ngaySinh:dateOnly(dto.ngaySinh),gioiTinh:dto.gioiTinh,soCccd:dto.soCccd?.trim(),ngayCapCccd:dateOnly(dto.ngayCapCccd),noiCapCccd:dto.noiCapCccd,quocTich:dto.quocTich,danToc:dto.danToc,tonGiao:dto.tonGiao,soDienThoai:dto.soDienThoai,soDienThoaiBoNguoiNuoiDuong:dto.soDienThoaiBoNguoiNuoiDuong,soDienThoaiMeNguoiNuoiDuong:dto.soDienThoaiMeNguoiNuoiDuong,emailLienHe:dto.emailLienHe}},diaChi:{create:(dto.diaChi??[]).map(a=>({loaiDiaChi:a.loaiDiaChi,phanLoaiNoiSinh:a.phanLoaiNoiSinh as never,quocGia:a.quocGia,tinhThanhPho:a.tinhThanhPho,quanHuyen:a.quanHuyen,xaPhuong:a.xaPhuong,diaChiChiTiet:a.diaChiChiTiet}))},...(dto.thongTinSinhVien?{thongTinSinhVien:{create:dto.thongTinSinhVien}}:{}),...(dto.ngayVaoDang?{quaTrinh:{create:{loaiSuKien:'VAO_DANG_DU_BI',ngaySuKien:dateOnly(dto.ngayVaoDang)!,soQuyetDinh:dto.soQuyetDinhKetNap?.trim(),ngayQuyetDinh:dateOnly(dto.ngayQuyetDinhKetNap),donViBanHanhQuyetDinh:dto.donViBanHanhQuyetDinh?.trim(),nguoiGioiThieuThuNhat:dto.nguoiGioiThieuThuNhat?.trim(),nguoiGioiThieuThuHai:dto.nguoiGioiThieuThuHai?.trim(),maNguoiGhiNhan:actor.maTaiKhoan}}}:{})},select:{ma:true,maHoSoNoiBo:true,hoVaTen:true}})
     await tx.lichSuDonViDangVien.create({data:{maHoSo:profile.ma,maChiBo:donVi.chiBo,maTo:donVi.to,ngayHieuLucTu:dateOnly(dto.ngaySinhHoatTu)!,maNguoiGhiNhan:actor.maTaiKhoan}})
     let account:{ma:string;tenDangNhap:string}|undefined
     if(dto.taiKhoanMoi&&hash)account=await tx.taiKhoanNguoiDung.create({data:{tenDangNhap:dto.taiKhoanMoi.tenDangNhap.trim(),email:dto.taiKhoanMoi.email?.trim(),matKhauBam:hash,trangThai:'DANG_HOAT_DONG',doiMatKhauLanDau:false,hoSoDangVien:{connect:{ma:profile.ma}}},select:{ma:true,tenDangNhap:true}})
@@ -675,7 +681,7 @@ export class HoSoDangVienService {
     const currentMembership = await this.coQuyen(actor, 'SINH_HOAT_XEM_HIEN_TAI', id)
     const row = await this.prisma.hoSoDangVien.findUnique({ where: { ma: id }, select: {
       ma: true, maHoSoNoiBo: true, soPhieuLyLich: true, soTheDangVien: true, khoaDangVien: true, hoVaTen: true, trangThai: true, trangThaiDangVien: true, ngayVaoDang: true, ngayChinhThuc: true,
-      thongTinCaNhan: personal ? { select: { ngaySinh: true, gioiTinh: true, soCccd: true, ngayCapCccd: true, noiCapCccd: true, quocTich: true, danToc: true, tonGiao: true, soDienThoai: true, emailLienHe: true } } : false,
+      thongTinCaNhan: personal ? { select: { ngaySinh: true, gioiTinh: true, soCccd: true, ngayCapCccd: true, noiCapCccd: true, quocTich: true, danToc: true, tonGiao: true, soDienThoai: true, soDienThoaiBoNguoiNuoiDuong: true, soDienThoaiMeNguoiNuoiDuong: true, emailLienHe: true } } : false,
       diaChi: address ? { select: { loaiDiaChi: true, phanLoaiNoiSinh: true, quocGia: true, tinhThanhPho: true, quanHuyen: true, xaPhuong: true, diaChiChiTiet: true } } : false,
       thongTinSinhVien: student ? { select: { maSinhVien: true, trangThaiHocTap: true, khoaHoc: true, donViPhuTrach: true, chuongTrinhDaoTao: true, nganh: true, chuyenNganh: true, lopHanhChinh: true } } : false,
       quaTrinh: { where: { loaiSuKien: 'VAO_DANG_DU_BI' }, orderBy: { ngaySuKien: 'asc' }, take: 1, select: { soQuyetDinh: true, ngayQuyetDinh: true, donViBanHanhQuyetDinh: true, nguoiGioiThieuThuNhat: true, nguoiGioiThieuThuHai: true } },
@@ -740,6 +746,32 @@ export class HoSoDangVienService {
     }
   }
 
+  async chuyenSinhHoatNgoai(actor: TaiKhoanDaXacThuc, id: string) {
+    await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'SINH_HOAT_XEM_LICH_SU', { maHoSo: id }, actor.maPhien)
+    return this.prisma.chuyenSinhHoatNgoai.findMany({ where: { maHoSo: id }, orderBy: [{ namChuyenDi: 'desc' }, { thangChuyenDi: 'desc' }], select: { ma: true, tenChiBoChuyenDi: true, tenDangUyQuanLy: true, tinhThanhPho: true, noiDung: true, thangChuyenDi: true, namChuyenDi: true, ngayChuyenDi: true, lichSuDonViTiepNhan: { select: { ma: true, maChiBo: true, maTo: true, ngayHieuLucTu: true } } } })
+  }
+
+  async taoChuyenSinhHoatNgoai(actor: TaiKhoanDaXacThuc, id: string, dto: TaoChuyenSinhHoatNgoaiDto, ip: string | null) {
+    const profile = await this.prisma.hoSoDangVien.findUnique({ where: { ma: id }, select: { maTaiKhoan: true } })
+    if (!profile) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_HO_SO', thongBao: 'Không tìm thấy hồ sơ Đảng viên.' })
+    if (profile.maTaiKhoan !== actor.maTaiKhoan) throw new ForbiddenException({ maLoi: 'CHI_DANG_VIEN_TU_KHAI_BAO', thongBao: 'Chỉ Đảng viên sở hữu hồ sơ mới được bổ sung thông tin chuyển sinh hoạt ngoài PTIT.' })
+    await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'SINH_HOAT_SUA_LICH_SU', { maHoSo: id }, actor.maPhien)
+    const history = await this.prisma.lichSuDonViDangVien.findFirst({ where: { ma: dto.maLichSuDonViTiepNhan, maHoSo: id }, select: { ma: true, ngayHieuLucTu: true } })
+    if (!history) throw new BadRequestException({ maLoi: 'DON_VI_TIEP_NHAN_KHONG_HOP_LE', thongBao: 'Hãy chọn một lần sinh hoạt tại PTIT đã được ghi nhận trong hồ sơ.' })
+    const transferDate = dateOnly(dto.ngayChuyenDi)
+    if (transferDate && (transferDate.getUTCMonth() + 1 !== dto.thangChuyenDi || transferDate.getUTCFullYear() !== dto.namChuyenDi)) throw new BadRequestException({ maLoi: 'THOI_DIEM_CHUYEN_KHONG_KHOP', thongBao: 'Ngày chuyển đi phải thuộc đúng tháng và năm đã chọn.' })
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const created = await tx.chuyenSinhHoatNgoai.create({ data: { maHoSo: id, maLichSuDonViTiepNhan: history.ma, tenChiBoChuyenDi: dto.tenChiBoChuyenDi.trim(), tenDangUyQuanLy: dto.tenDangUyQuanLy?.trim(), tinhThanhPho: dto.tinhThanhPho?.trim(), noiDung: dto.noiDung?.trim(), thangChuyenDi: dto.thangChuyenDi, namChuyenDi: dto.namChuyenDi, ngayChuyenDi: transferDate }, select: { ma: true, tenChiBoChuyenDi: true, tenDangUyQuanLy: true, tinhThanhPho: true, noiDung: true, thangChuyenDi: true, namChuyenDi: true, ngayChuyenDi: true, maLichSuDonViTiepNhan: true } })
+        await this.audit(tx, actor, id, 'HO_SO_DANG_VIEN_CHUYEN_SINH_HOAT_NGOAI_TAO', ip, undefined, { maChuyenSinhHoat: created.ma, tenChiBoChuyenDi: created.tenChiBoChuyenDi, tenDangUyQuanLy: created.tenDangUyQuanLy, tinhThanhPho: created.tinhThanhPho, coNoiDung: Boolean(created.noiDung), thangChuyenDi: created.thangChuyenDi, namChuyenDi: created.namChuyenDi, ngayChuyenDi: created.ngayChuyenDi, maLichSuDonViTiepNhan: created.maLichSuDonViTiepNhan })
+        return created
+      })
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') throw new ConflictException({ maLoi: 'DA_CO_THONG_TIN_CHUYEN_NGOAI', thongBao: 'Lần sinh hoạt tại PTIT này đã có thông tin đơn vị chuyển đến.' })
+      throw error
+    }
+  }
+
   async quaTrinhDang(actor: TaiKhoanDaXacThuc, id: string) {
     await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'QUA_TRINH_DANG_XEM', { maHoSo: id }, actor.maPhien)
     return this.prisma.quaTrinhDangVien.findMany({
@@ -749,6 +781,36 @@ export class HoSoDangVienService {
         donViBanHanhQuyetDinh: true, nguoiGioiThieuThuNhat: true, nguoiGioiThieuThuHai: true,
         moTa: true, nguoiGhiNhan: { select: { tenDangNhap: true } },
       },
+    })
+  }
+
+  async daoTaoDang(actor: TaiKhoanDaXacThuc, id: string) {
+    await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'DAO_TAO_DANG_XEM', { maHoSo: id }, actor.maPhien)
+    return this.prisma.thongTinDaoTaoDang.findMany({
+      where: { maHoSo: id }, orderBy: [{ ngayTao: 'desc' }, { ma: 'asc' }],
+      select: { ma: true, loaiLop: true, tenChuongTrinh: true, trangThai: true, ngayHoanThanh: true, donViToChuc: true, ghiChu: true, ngayTao: true, ngayCapNhat: true,
+        taiLieu: { where: { trangThai: 'DANG_SU_DUNG', loaiTaiLieu: 'GIAY_CHUNG_NHAN_DANG_VIEN_MOI' }, select: { ma: true, loaiTaiLieu: true, tenTepGoc: true, kichThuoc: true, ngayTao: true } } },
+    })
+  }
+
+  async taoDaoTaoDang(actor: TaiKhoanDaXacThuc, id: string, dto: TaoDaoTaoDangDto, ip: string | null) {
+    await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'DAO_TAO_DANG_TAO', { maHoSo: id }, actor.maPhien)
+    const row = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.thongTinDaoTaoDang.create({ data: { maHoSo: id, loaiLop: dto.loaiLop, tenChuongTrinh: dto.tenChuongTrinh, trangThai: dto.trangThai, ngayHoanThanh: dateOnly(dto.ngayHoanThanh), donViToChuc: dto.donViToChuc, ghiChu: dto.ghiChu }, select: { ma: true, loaiLop: true, tenChuongTrinh: true, trangThai: true, ngayHoanThanh: true, donViToChuc: true, ghiChu: true, ngayTao: true, ngayCapNhat: true } })
+      await this.audit(tx, actor, id, 'HO_SO_DANG_VIEN_DAO_TAO_DANG_TAO', ip, undefined, { maDaoTao: created.ma, loaiLop: created.loaiLop, tenChuongTrinh: created.tenChuongTrinh, trangThai: created.trangThai, ngayHoanThanh: created.ngayHoanThanh, donViToChuc: created.donViToChuc })
+      return created
+    })
+    return row
+  }
+
+  async suaDaoTaoDang(actor: TaiKhoanDaXacThuc, id: string, maDaoTao: string, dto: TaoDaoTaoDangDto, ip: string | null) {
+    await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'DAO_TAO_DANG_SUA', { maHoSo: id }, actor.maPhien)
+    const before = await this.prisma.thongTinDaoTaoDang.findFirst({ where: { ma: maDaoTao, maHoSo: id } })
+    if (!before) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_QUA_TRINH_DAO_TAO', thongBao: 'Không tìm thấy thông tin đào tạo Đảng của hồ sơ này.' })
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.thongTinDaoTaoDang.update({ where: { ma: maDaoTao }, data: { loaiLop: dto.loaiLop, tenChuongTrinh: dto.tenChuongTrinh, trangThai: dto.trangThai, ngayHoanThanh: dateOnly(dto.ngayHoanThanh), donViToChuc: dto.donViToChuc, ghiChu: dto.ghiChu }, select: { ma: true, loaiLop: true, tenChuongTrinh: true, trangThai: true, ngayHoanThanh: true, donViToChuc: true, ghiChu: true, ngayTao: true, ngayCapNhat: true } })
+      await this.audit(tx, actor, id, 'HO_SO_DANG_VIEN_DAO_TAO_DANG_SUA', ip, { maDaoTao: before.ma, loaiLop: before.loaiLop, tenChuongTrinh: before.tenChuongTrinh, trangThai: before.trangThai, ngayHoanThanh: before.ngayHoanThanh, donViToChuc: before.donViToChuc }, { maDaoTao: updated.ma, loaiLop: updated.loaiLop, tenChuongTrinh: updated.tenChuongTrinh, trangThai: updated.trangThai, ngayHoanThanh: updated.ngayHoanThanh, donViToChuc: updated.donViToChuc })
+      return updated
     })
   }
 
@@ -809,7 +871,7 @@ export class HoSoDangVienService {
     try {
       return await this.prisma.$transaction(async (tx) => {
         const profile = await tx.hoSoDangVien.create({ data: { maHoSoNoiBo: dto.maHoSoNoiBo.trim(), soPhieuLyLich: dto.soPhieuLyLich?.trim() || null, soTheDangVien: dto.soTheDangVien?.trim() || null, khoaDangVien: dto.khoaDangVien?.trim() || null, hoVaTen: dto.hoVaTen.trim(), trangThai: dto.trangThai, trangThaiDangVien: dto.trangThaiDangVien, ngayVaoDang: dateOnly(dto.ngayVaoDang), ngayChinhThuc: dateOnly(dto.ngayChinhThuc),
-          thongTinCaNhan: { create: { ngaySinh: dateOnly(dto.ngaySinh), gioiTinh: dto.gioiTinh, soCccd, ngayCapCccd: dateOnly(dto.ngayCapCccd), noiCapCccd: dto.noiCapCccd, quocTich: dto.quocTich, danToc: dto.danToc, tonGiao: dto.tonGiao, soDienThoai: dto.soDienThoai, emailLienHe: dto.emailLienHe } },
+          thongTinCaNhan: { create: { ngaySinh: dateOnly(dto.ngaySinh), gioiTinh: dto.gioiTinh, soCccd, ngayCapCccd: dateOnly(dto.ngayCapCccd), noiCapCccd: dto.noiCapCccd, quocTich: dto.quocTich, danToc: dto.danToc, tonGiao: dto.tonGiao, soDienThoai: dto.soDienThoai, soDienThoaiBoNguoiNuoiDuong: dto.soDienThoaiBoNguoiNuoiDuong, soDienThoaiMeNguoiNuoiDuong: dto.soDienThoaiMeNguoiNuoiDuong, emailLienHe: dto.emailLienHe } },
           diaChi: { create: (dto.diaChi ?? []).map((a) => ({ loaiDiaChi: a.loaiDiaChi, phanLoaiNoiSinh: a.phanLoaiNoiSinh as never, quocGia: a.quocGia, tinhThanhPho: a.tinhThanhPho, quanHuyen: a.quanHuyen, xaPhuong: a.xaPhuong, diaChiChiTiet: a.diaChiChiTiet })) },
           ...(dto.thongTinSinhVien ? { thongTinSinhVien: { create: dto.thongTinSinhVien } } : {}),
           ...(dto.ngayVaoDang ? { quaTrinh: { create: { loaiSuKien: 'VAO_DANG_DU_BI', ngaySuKien: dateOnly(dto.ngayVaoDang)!, soQuyetDinh: dto.soQuyetDinhKetNap?.trim(), ngayQuyetDinh: dateOnly(dto.ngayQuyetDinhKetNap), donViBanHanhQuyetDinh: dto.donViBanHanhQuyetDinh?.trim(), nguoiGioiThieuThuNhat: dto.nguoiGioiThieuThuNhat?.trim(), nguoiGioiThieuThuHai: dto.nguoiGioiThieuThuHai?.trim(), maNguoiGhiNhan: actor.maTaiKhoan } } } : {}),
@@ -826,7 +888,7 @@ export class HoSoDangVienService {
 
   async sua(actor: TaiKhoanDaXacThuc, id: string, dto: SuaHoSoDto, ip: string | null) {
     await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'HO_SO_DANG_VIEN_SUA_THONG_TIN_CO_BAN', { maHoSo: id }, actor.maPhien)
-    if (['ngaySinh','gioiTinh','soCccd','ngayCapCccd','noiCapCccd','quocTich','danToc','tonGiao','soDienThoai','emailLienHe'].some((key) => Object.hasOwn(dto, key))) await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'HO_SO_CA_NHAN_SUA', { maHoSo: id }, actor.maPhien)
+    if (['ngaySinh','gioiTinh','soCccd','ngayCapCccd','noiCapCccd','quocTich','danToc','tonGiao','soDienThoai','soDienThoaiBoNguoiNuoiDuong','soDienThoaiMeNguoiNuoiDuong','emailLienHe'].some((key) => Object.hasOwn(dto, key))) await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'HO_SO_CA_NHAN_SUA', { maHoSo: id }, actor.maPhien)
     if (Object.hasOwn(dto, 'diaChi')) await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'HO_SO_DIA_CHI_SUA', { maHoSo: id }, actor.maPhien)
     if (Object.hasOwn(dto, 'thongTinSinhVien')) await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'HO_SO_SINH_VIEN_SUA', { maHoSo: id }, actor.maPhien)
     const before = await this.prisma.hoSoDangVien.findUnique({ where: { ma: id }, select: { ma: true, maHoSoNoiBo: true, soPhieuLyLich: true, soTheDangVien: true, khoaDangVien: true, hoVaTen: true, trangThai: true, trangThaiDangVien: true, ngayVaoDang: true } })
@@ -836,7 +898,7 @@ export class HoSoDangVienService {
       if (!dto.soCccd) throw new ConflictException({ maLoi: 'KHONG_HO_TRO_XOA_CCCD', thongBao: 'Không thể xóa CCCD qua biểu mẫu này.' })
     }
     try { return await this.prisma.$transaction(async (tx) => {
-      const caNhan = { ngaySinh: dateOnly(dto.ngaySinh), gioiTinh: dto.gioiTinh, soCccd: dto.soCccd?.trim(), ngayCapCccd: dateOnly(dto.ngayCapCccd), noiCapCccd: dto.noiCapCccd, quocTich: dto.quocTich, danToc: dto.danToc, tonGiao: dto.tonGiao, soDienThoai: dto.soDienThoai, emailLienHe: dto.emailLienHe }
+      const caNhan = { ngaySinh: dateOnly(dto.ngaySinh), gioiTinh: dto.gioiTinh, soCccd: dto.soCccd?.trim(), ngayCapCccd: dateOnly(dto.ngayCapCccd), noiCapCccd: dto.noiCapCccd, quocTich: dto.quocTich, danToc: dto.danToc, tonGiao: dto.tonGiao, soDienThoai: dto.soDienThoai, soDienThoaiBoNguoiNuoiDuong: dto.soDienThoaiBoNguoiNuoiDuong, soDienThoaiMeNguoiNuoiDuong: dto.soDienThoaiMeNguoiNuoiDuong, emailLienHe: dto.emailLienHe }
       const updated = await tx.hoSoDangVien.update({ where: { ma: id }, data: { maHoSoNoiBo: dto.maHoSoNoiBo?.trim(), soPhieuLyLich: dto.soPhieuLyLich === undefined ? undefined : dto.soPhieuLyLich.trim() || null, soTheDangVien: dto.soTheDangVien === undefined ? undefined : dto.soTheDangVien.trim() || null, khoaDangVien: dto.khoaDangVien === undefined ? undefined : dto.khoaDangVien.trim() || null, hoVaTen: dto.hoVaTen?.trim(), trangThai: dto.trangThai, trangThaiDangVien: dto.trangThaiDangVien, ngayVaoDang: dto.ngayVaoDang === undefined ? undefined : dateOnly(dto.ngayVaoDang), ngayChinhThuc: dto.ngayChinhThuc === undefined ? undefined : dateOnly(dto.ngayChinhThuc), thongTinCaNhan: { upsert: { create: caNhan, update: caNhan } }, thongTinSinhVien: dto.thongTinSinhVien ? { upsert: { create: dto.thongTinSinhVien, update: dto.thongTinSinhVien } } : dto.thongTinSinhVien === null ? { delete: true } : undefined }, select: { ma: true, maHoSoNoiBo: true, soPhieuLyLich: true, soTheDangVien: true, khoaDangVien: true, hoVaTen: true } })
       if (dto.diaChi) for (const a of dto.diaChi) await tx.diaChiDangVien.upsert({ where: { maHoSo_loaiDiaChi: { maHoSo: id, loaiDiaChi: a.loaiDiaChi as never } }, create: { maHoSo: id, loaiDiaChi: a.loaiDiaChi as never, phanLoaiNoiSinh: a.phanLoaiNoiSinh as never, quocGia: a.quocGia, tinhThanhPho: a.tinhThanhPho, quanHuyen: a.quanHuyen, xaPhuong: a.xaPhuong, diaChiChiTiet: a.diaChiChiTiet }, update: { phanLoaiNoiSinh: a.phanLoaiNoiSinh as never, quocGia: a.quocGia, tinhThanhPho: a.tinhThanhPho, quanHuyen: a.quanHuyen, xaPhuong: a.xaPhuong, diaChiChiTiet: a.diaChiChiTiet } })
       if (dto.ngayVaoDang !== undefined && dto.ngayVaoDang !== before.ngayVaoDang?.toISOString().slice(0, 10)) await tx.quaTrinhDangVien.create({ data: { maHoSo: id, loaiSuKien: 'VAO_DANG_DU_BI', ngaySuKien: dateOnly(dto.ngayVaoDang)!, maNguoiGhiNhan: actor.maTaiKhoan } })

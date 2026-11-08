@@ -25,6 +25,7 @@ describe('MyMemberProfilePage', () => {
   })
 
   it('shows profile data and approved completion fields as read-only', async () => {
+    mocks.permissions = ['SINH_HOAT_XEM_HIEN_TAI', 'HO_SO_CA_NHAN_XEM', 'HO_SO_DIA_CHI_XEM', 'HO_SO_SINH_VIEN_XEM']
     mocks.myProfile.mockResolvedValue({ hoSo: {
       ma: 'profile-a', maHoSoNoiBo: 'HS-A', hoVaTen: 'Nguyễn An', trangThai: 'DANG_HOAT_DONG', trangThaiDangVien: 'DU_BI',
       ngayVaoDang: null, ngayChinhThuc: null, soPhieuLyLich: null, soTheDangVien: null, khoaDangVien: 'D25', thongTinCaNhan: null,
@@ -33,10 +34,15 @@ describe('MyMemberProfilePage', () => {
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Nguyễn An' })).toBeInTheDocument()
     expect(screen.getByText('HS-A')).toBeInTheDocument()
+    const completionAlert = (await screen.findByText('Hồ sơ của bạn chưa hoàn thiện')).closest('[data-slot="alert"]')
+    const progress = screen.getByRole('progressbar', { name: 'Mức độ hoàn thiện hồ sơ: 17%' })
+    expect(progress.closest('[data-slot="card"]')?.compareDocumentPosition(completionAlert!) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+    expect(completionAlert?.closest('aside')).toBeInTheDocument()
+    expect(completionAlert?.closest('[data-slot="card"]')).toBeNull()
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Thông tin cá nhân' }), { key: 'ArrowRight' })
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Thông tin sinh viên' }), { key: 'ArrowRight' })
     expect(await screen.findByText('D25')).toBeInTheDocument()
-    expect(screen.getByRole('progressbar', { name: 'Mức độ hoàn thiện hồ sơ 60%' })).toHaveAttribute('aria-valuenow', '60')
+    expect(screen.getByRole('progressbar', { name: 'Mức độ hoàn thiện hồ sơ: 17%' })).toHaveAttribute('aria-valuenow', '17')
     expect(screen.getByText('Bạn chưa được cấp quyền gửi đề nghị cập nhật hồ sơ.')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Cập nhật hồ sơ' })).not.toBeInTheDocument()
     expect(screen.queryByText('Yêu cầu cập nhật hồ sơ')).not.toBeInTheDocument()
@@ -75,7 +81,7 @@ describe('MyMemberProfilePage', () => {
     await waitFor(() => expect(mocks.submitUpdateRequest).toHaveBeenCalledWith({ 'thongTinCaNhan.soDienThoai': '0912345678' }))
     const error = await screen.findByText('Trường 0 không được mở trong đợt cập nhật này.')
     const errorTabList = screen.getByRole('tablist')
-    expect(errorTabList.nextElementSibling).toContainElement(error)
+    expect(errorTabList.compareDocumentPosition(error) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
   })
 
   it('restores a pending request from the server after page reload and prevents a duplicate request', async () => {
@@ -94,5 +100,32 @@ describe('MyMemberProfilePage', () => {
     expect(screen.getByText('Chờ phê duyệt')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Sửa Số điện thoại' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Gửi yêu cầu cập nhật' })).not.toBeInTheDocument()
+  })
+
+  it('shows an approved-request notice only while its own campaign is open', async () => {
+    mocks.permissions = ['HO_SO_CA_NHAN_TU_CAP_NHAT']
+    mocks.myProfile.mockResolvedValue({ hoSo: {
+      ma: 'profile-a', maHoSoNoiBo: 'HS-A', hoVaTen: 'Nguyễn An', trangThai: 'DANG_HOAT_DONG', trangThaiDangVien: 'DU_BI',
+      ngayVaoDang: null, ngayChinhThuc: null, soPhieuLyLich: null, soTheDangVien: null,
+      thongTinCaNhan: null, diaChi: [], thongTinSinhVien: null, quaTrinh: [], lichSuDonVi: [],
+    } })
+    mocks.myUpdateWindow.mockResolvedValue({ hoSoLienKet: true, dotCapNhat: { ma: 'window-a', ten: 'Rà soát hồ sơ', ngayBatDau: '2026-11-04T00:00:00Z', ngayKetThuc: '2026-11-10T00:00:00Z', cacTruongDuocPhep: [], trangThai: 'DANG_MO' } })
+    mocks.myUpdateRequests.mockResolvedValue([{ ma: 'request-a', maHoSo: 'profile-a', maDotCapNhat: 'window-a', maDonViDuyet: 'unit-a', trangThai: 'DA_DUYET', giaTriTruoc: {}, giaTriDeNghi: {}, coAnhDaiDienDuocDeNghi: false, tenChiBo: 'Chi bộ A', ngayTao: '2026-11-04T00:00:00Z', thoiDiemXuLy: '2026-11-05T00:00:00Z', lyDoXuLy: null }])
+    renderPage()
+    expect(await screen.findByText('Yêu cầu cập nhật đã được phê duyệt')).toBeInTheDocument()
+  })
+
+  it('hides approved-request notices once the campaign has ended', async () => {
+    mocks.permissions = ['HO_SO_CA_NHAN_TU_CAP_NHAT']
+    mocks.myProfile.mockResolvedValue({ hoSo: {
+      ma: 'profile-a', maHoSoNoiBo: 'HS-A', hoVaTen: 'Nguyễn An', trangThai: 'DANG_HOAT_DONG', trangThaiDangVien: 'DU_BI',
+      ngayVaoDang: null, ngayChinhThuc: null, soPhieuLyLich: null, soTheDangVien: null,
+      thongTinCaNhan: null, diaChi: [], thongTinSinhVien: null, quaTrinh: [], lichSuDonVi: [],
+    } })
+    mocks.myUpdateWindow.mockResolvedValue({ hoSoLienKet: true, dotCapNhat: { ma: 'window-a', ten: 'Rà soát hồ sơ', ngayBatDau: '2026-11-04T00:00:00Z', ngayKetThuc: '2026-11-06T00:00:00Z', cacTruongDuocPhep: [], trangThai: 'DA_KET_THUC' } })
+    mocks.myUpdateRequests.mockResolvedValue([{ ma: 'request-a', maHoSo: 'profile-a', maDotCapNhat: 'window-a', maDonViDuyet: 'unit-a', trangThai: 'DA_DUYET', giaTriTruoc: {}, giaTriDeNghi: {}, coAnhDaiDienDuocDeNghi: false, tenChiBo: 'Chi bộ A', ngayTao: '2026-11-04T00:00:00Z', thoiDiemXuLy: '2026-11-05T00:00:00Z', lyDoXuLy: null }])
+    renderPage()
+    await screen.findByText('Đợt cập nhật đã kết thúc · Rà soát hồ sơ')
+    expect(screen.queryByText('Yêu cầu cập nhật đã được phê duyệt')).not.toBeInTheDocument()
   })
 })

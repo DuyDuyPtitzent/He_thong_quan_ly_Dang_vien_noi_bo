@@ -6,12 +6,17 @@
 
 - Một Role gồm nhiều Permission. Tài khoản có thể có nhiều Assignment đồng thời.
 - Permission xác định hành động; Scope xác định đối tượng/đơn vị mà hành động được phép tác động.
+- Quy tắc áp dụng cho mọi module dùng ma trận Permission theo Role: với từng API/hành động, rà soát và kiểm thử Assignment có `CAY_DON_VI`, `DON_VI_CHI_DINH` và `TOAN_HE_THONG`; xét `CA_NHAN` khi nghiệp vụ hỗ trợ thao tác cá nhân. Không chỉ cập nhật hoặc kiểm thử một loại Scope.
+- Khi có Permission tương ứng, `CAY_DON_VI` phải được đánh giá theo cây tổ chức; `DON_VI_CHI_DINH` chỉ bao phủ chính xác các đơn vị được chỉ định; `TOAN_HE_THONG` bao phủ toàn hệ thống. Không từ chối Scope chỉ vì nó không phải `TOAN_HE_THONG`, và không coi các Scope tương đương.
+- Ma trận chỉ gán Permission cho Role; Scope vẫn độc lập và được lưu trên Assignment. Permission trong ma trận phải phối hợp với kiểm tra Scope tại Backend. Không tự đổi Scope hoặc cấp Permission. Chỉ policy nghiệp vụ đã duyệt rõ mới có thể giới hạn/loại Scope; tài liệu phải nêu lý do và kiểm thử cả hành vi được phép lẫn bị từ chối.
 - Backend kiểm tra phiên, Permission, Assignment còn hiệu lực và Scope ở mỗi API. Mặc định từ chối khi thiếu quyền hoặc không xác định được phạm vi.
 - Scope không tự cấp Permission. Quyền xem không bao gồm tạo, sửa, xóa, xuất hay xem dữ liệu nhạy cảm theo nghĩa rộng.
 - Danh mục Permission do hệ thống định nghĩa; Role quản lý bằng cách gắn/bỏ Permission có sẵn.
 - Phạm vi chức năng không bao gồm mô-đun cấp ủy/chi ủy.
 
 ## 2. Scope
+
+**Policy riêng đã duyệt — danh mục năm học dùng chung:** bốn Permission `NAM_HOC_XEM`, `NAM_HOC_TAO`, `NAM_HOC_SUA`, `NAM_HOC_XOA` vẫn phải có trên Assignment đang được chọn và Assignment phải hợp lệ; thao tác danh mục không giới hạn theo đơn vị. Backend chấp nhận Scope `CAY_DON_VI`, `DON_VI_CHI_DINH` hoặc `TOAN_HE_THONG`, từ chối `CA_NHAN`. Đây là policy cụ thể trong khuôn khổ quy tắc chung ở trên; không làm thay đổi Scope lưu trong Assignment hay cách kiểm tra Scope của nghiệp vụ khác. Không tự cấp Permission/Assignment.
 
 | Mã trong CSDL | Cách hiểu | Quy tắc |
 |---|---|---|

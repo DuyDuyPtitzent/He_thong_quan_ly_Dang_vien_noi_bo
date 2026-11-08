@@ -4,6 +4,7 @@ import type { YeuCauPhamVi } from './authorization.types'
 import { systemAdministratorRoleCode } from './system-administrator.policy'
 
 const trangThaiHoatDong = 'DANG_HOAT_DONG'
+const phamViDanhMucNamHoc = new Set(['CAY_DON_VI', 'DON_VI_CHI_DINH', 'TOAN_HE_THONG'])
 
 @Injectable()
 export class PhanQuyenService {
@@ -45,6 +46,25 @@ export class PhanQuyenService {
     throw new ForbiddenException({
       maLoi: 'KHONG_DU_QUYEN',
       thongBao: 'Tài khoản không có đủ quyền hoặc phạm vi phù hợp để thực hiện thao tác này.',
+    })
+  }
+
+  /** Shared school-year catalog policy: the active Assignment must carry the requested NAM_HOC permission.
+   * Organizational Scopes do not restrict this shared catalog, but personal-only assignments are not eligible.
+   */
+  async kiemTraQuyenDanhMucNamHoc(
+    maTaiKhoan: string,
+    maQuyen: 'NAM_HOC_XEM' | 'NAM_HOC_TAO' | 'NAM_HOC_SUA' | 'NAM_HOC_XOA',
+    maPhien?: string,
+  ): Promise<void> {
+    const assignments = await this.layAssignments(maTaiKhoan, maPhien)
+    if (assignments.some((assignment) =>
+      phamViDanhMucNamHoc.has(assignment.loaiPhamVi)
+      && assignment.vaiTro.quyen.some(({ quyen }) => quyen.maDinhDanh === maQuyen),
+    )) return
+    throw new ForbiddenException({
+      maLoi: 'KHONG_DU_QUYEN',
+      thongBao: 'Tài khoản chưa được cấp quyền phù hợp để thao tác với danh mục năm học.',
     })
   }
 

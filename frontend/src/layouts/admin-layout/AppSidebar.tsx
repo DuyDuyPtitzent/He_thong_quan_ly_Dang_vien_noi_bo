@@ -6,6 +6,7 @@ import { useAuth } from '@/core/auth/auth-context'
 import { coQuyenTruyCapNhatKyToanHeThong } from '@/core/auth/system-log-access'
 import { appConfig } from '@/core/config/app.config'
 import { navigationConfig } from '@/core/config/navigation.config'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
 import {
   Sidebar,
   SidebarContent,
@@ -157,9 +158,10 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
       <SidebarFooter className="gap-2">
+        <Tooltip>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" disabled={!taiKhoan?.phanCongHopLe.length || switching} className="flex min-h-11 w-full min-w-0 items-center gap-2 rounded-md border bg-sidebar-accent/40 px-2 py-1.5 text-left outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring disabled:cursor-default disabled:opacity-70 group-data-[collapsible=icon]:justify-center" title={activeAssignment ? `${activeAssignment.tenVaiTro} · ${activeScope}` : 'Chưa chọn vai trò'}>
+            <TooltipTrigger asChild><button type="button" aria-label={activeAssignment ? `Vai trò đang dùng: ${activeAssignment.tenVaiTro}. ${activeScope}` : 'Chưa chọn vai trò'} disabled={!taiKhoan?.phanCongHopLe.length || switching} className="flex min-h-11 w-full min-w-0 items-center gap-2 rounded-md border bg-sidebar-accent/40 px-2 py-1.5 text-left outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring disabled:cursor-default disabled:opacity-70 group-data-[collapsible=icon]:justify-center">
               <ShieldCheck aria-hidden="true" className="size-4 shrink-0 text-sidebar-foreground/70" />
               <span className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
                 <span className="block text-[11px] leading-4 text-muted-foreground">Vai trò đang dùng</span>
@@ -167,8 +169,9 @@ export function AppSidebar() {
                 {activeAssignment && <span className="block truncate text-[11px] text-muted-foreground">{activeScope}</span>}
               </span>
               <ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
-            </button>
+            </button></TooltipTrigger>
           </DropdownMenuTrigger>
+          <TooltipContent>{activeAssignment ? `${activeAssignment.tenVaiTro} · ${activeScope}` : 'Chưa chọn vai trò'}</TooltipContent>
           <DropdownMenuContent side="top" align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-64">
             <DropdownMenuLabel>Chọn vai trò làm việc</DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -187,6 +190,7 @@ export function AppSidebar() {
             })}
           </DropdownMenuContent>
         </DropdownMenu>
+        </Tooltip>
         <SidebarTrigger className="w-full justify-start" />
       </SidebarFooter>
       <SidebarRail />

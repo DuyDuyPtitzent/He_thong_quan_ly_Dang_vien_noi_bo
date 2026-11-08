@@ -28,7 +28,7 @@ export function SchoolYearsPage() {
   const currentAccount = useAuth().taiKhoan
   const permissions = currentAccount?.quyenDangHoatDong ?? []
   const activeAssignment = currentAccount?.phanCongHopLe?.find(item => item.maPhanCong === currentAccount.maPhanCongVaiTroDangHoatDong)
-  const canManageCatalog = activeAssignment?.loaiPhamVi === 'TOAN_HE_THONG'
+  const canManageCatalog = ['CAY_DON_VI', 'DON_VI_CHI_DINH', 'TOAN_HE_THONG'].includes(activeAssignment?.loaiPhamVi ?? '')
   const can = (code: string) => permissions.includes(code)
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
@@ -54,8 +54,7 @@ export function SchoolYearsPage() {
   const pages = Math.max(1, Math.ceil((currentPage?.tongSo ?? 0) / size))
   useEffect(() => { if (page > pages) setPage(pages) }, [page, pages])
   return <div className="min-w-0 space-y-5 pb-8">
-    <PageHeader title="Quản lý năm học" description="Quản lý danh mục năm học phục vụ công tác quản lý hồ sơ và theo dõi biến động Đảng viên." actions={<div className="flex gap-2"><Button variant="outline" onClick={() => void query.refetch()} disabled={query.isFetching}><RefreshCw className={query.isFetching ? 'animate-spin' : ''} />Làm mới</Button>{canManageCatalog && can('NAM_HOC_TAO') && <Button onClick={openCreate}><Plus />Tạo năm học</Button>}</div>} />
-    {!canManageCatalog && (can('NAM_HOC_TAO') || can('NAM_HOC_SUA') || can('NAM_HOC_XOA')) && <p className="text-sm text-muted-foreground">Danh mục năm học dùng chung. Tạo, sửa và xóa cần Assignment có Scope Toàn hệ thống.</p>}
+    <PageHeader title="Quản lý năm học" description="Danh mục năm học dùng chung, được quản lý theo quyền hạn đã cấp." actions={<div className="flex gap-2"><Button variant="outline" onClick={() => void query.refetch()} disabled={query.isFetching}><RefreshCw className={query.isFetching ? 'animate-spin' : ''} />Làm mới</Button>{canManageCatalog && can('NAM_HOC_TAO') && <Button onClick={openCreate}><Plus />Tạo năm học</Button>}</div>} />
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <button className="text-left" onClick={() => { setStatus('all'); setPage(1) }}><StatisticCard label="Tổng số năm học" value={stats?.tongSo ?? '—'} icon={<CalendarDays />} /></button>
       <button className="text-left" onClick={() => { setStatus('DANG_DIEN_RA'); setPage(1) }}><StatisticCard label="Đang diễn ra" value={stats?.dangDienRa ?? '—'} /></button>

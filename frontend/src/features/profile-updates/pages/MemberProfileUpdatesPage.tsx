@@ -31,8 +31,8 @@ import { hasRichTextContent, sanitizeRichTextHtml } from '@/shared/lib/rich-text
 type FieldChoice = readonly [string, string]
 const fieldGroups: { label: string; fields: FieldChoice[] }[] = [
   { label: 'Thông tin Đảng viên', fields: [['hoVaTen', 'Họ và tên'], ['khoaDangVien', 'Khóa Đảng viên']] },
-  { label: 'Thông tin cá nhân', fields: [['thongTinCaNhan.ngaySinh', 'Ngày sinh'], ['thongTinCaNhan.gioiTinh', 'Giới tính'], ['thongTinCaNhan.soCccd', 'Số căn cước công dân'], ['thongTinCaNhan.ngayCapCccd', 'Ngày cấp căn cước công dân'], ['thongTinCaNhan.noiCapCccd', 'Nơi cấp căn cước công dân'], ['thongTinCaNhan.quocTich', 'Quốc tịch'], ['thongTinCaNhan.danToc', 'Dân tộc'], ['thongTinCaNhan.tonGiao', 'Tôn giáo'], ['thongTinCaNhan.soDienThoai', 'Số điện thoại'], ['thongTinCaNhan.emailLienHe', 'Thư điện tử']] },
-  { label: 'Địa chỉ', fields: [['diaChi.NOI_SINH', 'Nơi sinh'], ['diaChi.QUE_QUAN', 'Quê quán'], ['diaChi.THUONG_TRU', 'Địa chỉ thường trú']] },
+  { label: 'Thông tin cá nhân', fields: [['thongTinCaNhan.ngaySinh', 'Ngày sinh'], ['thongTinCaNhan.gioiTinh', 'Giới tính'], ['thongTinCaNhan.soCccd', 'Số căn cước công dân'], ['thongTinCaNhan.ngayCapCccd', 'Ngày cấp căn cước công dân'], ['thongTinCaNhan.noiCapCccd', 'Nơi cấp căn cước công dân'], ['thongTinCaNhan.quocTich', 'Quốc tịch'], ['thongTinCaNhan.danToc', 'Dân tộc'], ['thongTinCaNhan.tonGiao', 'Tôn giáo'], ['thongTinCaNhan.soDienThoai', 'Số điện thoại'], ['thongTinCaNhan.soDienThoaiBoNguoiNuoiDuong', 'Số điện thoại bố/người nuôi dưỡng'], ['thongTinCaNhan.soDienThoaiMeNguoiNuoiDuong', 'Số điện thoại mẹ/người nuôi dưỡng'], ['thongTinCaNhan.emailLienHe', 'Thư điện tử']] },
+  { label: 'Địa chỉ', fields: [['diaChi.NOI_SINH', 'Nơi sinh, cấp giấy khai sinh'], ['diaChi.QUE_QUAN', 'Quê quán'], ['diaChi.THUONG_TRU', 'Địa chỉ thường trú'], ['diaChi.NOI_O_HIEN_NAY', 'Nơi ở hiện nay']] },
   { label: 'Ảnh đại diện', fields: [['anhDaiDien', 'Ảnh đại diện']] },
 ]
 const allFields = fieldGroups.flatMap((group) => group.fields)

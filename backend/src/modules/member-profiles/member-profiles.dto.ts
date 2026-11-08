@@ -3,7 +3,7 @@ import { IsDateString, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Match
 
 const trimOptional = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() || undefined : value
 
-const addressTypes = ['NOI_SINH', 'QUE_QUAN', 'THUONG_TRU'] as const
+const addressTypes = ['NOI_SINH', 'QUE_QUAN', 'THUONG_TRU', 'NOI_O_HIEN_NAY'] as const
 class DiaChiDto {
   @IsIn(addressTypes) loaiDiaChi!: typeof addressTypes[number]
   @IsOptional() @IsIn(['TRONG_NUOC', 'NUOC_NGOAI']) phanLoaiNoiSinh?: string
@@ -52,6 +52,8 @@ export class TaoHoSoDto {
   @Transform(trimOptional) @IsOptional() @IsString() @MaxLength(100) danToc?: string
   @Transform(trimOptional) @IsOptional() @IsString() @MaxLength(100) tonGiao?: string
   @Transform(trimOptional) @IsOptional() @IsString() @MaxLength(30) soDienThoai?: string
+  @Transform(trimOptional) @IsOptional() @IsString() @Matches(/^\+?[0-9 ().-]{7,30}$/) @MaxLength(30) soDienThoaiBoNguoiNuoiDuong?: string
+  @Transform(trimOptional) @IsOptional() @IsString() @Matches(/^\+?[0-9 ().-]{7,30}$/) @MaxLength(30) soDienThoaiMeNguoiNuoiDuong?: string
   @Transform(trimOptional) @IsOptional() @IsEmail() @MaxLength(254) emailLienHe?: string
   @IsOptional() @ValidateNested({ each: true }) @Type(() => DiaChiDto) diaChi?: DiaChiDto[]
   @IsOptional() @ValidateNested() @Type(() => SinhVienDto) thongTinSinhVien?: SinhVienDto
@@ -79,6 +81,8 @@ export class SuaHoSoDto {
   @Transform(trimOptional) @IsOptional() @IsString() @MaxLength(100) danToc?: string
   @Transform(trimOptional) @IsOptional() @IsString() @MaxLength(100) tonGiao?: string
   @Transform(trimOptional) @IsOptional() @IsString() @MaxLength(30) soDienThoai?: string
+  @Transform(trimOptional) @IsOptional() @IsString() @Matches(/^\+?[0-9 ().-]{7,30}$/) @MaxLength(30) soDienThoaiBoNguoiNuoiDuong?: string
+  @Transform(trimOptional) @IsOptional() @IsString() @Matches(/^\+?[0-9 ().-]{7,30}$/) @MaxLength(30) soDienThoaiMeNguoiNuoiDuong?: string
   @Transform(trimOptional) @IsOptional() @IsEmail() @MaxLength(254) emailLienHe?: string
   @IsOptional() @ValidateNested({ each: true }) @Type(() => DiaChiDto) diaChi?: DiaChiDto[]
   @IsOptional() @ValidateNested() @Type(() => SinhVienDto) thongTinSinhVien?: SinhVienDto | null
@@ -90,4 +94,30 @@ export class DanhSachHoSoDto {
   @IsOptional() @IsIn(['DU_BI', 'CHINH_THUC', 'DA_RA_KHOI_DANG', 'TU_TRAN']) trangThaiDangVien?: string
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) trang = 1
   @IsOptional() @Type(() => Number) @IsInt() @Min(10) @Max(100) gioiHan = 20
+}
+
+export class TaoDaoTaoDangDto {
+  @Transform(trimOptional) @IsString() @IsIn(['LOP_DANG_VIEN_MOI']) loaiLop!: string
+  @Transform(trimOptional) @IsString() @MinLength(1) @MaxLength(200) tenChuongTrinh!: string
+  @Transform(trimOptional) @IsString() @IsIn(['CHUA_HOC', 'DANG_HOC', 'DA_HOAN_THANH']) trangThai!: string
+  @Transform(trimOptional) @IsOptional() @IsDateString() ngayHoanThanh?: string
+  @Transform(trimOptional) @IsOptional() @IsString() @MaxLength(200) donViToChuc?: string
+  @Transform(trimOptional) @IsOptional() @IsString() @MaxLength(1000) ghiChu?: string
+}
+
+export class TaoChuyenSinhHoatNgoaiDto {
+  @IsUUID('4') maLichSuDonViTiepNhan!: string
+  @Transform(trimOptional) @IsString() @MinLength(1) @MaxLength(200) tenChiBoChuyenDi!: string
+  @Transform(trimOptional) @IsOptional() @IsString() @MaxLength(200) tenDangUyQuanLy?: string
+  @Transform(trimOptional) @IsOptional() @IsString() @MaxLength(150) tinhThanhPho?: string
+  @Transform(trimOptional) @IsOptional() @IsString() @MaxLength(2000) noiDung?: string
+  @Type(() => Number) @IsInt() @Min(1) @Max(12) thangChuyenDi!: number
+  @Type(() => Number) @IsInt() @Min(1900) @Max(2200) namChuyenDi!: number
+  @Transform(trimOptional) @IsOptional() @IsDateString() ngayChuyenDi?: string
+}
+
+export class TaoTaiLieuHoSoDto {
+  @Transform(trimOptional) @IsString() @MinLength(1) @MaxLength(50) @Matches(/^[^\u0000-\u001F\u007F-\u009F]{1,50}$/u) loaiTaiLieu!: string
+  @Transform(trimOptional) @IsOptional() @IsUUID('4') maQuaTrinhDangVien?: string
+  @Transform(trimOptional) @IsOptional() @IsUUID('4') maDaoTaoDang?: string
 }

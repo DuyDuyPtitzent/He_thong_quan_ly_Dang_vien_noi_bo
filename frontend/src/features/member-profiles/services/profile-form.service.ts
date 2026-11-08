@@ -2,7 +2,7 @@ import type { HoSoInput } from '../types/member-profiles.types'
 
 type ProfileDetailForForm = HoSoInput & {
   quaTrinh?: { soQuyetDinh?: string | null; ngayQuyetDinh?: string | null; donViBanHanhQuyetDinh?: string | null; nguoiGioiThieuThuNhat?: string | null; nguoiGioiThieuThuHai?: string | null }[]
-  thongTinCaNhan?: { ngaySinh?: string | null; gioiTinh?: string | null; soCccd?: string | null; ngayCapCccd?: string | null; noiCapCccd?: string | null; quocTich?: string | null; danToc?: string | null; tonGiao?: string | null; soDienThoai?: string | null; emailLienHe?: string | null }
+  thongTinCaNhan?: { ngaySinh?: string | null; gioiTinh?: string | null; soCccd?: string | null; ngayCapCccd?: string | null; noiCapCccd?: string | null; quocTich?: string | null; danToc?: string | null; tonGiao?: string | null; soDienThoai?: string | null; soDienThoaiBoNguoiNuoiDuong?: string | null; soDienThoaiMeNguoiNuoiDuong?: string | null; emailLienHe?: string | null }
   lichSuDonVi?: { maChiBo: string; maTo: string | null; ngayHieuLucTu: string }[]
   thongTinSinhVien?: HoSoInput['thongTinSinhVien'] | null
 }
@@ -29,6 +29,8 @@ export function profileDetailToForm(row: ProfileDetailForForm, blank: HoSoInput)
     danToc: row.thongTinCaNhan?.danToc ?? '',
     tonGiao: row.thongTinCaNhan?.tonGiao ?? '',
     soDienThoai: row.thongTinCaNhan?.soDienThoai ?? '',
+    soDienThoaiBoNguoiNuoiDuong: row.thongTinCaNhan?.soDienThoaiBoNguoiNuoiDuong ?? '',
+    soDienThoaiMeNguoiNuoiDuong: row.thongTinCaNhan?.soDienThoaiMeNguoiNuoiDuong ?? '',
     emailLienHe: row.thongTinCaNhan?.emailLienHe ?? '',
     soCccd: row.thongTinCaNhan?.soCccd ?? '',
     diaChi: row.diaChi ?? [],
@@ -68,6 +70,8 @@ export function profileFormToUpdatePayload(form: HoSoInput, can: (permission: st
       danToc: form.danToc,
       tonGiao: form.tonGiao,
       soDienThoai: form.soDienThoai,
+      soDienThoaiBoNguoiNuoiDuong: form.soDienThoaiBoNguoiNuoiDuong,
+      soDienThoaiMeNguoiNuoiDuong: form.soDienThoaiMeNguoiNuoiDuong,
       emailLienHe: form.emailLienHe,
       ...(form.soCccd ? { soCccd: form.soCccd } : {}),
     } : {}),

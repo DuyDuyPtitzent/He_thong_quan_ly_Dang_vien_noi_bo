@@ -16,6 +16,7 @@ import { OrganizationUnitPicker } from '@/shared/components/OrganizationUnitPick
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/shared/components/ui/breadcrumb'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
 import { AccountConfirmDialog, AccountDetailSheet, AccountFormSheet, AccountHistorySheet, ProfileLinkSheet, ResetPasswordSheet, StatusBadge, type AccountConfirmAction, type AccountFormValues } from '../components/AccountSheets'
 import { AccountImportDialog } from '../components/AccountImportDialog'
 import { accountsApi } from '../api/accounts.api'
@@ -162,7 +163,7 @@ export function AccountsPage() {
 
   return <main className="space-y-5 pb-8">
     <Breadcrumb><BreadcrumbList><BreadcrumbItem><BreadcrumbLink asChild><Link to="/">Trang chủ</Link></BreadcrumbLink></BreadcrumbItem><BreadcrumbSeparator /><BreadcrumbItem><BreadcrumbPage>Quản lý tài khoản</BreadcrumbPage></BreadcrumbItem></BreadcrumbList></Breadcrumb>
-    <PageHeader title="Quản lý tài khoản" description="Quản lý tài khoản đăng nhập, trạng thái sử dụng và liên kết hồ sơ Đảng viên trong phạm vi được phân quyền." actions={<div className="flex items-center gap-2"><Button variant="outline" onClick={refresh} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />Làm mới</Button>{can('TAI_KHOAN_TAO') && <><Button variant="outline" onClick={() => setImportOpen(true)}><FileSpreadsheet />Nhập Excel</Button><Button onClick={openCreate}><Plus />Thêm tài khoản</Button></>}</div>} />
+    <PageHeader title="Quản lý tài khoản" description="Quản lý tài khoản đăng nhập, trạng thái sử dụng và liên kết hồ sơ Đảng viên trong phạm vi được phân quyền." actions={<div className="flex items-center gap-2"><Button variant="outline" onClick={refresh} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />Làm mới</Button>{can('TAI_KHOAN_TAO') && <><Button variant="outline" onClick={() => setImportOpen(true)}><FileSpreadsheet />Nhập dữ liệu</Button><Button onClick={openCreate}><Plus />Thêm tài khoản</Button></>}</div>} />
 
     <section aria-label="Thống kê tài khoản" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <StatisticFilterCard label="Tổng tài khoản" active={status === 'all' && linkStatus === 'all' && branch === 'all' && assignmentStatus === 'all' && !keyword} onClick={() => applyStatisticFilter('all', 'all')}><StatisticCard label="Tổng tài khoản" value={loading ? '—' : stats.all.toLocaleString('vi-VN')} icon={<UsersRound className="size-5" />} description="Tài khoản trong phạm vi quản lý" /></StatisticFilterCard>
@@ -202,7 +203,7 @@ function FilterSelect({ label, value, options, onValueChange }: { label: string;
 }
 
 function StatisticFilterCard({ label, children, onClick, active }: { label: string; children: ReactNode; onClick: () => void; active: boolean }) {
-  return <button type="button" onClick={onClick} aria-label={`Lọc danh sách: ${label}`} aria-pressed={active} className={`group rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>div]:transition-colors group-hover:[&>div]:border-primary/40 group-hover:[&>div]:bg-accent/30 ${active ? '[&>div]:border-primary/50 [&>div]:bg-accent/20' : ''}`} title="Lọc danh sách theo thống kê này">{children}</button>
+  return <Tooltip><TooltipTrigger asChild><button type="button" onClick={onClick} aria-label={`Lọc danh sách: ${label}`} aria-pressed={active} className={`group rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>div]:transition-colors group-hover:[&>div]:border-primary/40 group-hover:[&>div]:bg-accent/30 ${active ? '[&>div]:border-primary/50 [&>div]:bg-accent/20' : ''}`}>{children}</button></TooltipTrigger><TooltipContent>Lọc danh sách theo thống kê này</TooltipContent></Tooltip>
 }
 
 function AccountActions({ account, can, canViewSystemLogs, onView, onEdit, onStatus, onReset, onLink, onHistory, onDelete }: { account: AccountRecord; can: (permission: string) => boolean; canViewSystemLogs: boolean; onView: () => void; onEdit: () => void; onStatus: (kind: 'lock' | 'unlock' | 'deactivate') => void; onReset: () => void; onLink: () => void; onHistory: () => void; onDelete: () => void }) {

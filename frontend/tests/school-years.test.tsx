@@ -22,24 +22,60 @@ describe('SchoolYearsPage', () => {
     await waitFor(() => expect(mocks.list).toHaveBeenLastCalledWith(expect.objectContaining({ trangThai: 'DANG_DIEN_RA' })))
   })
 
-  it('does not show create action for an organizational tree scope, even with the Permission', async () => {
+  it.each(['CAY_DON_VI', 'DON_VI_CHI_DINH', 'TOAN_HE_THONG'])('shows create action for %s when the active Assignment has the Permission', async (scope) => {
     mocks.permissions = ['NAM_HOC_XEM', 'NAM_HOC_TAO']
-    renderPage()
-    await screen.findByText('2026–2027')
-    expect(screen.queryByRole('button', { name: 'Tạo năm học' })).not.toBeInTheDocument()
-  })
-
-  it('shows create action when the active Assignment has Permission and TOAN_HE_THONG', async () => {
-    mocks.permissions = ['NAM_HOC_XEM', 'NAM_HOC_TAO']
-    mocks.scope = 'TOAN_HE_THONG'
+    mocks.scope = scope
     renderPage()
     await screen.findByText('2026–2027')
     expect(screen.getByRole('button', { name: 'Tạo năm học' })).toBeInTheDocument()
   })
 
+  it('does not show create action for personal Scope or without the matching Permission', async () => {
+    mocks.permissions = ['NAM_HOC_XEM', 'NAM_HOC_TAO']
+    mocks.scope = 'CA_NHAN'
+    renderPage()
+    await screen.findByText('2026–2027')
+    expect(screen.queryByRole('button', { name: 'Tạo năm học' })).not.toBeInTheDocument()
+    cleanup()
+    mocks.scope = 'CAY_DON_VI'
+    mocks.permissions = ['NAM_HOC_XEM']
+    renderPage()
+    await screen.findByText('2026–2027')
+    expect(screen.queryByRole('button', { name: 'Tạo năm học' })).not.toBeInTheDocument()
+  })
+
+  it('uses the approved plain-language shared-catalog description', async () => {
+    renderPage()
+    expect(await screen.findByText('Danh mục năm học dùng chung, được quản lý theo quyền hạn đã cấp.')).toBeInTheDocument()
+    expect(screen.queryByText(/Assignment|Scope|Permission/)).not.toBeInTheDocument()
+  })
+
+  it('shows edit and delete actions only for their matching Permissions under an organizational Scope', async () => {
+    mocks.permissions = ['NAM_HOC_XEM', 'NAM_HOC_SUA']
+    mocks.scope = 'CAY_DON_VI'
+    renderPage()
+    await screen.findByText('2026–2027')
+    const trigger = screen.getByRole('button', { name: 'Thao tác 2026-2027' })
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+    fireEvent.pointerUp(trigger, { button: 0, pointerType: 'mouse' })
+    fireEvent.click(trigger)
+    expect(await screen.findByText('Chỉnh sửa')).toBeInTheDocument()
+    expect(screen.queryByText('Xóa')).not.toBeInTheDocument()
+    cleanup()
+    mocks.permissions = ['NAM_HOC_XEM', 'NAM_HOC_XOA']
+    renderPage()
+    await screen.findByText('2026–2027')
+    const deleteTrigger = screen.getByRole('button', { name: 'Thao tác 2026-2027' })
+    fireEvent.pointerDown(deleteTrigger, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+    fireEvent.pointerUp(deleteTrigger, { button: 0, pointerType: 'mouse' })
+    fireEvent.click(deleteTrigger)
+    expect(await screen.findByText('Xóa')).toBeInTheDocument()
+    expect(screen.queryByText('Chỉnh sửa')).not.toBeInTheDocument()
+  })
+
   it('saves school-year dates as date-only values across the year boundary', async () => {
     mocks.permissions = ['NAM_HOC_XEM', 'NAM_HOC_TAO']
-    mocks.scope = 'TOAN_HE_THONG'
+    mocks.scope = 'CAY_DON_VI'
     mocks.create.mockResolvedValue(undefined)
     renderPage()
     await screen.findByText('2026–2027')
@@ -58,7 +94,7 @@ describe('SchoolYearsPage', () => {
 
   it('keeps the save action disabled when the school-year start date is after the end date', async () => {
     mocks.permissions = ['NAM_HOC_XEM', 'NAM_HOC_TAO']
-    mocks.scope = 'TOAN_HE_THONG'
+    mocks.scope = 'CAY_DON_VI'
     renderPage()
     await screen.findByText('2026–2027')
     fireEvent.click(screen.getByRole('button', { name: 'Tạo năm học' }))

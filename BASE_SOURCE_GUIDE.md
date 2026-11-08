@@ -10,6 +10,10 @@ Quy tắc nhập/xuất dữ liệu Excel dùng chung được bổ sung tại `
 
 Phần mô tả snapshot bên dưới phản ánh trạng thái ngày 30/10/2026. Mã nguồn hiện tại đã phát triển theo feature-based architecture; dùng [`docs/architecture.md`](docs/architecture.md) và [`docs/sidebar-module-conventions.md`](docs/sidebar-module-conventions.md) làm căn cứ hiện hành. Các feature nghiệp vụ được tách thành `accounts/`, `member-profiles/`, `my-profile/`, `profile-updates/`, `authorization/`, `organizations/`, `school-years/`, `dashboard/`, `settings/`, `auth/` và `developer/`. Mỗi feature chỉ tạo các lớp `pages/`, `components/`, `api/`, `types/`, `validation/`, `constants/`, `services/`, `hooks/` khi có nhu cầu. Router tập trung vẫn giữ nguyên URL; `shared/`, `core/`, `layouts/` không phụ thuộc vào feature và các feature không được tạo chu trình phụ thuộc.
 
+## Cập nhật policy danh mục năm học dùng chung — 2026-11-08
+
+Các API năm học kiểm tra lần lượt `NAM_HOC_XEM/TAO/SUA/XOA` trên Assignment đang chọn, hợp lệ và Role có trạng thái hoạt động. Policy riêng chấp nhận Scope `CAY_DON_VI`, `DON_VI_CHI_DINH` hoặc `TOAN_HE_THONG`; từ chối `CA_NHAN`. Đây chỉ là ngoại lệ phạm vi cho danh mục năm học dùng chung, không sửa Scope/Permission/Assignment và không nới kiểm tra Permission + Scope chung. Frontend hiện/ẩn từng hành động theo Permission và Assignment hiện tại; phiên được làm mới định kỳ và khi focus cửa sổ. Chi tiết hiện hành nằm trong `docs/architecture.md` và `docs/THIET_KE_MA_TRAN_QUYEN.md`.
+
 Trước khi thêm module/chức năng, phải đọc tài liệu quy hoạch Sidebar, xác định nhóm phù hợp và chỉ thêm mục menu đã được duyệt. Nếu không phù hợp nhóm hiện có, đề xuất phương án và chờ phê duyệt.
 
 ## 1. Mục đích
@@ -164,3 +168,10 @@ Khi nhận nhiệm vụ mới:
 - Sáu component picker nằm trong `frontend/src/shared/components/date-time/`, dùng lại `react-day-picker`, `date-fns` và UI primitives có sẵn. Không thêm dependency.
 - Ngày và tháng dùng giá trị date-only; ngày giờ dùng chuỗi giờ địa phương không gắn UTC. Hai picker khoảng dùng chung `RangeCalendar` và giữ khoảng đã hoàn thành cố định khi con trỏ di chuyển.
 - Hướng dẫn API và quy tắc sử dụng chi tiết: `docs/architecture.md`, `docs/design-system.md`, `AGENTS.md`.
+
+## Bổ sung dữ liệu hồ sơ Đảng viên — 2026-11-08
+
+- Hồ sơ lưu số điện thoại bố/người nuôi dưỡng, mẹ/người nuôi dưỡng và địa chỉ hiện nay trong các mô hình hiện có.
+- Bổ sung các bản ghi lịch sử chuyển sinh hoạt từ đơn vị ngoài PTIT, đào tạo/bồi dưỡng Đảng và metadata tài liệu hồ sơ riêng tư; không nhân bản hồ sơ gốc.
+- Migration mới: `20261108123435_member_profile_supplementary_records`. Đã áp dụng PostgreSQL phát triển, `prisma migrate status` xác nhận schema đồng bộ. Nội dung tệp nằm trong `KHO_TEP_RIENG`, chỉ metadata ở PostgreSQL.
+- Permission phục vụ đào tạo và tài liệu đã đồng bộ vào danh mục, không gán tự động vào Role. Xem quy tắc và endpoint tại `docs/architecture.md`.

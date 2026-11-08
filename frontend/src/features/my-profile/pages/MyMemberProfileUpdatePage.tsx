@@ -22,12 +22,12 @@ const labels: Record<string, string> = {
   hoVaTen: 'Họ và tên', khoaDangVien: 'Khóa Đảng viên', 'thongTinCaNhan.ngaySinh': 'Ngày sinh', 'thongTinCaNhan.gioiTinh': 'Giới tính',
   'thongTinCaNhan.soCccd': 'Số CCCD', 'thongTinCaNhan.ngayCapCccd': 'Ngày cấp CCCD', 'thongTinCaNhan.noiCapCccd': 'Nơi cấp CCCD',
   'thongTinCaNhan.quocTich': 'Quốc tịch', 'thongTinCaNhan.danToc': 'Dân tộc', 'thongTinCaNhan.tonGiao': 'Tôn giáo',
-  'thongTinCaNhan.soDienThoai': 'Số điện thoại', 'thongTinCaNhan.emailLienHe': 'Thư điện tử',
-  'diaChi.NOI_SINH': 'Nơi sinh', 'diaChi.QUE_QUAN': 'Quê quán', 'diaChi.THUONG_TRU': 'Địa chỉ thường trú', anhDaiDien: 'Ảnh đại diện',
+  'thongTinCaNhan.soDienThoai': 'Số điện thoại', 'thongTinCaNhan.soDienThoaiBoNguoiNuoiDuong': 'Số điện thoại bố/người nuôi dưỡng', 'thongTinCaNhan.soDienThoaiMeNguoiNuoiDuong': 'Số điện thoại mẹ/người nuôi dưỡng', 'thongTinCaNhan.emailLienHe': 'Thư điện tử',
+  'diaChi.NOI_SINH': 'Nơi sinh, cấp giấy khai sinh', 'diaChi.QUE_QUAN': 'Quê quán', 'diaChi.THUONG_TRU': 'Địa chỉ thường trú', 'diaChi.NOI_O_HIEN_NAY': 'Nơi ở hiện nay', anhDaiDien: 'Ảnh đại diện',
 }
 const statusLabels: Record<string, string> = { CHO_DUYET: 'Chờ phê duyệt', DA_DUYET: 'Đã phê duyệt', DA_TU_CHOI: 'Đã từ chối', DA_HUY: 'Đã hủy' }
-const personalFields = ['thongTinCaNhan.ngaySinh', 'thongTinCaNhan.gioiTinh', 'thongTinCaNhan.soCccd', 'thongTinCaNhan.ngayCapCccd', 'thongTinCaNhan.noiCapCccd', 'thongTinCaNhan.quocTich', 'thongTinCaNhan.danToc', 'thongTinCaNhan.tonGiao', 'thongTinCaNhan.soDienThoai', 'thongTinCaNhan.emailLienHe']
-const addressFields = ['diaChi.NOI_SINH', 'diaChi.QUE_QUAN', 'diaChi.THUONG_TRU']
+const personalFields = ['thongTinCaNhan.ngaySinh', 'thongTinCaNhan.gioiTinh', 'thongTinCaNhan.soCccd', 'thongTinCaNhan.ngayCapCccd', 'thongTinCaNhan.noiCapCccd', 'thongTinCaNhan.quocTich', 'thongTinCaNhan.danToc', 'thongTinCaNhan.tonGiao', 'thongTinCaNhan.soDienThoai', 'thongTinCaNhan.soDienThoaiBoNguoiNuoiDuong', 'thongTinCaNhan.soDienThoaiMeNguoiNuoiDuong', 'thongTinCaNhan.emailLienHe']
+const addressFields = ['diaChi.NOI_SINH', 'diaChi.QUE_QUAN', 'diaChi.THUONG_TRU', 'diaChi.NOI_O_HIEN_NAY']
 const display = (value: unknown) => value == null || value === '' ? 'Chưa cập nhật' : String(value)
 const dateTime = (value: string) => new Date(value).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -52,7 +52,7 @@ function getCurrentValue(profile: HoSoChiTiet, field: string): string {
 function fieldType(field: string) {
   if (field.endsWith('.ngaySinh') || field.endsWith('.ngayCapCccd')) return 'date'
   if (field.endsWith('.emailLienHe')) return 'email'
-  if (field.endsWith('.soDienThoai')) return 'tel'
+  if (field.includes('.soDienThoai')) return 'tel'
   return 'text'
 }
 

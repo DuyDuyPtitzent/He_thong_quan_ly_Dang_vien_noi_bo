@@ -3,6 +3,7 @@ import type { Request } from 'express'
 export type TaiKhoanDaXacThuc = {
   maTaiKhoan: string
   tenDangNhap: string
+  hoVaTen?: string | null
   doiMatKhauLanDau: boolean
   maPhien: string
   maPhanCongVaiTroDangHoatDong?: string | null

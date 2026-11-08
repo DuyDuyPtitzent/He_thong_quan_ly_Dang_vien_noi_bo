@@ -29,6 +29,7 @@ enum LoaiDiaChi {
   NOI_SINH  @map("NOI_SINH")
   QUE_QUAN  @map("QUE_QUAN")
   THUONG_TRU @map("THUONG_TRU")
+  NOI_O_HIEN_NAY @map("NOI_O_HIEN_NAY")
 
   @@map("loai_dia_chi")
 }
@@ -77,6 +78,7 @@ model TaiKhoanNguoiDung {
   dotCapNhatHoSoDaKetThucSom DotCapNhatHoSo[] @relation("NguoiKetThucSomDotCapNhatHoSo")
   yeuCauCapNhatHoSoDaGui YeuCauCapNhatHoSo[] @relation("NguoiGuiYeuCauCapNhatHoSo")
   yeuCauCapNhatHoSoDaXuLy YeuCauCapNhatHoSo[] @relation("NguoiXuLyYeuCauCapNhatHoSo")
+  taiLieuHoSoDaTaiLen TaiLieuHoSoDangVien[] @relation("NguoiTaiTaiLieuHoSo")
 
   @@index([trangThai], map: "ix_tai_khoan_trang_thai")
   @@map("tai_khoan_nguoi_dung")
@@ -180,6 +182,9 @@ model HoSoDangVien {
   lichSuDonVi LichSuDonViDangVien[]
   phanCongChucVu PhanCongChucVu[]
   yeuCauCapNhat YeuCauCapNhatHoSo[]
+  chuyenSinhHoatNgoai ChuyenSinhHoatNgoai[]
+  daoTaoDang ThongTinDaoTaoDang[]
+  taiLieu TaiLieuHoSoDangVien[]
 
   @@index([trangThai], map: "ix_ho_so_trang_thai")
   @@index([hoVaTen], map: "ix_ho_so_ho_va_ten")
@@ -212,6 +217,8 @@ model ThongTinCaNhanDangVien {
   tonGiao            String?     @db.VarChar(100) @map("ton_giao")
   soDienThoai         String?     @db.VarChar(30) @map("so_dien_thoai")
   emailLienHe        String?     @db.VarChar(254) @map("email_lien_he")
+  soDienThoaiBoNguoiNuoiDuong String? @db.VarChar(30) @map("so_dien_thoai_bo_nguoi_nuoi_duong")
+  soDienThoaiMeNguoiNuoiDuong String? @db.VarChar(30) @map("so_dien_thoai_me_nguoi_nuoi_duong")
   ngayTao           DateTime    @default(now()) @db.Timestamptz(6) @map("ngay_tao")
   ngayCapNhat           DateTime    @default(now()) @updatedAt @db.Timestamptz(6) @map("ngay_cap_nhat")
   hoSoDangVien         HoSoDangVien @relation(fields: [maHoSo], references: [ma], onDelete: Restrict, onUpdate: Cascade)
@@ -276,6 +283,7 @@ model QuaTrinhDangVien {
   ngayTao      DateTime    @default(now()) @db.Timestamptz(6) @map("ngay_tao")
   hoSoDangVien    HoSoDangVien @relation(fields: [maHoSo], references: [ma], onDelete: Restrict, onUpdate: Cascade)
   nguoiGhiNhan     TaiKhoanNguoiDung @relation("NguoiGhiQuaTrinhDangVien", fields: [maNguoiGhiNhan], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+  taiLieu TaiLieuHoSoDangVien[] @relation("TaiLieuQuaTrinhDang")
 
   @@index([maHoSo, ngaySuKien], map: "ix_qua_trinh_dang_vien_ho_so_ngay")
   @@map("qua_trinh_dang_vien")
@@ -295,10 +303,71 @@ model LichSuDonViDangVien {
   chiBo         DonViToChuc @relation("LichSuSinhHoatChiBo", fields: [maChiBo], references: [ma], onDelete: Restrict, onUpdate: Cascade)
   to           DonViToChuc? @relation("LichSuSinhHoatTo", fields: [maTo], references: [ma], onDelete: Restrict, onUpdate: Cascade)
   nguoiGhiNhan     TaiKhoanNguoiDung      @relation("NguoiGhiLichSuDonViDangVien", fields: [maNguoiGhiNhan], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+  chuyenSinhHoatNgoai ChuyenSinhHoatNgoai?
 
   @@index([maHoSo, ngayHieuLucTu], map: "ix_lich_su_sinh_hoat_ho_so_thoi_diem")
   @@index([maChiBo, ngayHieuLucTu], map: "ix_lich_su_sinh_hoat_chi_bo_thoi_diem")
   @@map("lich_su_don_vi_dang_vien")
+}
+
+model ChuyenSinhHoatNgoai {
+  ma String @id @default(uuid()) @db.Uuid @map("ma_chuyen_sinh_hoat_ngoai")
+  maHoSo String @db.Uuid @map("ma_ho_so")
+  maLichSuDonViTiepNhan String @unique @db.Uuid @map("ma_lich_su_don_vi_tiep_nhan")
+  tenChiBoChuyenDi String @db.VarChar(200) @map("ten_chi_bo_chuyen_di")
+  tenDangUyQuanLy String? @db.VarChar(200) @map("ten_dang_uy_quan_ly")
+  tinhThanhPho String? @db.VarChar(150) @map("tinh_thanh_pho")
+  noiDung String? @db.Text @map("noi_dung")
+  thangChuyenDi Int @map("thang_chuyen_di")
+  namChuyenDi Int @map("nam_chuyen_di")
+  ngayChuyenDi DateTime? @db.Date @map("ngay_chuyen_di")
+  ngayTao DateTime @default(now()) @db.Timestamptz(6) @map("ngay_tao")
+  ngayCapNhat DateTime @default(now()) @updatedAt @db.Timestamptz(6) @map("ngay_cap_nhat")
+  hoSo HoSoDangVien @relation(fields: [maHoSo], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+  lichSuDonViTiepNhan LichSuDonViDangVien @relation(fields: [maLichSuDonViTiepNhan], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([maHoSo], map: "ix_chuyen_sinh_hoat_ngoai_ho_so")
+  @@map("chuyen_sinh_hoat_ngoai")
+}
+
+model ThongTinDaoTaoDang {
+  ma String @id @default(uuid()) @db.Uuid @map("ma_dao_tao_dang")
+  maHoSo String @db.Uuid @map("ma_ho_so")
+  loaiLop String @db.VarChar(50) @map("loai_lop")
+  tenChuongTrinh String? @db.VarChar(200) @map("ten_chuong_trinh")
+  trangThai String @db.VarChar(30) @map("trang_thai")
+  ngayHoanThanh DateTime? @db.Date @map("ngay_hoan_thanh")
+  donViToChuc String? @db.VarChar(200) @map("don_vi_to_chuc")
+  ghiChu String? @db.VarChar(1000) @map("ghi_chu")
+  ngayTao DateTime @default(now()) @db.Timestamptz(6) @map("ngay_tao")
+  ngayCapNhat DateTime @default(now()) @updatedAt @db.Timestamptz(6) @map("ngay_cap_nhat")
+  hoSo HoSoDangVien @relation(fields: [maHoSo], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+  taiLieu TaiLieuHoSoDangVien[] @relation("TaiLieuDaoTaoDang")
+
+  @@index([maHoSo, loaiLop], map: "ix_dao_tao_dang_ho_so_loai")
+  @@map("thong_tin_dao_tao_dang")
+}
+
+model TaiLieuHoSoDangVien {
+  ma String @id @default(uuid()) @db.Uuid @map("ma_tai_lieu")
+  maHoSo String @db.Uuid @map("ma_ho_so")
+  loaiTaiLieu String @db.VarChar(50) @map("loai_tai_lieu")
+  tenTepGoc String @db.VarChar(255) @map("ten_tep_goc")
+  khoaLuuTru String @unique @db.VarChar(80) @map("khoa_luu_tru")
+  kieuNoiDung String @db.VarChar(100) @map("kieu_noi_dung")
+  kichThuoc Int @map("kich_thuoc")
+  trangThai String @default("DANG_SU_DUNG") @db.VarChar(30) @map("trang_thai")
+  maNguoiTaiLen String @db.Uuid @map("ma_nguoi_tai_len")
+  maQuaTrinhDangVien String? @db.Uuid @map("ma_qua_trinh_dang_vien")
+  maDaoTaoDang String? @db.Uuid @map("ma_dao_tao_dang")
+  ngayTao DateTime @default(now()) @db.Timestamptz(6) @map("ngay_tai_len")
+  hoSo HoSoDangVien @relation(fields: [maHoSo], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+  nguoiTaiLen TaiKhoanNguoiDung @relation("NguoiTaiTaiLieuHoSo", fields: [maNguoiTaiLen], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+  quaTrinhDangVien QuaTrinhDangVien? @relation("TaiLieuQuaTrinhDang", fields: [maQuaTrinhDangVien], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+  daoTaoDang ThongTinDaoTaoDang? @relation("TaiLieuDaoTaoDang", fields: [maDaoTaoDang], references: [ma], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([maHoSo, loaiTaiLieu, ngayTao], map: "ix_tai_lieu_ho_so_loai_ngay")
+  @@map("tai_lieu_ho_so_dang_vien")
 }
 
 model DanhMucChucVu {

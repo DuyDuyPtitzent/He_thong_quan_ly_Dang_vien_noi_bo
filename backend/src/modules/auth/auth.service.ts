@@ -110,6 +110,13 @@ export class XacThucService {
 
     const taiKhoan = await this.prisma.taiKhoanNguoiDung.findUnique({
       where: { ma: phien.maTaiKhoan },
+      select: {
+        ma: true,
+        tenDangNhap: true,
+        trangThai: true,
+        doiMatKhauLanDau: true,
+        hoSoDangVien: { select: { hoVaTen: true } },
+      },
     })
     if (!taiKhoan || taiKhoan.trangThai !== trangThaiTaiKhoanHoatDong) return null
 
@@ -157,6 +164,7 @@ export class XacThucService {
       taiKhoan: {
         maTaiKhoan: taiKhoan.ma,
         tenDangNhap: taiKhoan.tenDangNhap,
+        hoVaTen: taiKhoan.hoSoDangVien?.hoVaTen ?? null,
         doiMatKhauLanDau: taiKhoan.doiMatKhauLanDau,
       },
     }

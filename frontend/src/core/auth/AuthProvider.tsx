@@ -31,6 +31,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     retry: false,
     staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: 'always',
   })
 
   const giaTri: NguCanhXacThuc = {

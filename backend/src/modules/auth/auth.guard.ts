@@ -22,6 +22,7 @@ export class XacThucGuard implements CanActivate {
     yeuCau.taiKhoanDaXacThuc = {
       maTaiKhoan: phien.taiKhoan.maTaiKhoan,
       tenDangNhap: phien.taiKhoan.tenDangNhap,
+      hoVaTen: phien.taiKhoan.hoVaTen,
       doiMatKhauLanDau: phien.taiKhoan.doiMatKhauLanDau,
       maPhien: phien.maPhien,
       maPhanCongVaiTroDangHoatDong: phien.maPhanCongVaiTroDangHoatDong,

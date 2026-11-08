@@ -17,7 +17,7 @@
   --modal: #ffffff;
   --modal-foreground: #0b1c30;
   --modal-muted-foreground: #59413e;
-  --tooltip: #14532d;
+  --tooltip: #1e3a8a;
   --tooltip-foreground: #ffffff;
   --popover: #ffffff;
   --popover-foreground: #0b1c30;
@@ -77,7 +77,7 @@
   --modal: #ffffff;
   --modal-foreground: #0b1c30;
   --modal-muted-foreground: #59413e;
-  --tooltip: #14532d;
+  --tooltip: #1e3a8a;
   --tooltip-foreground: #ffffff;
   --popover: oklch(0.21 0.016 30);
   --popover-foreground: #eef0ff;

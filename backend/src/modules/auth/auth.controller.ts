@@ -56,6 +56,7 @@ export class XacThucController {
       taiKhoan: {
         maTaiKhoan: yeuCau.taiKhoanDaXacThuc.maTaiKhoan,
         tenDangNhap: yeuCau.taiKhoanDaXacThuc.tenDangNhap,
+        hoVaTen: yeuCau.taiKhoanDaXacThuc.hoVaTen ?? null,
         doiMatKhauLanDau: yeuCau.taiKhoanDaXacThuc.doiMatKhauLanDau,
       },
     }

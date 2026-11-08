@@ -1,7 +1,8 @@
-import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
 import { Prisma } from '../../infrastructure/database/generated/prisma/client'
 import { DichVuPrisma } from '../../infrastructure/database/prisma.service'
+import { PhanQuyenService } from '../authorization/authorization.service'
 import type { TaiKhoanDaXacThuc } from '../auth/auth.types'
 import type { DanhSachNamHocDto, SuaNamHocDto, TaoNamHocDto } from './school-years.dto'
 
@@ -9,29 +10,13 @@ const quyen = { xem: 'NAM_HOC_XEM', tao: 'NAM_HOC_TAO', sua: 'NAM_HOC_SUA', xoa:
 
 @Injectable()
 export class NamHocService {
-  constructor(@Inject(DichVuPrisma) private readonly prisma: DichVuPrisma) {}
+  constructor(
+    @Inject(DichVuPrisma) private readonly prisma: DichVuPrisma,
+    @Inject(PhanQuyenService) private readonly phanQuyen: PhanQuyenService,
+  ) {}
 
-  private async check(actor: TaiKhoanDaXacThuc, permission: string, requiresSystemScope = false) {
-    const now = new Date()
-    const session = await this.prisma.phienDangNhap.findFirst({
-      where: { ma: actor.maPhien, maTaiKhoan: actor.maTaiKhoan, thuHoiLuc: null, hetHanLuc: { gt: now } },
-      select: { maPhanCongVaiTroDangHoatDong: true },
-    })
-    const assignmentId = session?.maPhanCongVaiTroDangHoatDong
-    if (!assignmentId) throw new ForbiddenException({ maLoi: 'KHONG_DU_QUYEN', thongBao: 'Phiên chưa chọn Assignment đang hoạt động.' })
-    const assignment = await this.prisma.phanCongVaiTro.findFirst({
-      where: {
-        ma: assignmentId, maTaiKhoan: actor.maTaiKhoan,
-        ngayHieuLucTu: { lte: now }, OR: [{ ngayHieuLucDen: null }, { ngayHieuLucDen: { gt: now } }],
-        thuHoiLuc: null, vaiTro: { trangThai: 'DANG_HOAT_DONG', quyen: { some: { quyen: { maDinhDanh: permission } } } },
-      },
-      select: { loaiPhamVi: true },
-    })
-    if (!assignment || (requiresSystemScope && assignment.loaiPhamVi !== 'TOAN_HE_THONG')) {
-      throw new ForbiddenException({ maLoi: 'KHONG_DU_QUYEN', thongBao: requiresSystemScope
-        ? 'Thao tác này cần Permission tương ứng trên Assignment đang hoạt động với Scope TOAN_HE_THONG.'
-        : 'Cần Permission xem năm học trên Assignment đang hoạt động.' })
-    }
+  private async check(actor: TaiKhoanDaXacThuc, permission: typeof quyen[keyof typeof quyen]) {
+    await this.phanQuyen.kiemTraQuyenDanhMucNamHoc(actor.maTaiKhoan, permission, actor.maPhien)
   }
 
   async danhSach(actor: TaiKhoanDaXacThuc, query: DanhSachNamHocDto) {
@@ -48,7 +33,7 @@ export class NamHocService {
   async chiTiet(actor: TaiKhoanDaXacThuc, id: string) { await this.check(actor, quyen.xem); const row = await this.prisma.namHoc.findUnique({ where: { ma: id } }); if (!row) throw new NotFoundException(); return row }
 
   async tao(actor: TaiKhoanDaXacThuc, dto: TaoNamHocDto, ip?: string | null) {
-    await this.check(actor, quyen.tao, true); this.validateDates(dto.ngayBatDau, dto.ngayKetThuc)
+    await this.check(actor, quyen.tao); this.validateDates(dto.ngayBatDau, dto.ngayKetThuc)
     const id = randomUUID()
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -59,7 +44,7 @@ export class NamHocService {
   }
 
   async sua(actor: TaiKhoanDaXacThuc, id: string, dto: SuaNamHocDto, ip?: string | null) {
-    await this.check(actor, quyen.sua, true)
+    await this.check(actor, quyen.sua)
     const before = await this.prisma.namHoc.findUnique({ where: { ma: id } }); if (!before) throw new NotFoundException()
     const start = dto.ngayBatDau ?? before.ngayBatDau.toISOString().slice(0, 10); const end = dto.ngayKetThuc ?? before.ngayKetThuc.toISOString().slice(0, 10); this.validateDates(start, end)
     try {
@@ -71,7 +56,7 @@ export class NamHocService {
   }
 
   async xoa(actor: TaiKhoanDaXacThuc, id: string, ip?: string | null) {
-    await this.check(actor, quyen.xoa, true); const before = await this.prisma.namHoc.findUnique({ where: { ma: id } }); if (!before) throw new NotFoundException()
+    await this.check(actor, quyen.xoa); const before = await this.prisma.namHoc.findUnique({ where: { ma: id } }); if (!before) throw new NotFoundException()
     await this.prisma.$transaction(async (tx) => { await tx.namHoc.delete({ where: { ma: id } }); await this.audit(tx, actor, 'XOA', id, before, null, ip) }); return { ma: id }
   }
 

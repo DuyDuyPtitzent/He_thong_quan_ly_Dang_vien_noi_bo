@@ -21,7 +21,7 @@ describe('MemberProfileDetailPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.permissions.splice(0, mocks.permissions.length, 'HO_SO_DANG_VIEN_SUA_THONG_TIN_CO_BAN', 'SINH_HOAT_XEM_HIEN_TAI', 'SINH_HOAT_XEM_LICH_SU', 'QUA_TRINH_DANG_XEM', 'PHAN_CONG_CHUC_VU_XEM', 'HO_SO_XEM_LICH_SU_THAY_DOI')
+    mocks.permissions.splice(0, mocks.permissions.length, 'HO_SO_DANG_VIEN_SUA_THONG_TIN_CO_BAN', 'HO_SO_CA_NHAN_XEM', 'HO_SO_DIA_CHI_XEM', 'HO_SO_SINH_VIEN_XEM', 'SINH_HOAT_XEM_HIEN_TAI', 'SINH_HOAT_XEM_LICH_SU', 'QUA_TRINH_DANG_XEM', 'PHAN_CONG_CHUC_VU_XEM', 'HO_SO_XEM_LICH_SU_THAY_DOI')
     mocks.detail.mockResolvedValue({
       ma: 'profile-id', maHoSoNoiBo: 'HS-001', hoVaTen: 'Nguyễn An', trangThai: 'DANG_HOAT_DONG', trangThaiDangVien: 'DU_BI',
       ngayVaoDang: '2024-01-01T00:00:00.000Z', ngayChinhThuc: null, soPhieuLyLich: 'PL-001', soTheDangVien: 'THE-001',
@@ -45,11 +45,11 @@ describe('MemberProfileDetailPage', () => {
     return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/profile-id']}><Routes><Route path="/:profileId" element={<MemberProfileDetailPage />} /></Routes></MemoryRouter></QueryClientProvider>)
   }
 
-  it('shows the approved five-field completion measure and loads membership history when opened', async () => {
+  it('shows the shared required-field completion measure and loads membership history when opened', async () => {
     renderPage()
 
     expect(await screen.findByRole('heading', { name: 'Nguyễn An' })).toBeInTheDocument()
-    expect(screen.getByRole('progressbar', { name: 'Mức độ hoàn thiện hồ sơ: 100%' })).toHaveAttribute('aria-valuenow', '100')
+    expect(screen.getByRole('progressbar', { name: 'Mức độ hoàn thiện hồ sơ: 26%' })).toHaveAttribute('aria-valuenow', '26')
     await userEvent.click(screen.getByRole('tab', { name: 'Sinh hoạt Đảng' }))
     expect(await screen.findByRole('heading', { name: 'Sinh hoạt Đảng' })).toBeInTheDocument()
     expect(screen.getByText('Đảng ủy Học viện PTIT')).toBeInTheDocument()

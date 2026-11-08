@@ -54,9 +54,11 @@ export type HoSoInput = {
   danToc?: string
   tonGiao?: string
   soDienThoai?: string
+  soDienThoaiBoNguoiNuoiDuong?: string
+  soDienThoaiMeNguoiNuoiDuong?: string
   emailLienHe?: string
   diaChi?: {
-    loaiDiaChi: 'NOI_SINH' | 'QUE_QUAN' | 'THUONG_TRU'
+    loaiDiaChi: 'NOI_SINH' | 'QUE_QUAN' | 'THUONG_TRU' | 'NOI_O_HIEN_NAY'
     phanLoaiNoiSinh?: 'TRONG_NUOC' | 'NUOC_NGOAI'
     quocGia?: string
     tinhThanhPho?: string
@@ -90,8 +92,8 @@ export type HoSoChiTiet = {
   soPhieuLyLich: string | null
   soTheDangVien: string | null
   khoaDangVien: string | null
-  thongTinCaNhan?: { ngaySinh?: string | null; gioiTinh?: string | null; soCccd?: string | null; ngayCapCccd?: string | null; noiCapCccd?: string | null; quocTich?: string | null; danToc?: string | null; tonGiao?: string | null; soDienThoai?: string | null; emailLienHe?: string | null } | null
-  diaChi?: { loaiDiaChi: 'NOI_SINH' | 'QUE_QUAN' | 'THUONG_TRU'; phanLoaiNoiSinh: string | null; quocGia: string | null; tinhThanhPho: string | null; quanHuyen: string | null; xaPhuong: string | null; diaChiChiTiet: string | null }[]
+  thongTinCaNhan?: { ngaySinh?: string | null; gioiTinh?: string | null; soCccd?: string | null; ngayCapCccd?: string | null; noiCapCccd?: string | null; quocTich?: string | null; danToc?: string | null; tonGiao?: string | null; soDienThoai?: string | null; soDienThoaiBoNguoiNuoiDuong?: string | null; soDienThoaiMeNguoiNuoiDuong?: string | null; emailLienHe?: string | null } | null
+  diaChi?: { loaiDiaChi: 'NOI_SINH' | 'QUE_QUAN' | 'THUONG_TRU' | 'NOI_O_HIEN_NAY'; phanLoaiNoiSinh: string | null; quocGia: string | null; tinhThanhPho: string | null; quanHuyen: string | null; xaPhuong: string | null; diaChiChiTiet: string | null }[]
   thongTinSinhVien?: { maSinhVien: string; khoaHoc: string | null; donViPhuTrach: string | null; chuongTrinhDaoTao: string | null; nganh: string | null; chuyenNganh: string | null; lopHanhChinh: string | null; trangThaiHocTap: string | null } | null
   quaTrinh: { soQuyetDinh: string | null; ngayQuyetDinh: string | null; donViBanHanhQuyetDinh: string | null; nguoiGioiThieuThuNhat: string | null; nguoiGioiThieuThuHai: string | null }[]
   lichSuDonVi: { ma: string; maChiBo: string; maTo: string | null; ngayHieuLucTu: string; tenDangUy?: string | null; chiBo?: { maDinhDanh: string | null; tenDonVi: { ten: string }[] }; to?: { maDinhDanh: string | null; tenDonVi: { ten: string }[] } | null }[]

@@ -83,11 +83,27 @@ Mọi mã định danh dùng UUID. Quan hệ tham chiếu dùng khóa ngoại; k
 
 ## Phân quyền
 
+Với mọi module dùng ma trận Permission theo Role, mỗi API/hành động phải được rà soát và kiểm thử cùng Assignment `CAY_DON_VI`, `DON_VI_CHI_DINH` và `TOAN_HE_THONG`; xem xét `CA_NHAN` khi phù hợp nghiệp vụ. Permission được gán trên Role, Scope lưu độc lập trên Assignment. Backend phải áp dụng đúng từng phạm vi: cây tổ chức, các đơn vị được chỉ định hoặc toàn hệ thống. Không chỉ hỗ trợ Scope toàn hệ thống và cũng không mở rộng Scope đơn vị thành toàn hệ thống. Việc loại một Scope chỉ được làm theo policy nghiệp vụ đã duyệt, có căn cứ tài liệu và kiểm thử.
+
+### Danh mục năm học dùng chung
+
+`NAM_HOC_XEM`, `NAM_HOC_TAO`, `NAM_HOC_SUA` và `NAM_HOC_XOA` được kiểm tra trên Assignment đang được chọn trong phiên, nhưng không ràng buộc thao tác với phạm vi đơn vị vì bản thân danh mục năm học dùng chung. `PhanQuyenService.kiemTraQuyenDanhMucNamHoc` chỉ chấp nhận Assignment hợp lệ có Scope `CAY_DON_VI`, `DON_VI_CHI_DINH` hoặc `TOAN_HE_THONG` và Role của chính Assignment đó có Permission yêu cầu; Scope `CA_NHAN` bị từ chối. Đây là policy riêng cho bốn Permission năm học, không biến Scope cây đơn vị thành toàn hệ thống và không thay đổi cơ chế Permission + Scope của module khác. Không có Role/Assignment nào được tự cấp hoặc chỉnh sửa bởi policy này.
+
+Frontend chỉ hiện từng thao tác khi phiên hiện hành có Permission tương ứng và Assignment đang chọn thuộc một trong ba Scope hợp lệ. `AuthProvider` làm mới phiên mỗi 60 giây khi trang hoạt động, khi quay lại cửa sổ thì tải lại ngay; đổi Assignment tiếp tục tải phiên mới và xóa cache dữ liệu. Backend luôn là nơi quyết định cuối cùng. Các API danh sách/chi tiết dùng `NAM_HOC_XEM`, tạo dùng `NAM_HOC_TAO`, sửa dùng `NAM_HOC_SUA`, xóa dùng `NAM_HOC_XOA`; kiểm tra ngày, trùng mã/khoảng thời gian, transaction và audit tiếp tục áp dụng.
+
 ### Xóa hồ sơ Đảng viên
 
 `DELETE /ho-so-dang-vien/:maHoSo` yêu cầu Permission `HO_SO_DANG_VIEN_XOA` và Scope trên hồ sơ ở cả guard và service. Backend khóa hồ sơ rồi kiểm tra trong transaction: chỉ chấp nhận một bản ghi sinh hoạt ban đầu và tối đa một mốc vào Đảng ban đầu nếu chúng được xác minh cùng audit tạo hồ sơ; mọi lịch sử sinh hoạt/quá trình phát sinh sau đó, phân công chức vụ hoặc yêu cầu cập nhật đều chặn xóa. Không thay đổi schema và không cascade.
 
 Khi xóa được duyệt, transaction xóa rõ ràng thông tin cá nhân, địa chỉ, thông tin sinh viên và các bản ghi sinh hoạt/quá trình ban đầu; giữ nguyên audit. Nếu có tài khoản liên kết, giữ tài khoản nhưng đặt `TAM_KHOA`, thu hồi Assignment và phiên đăng nhập; thao tác bị chặn nếu làm mất Quản trị viên toàn hệ thống hợp lệ cuối cùng. Giao diện chỉ hiện hành động theo quyền, xác nhận bằng `AlertDialog` và chỉ đóng/làm mới sau phản hồi thành công. Catalog Permission đánh dấu `HO_SO_DANG_VIEN_XOA` là `DA_CO_API`.
+
+### Thông tin bổ sung hồ sơ Đảng viên
+
+Hồ sơ cá nhân lưu thêm số điện thoại bố/người nuôi dưỡng và mẹ/người nuôi dưỡng trong `thong_tin_ca_nhan_dang_vien`; loại địa chỉ `NOI_O_HIEN_NAY` dùng chung bảng `dia_chi_dang_vien`. Dữ liệu được bổ sung vào biểu mẫu tạo/sửa, nhập/xuất Excel và luồng đề nghị cập nhật hiện có, không tạo bảng hồ sơ trùng lặp.
+
+Lịch sử chuyển sinh hoạt từ đơn vị ngoài PTIT được ghi trong `chuyen_sinh_hoat_ngoai` và gắn với hồ sơ cùng mốc lịch sử đơn vị tiếp nhận đã có; không tự đổi Chi bộ hiện tại. Thông tin lớp bồi dưỡng Đảng lưu trong `thong_tin_dao_tao_dang`. Tệp hồ sơ có metadata trong `tai_lieu_ho_so_dang_vien`, nội dung nằm trong kho riêng tư `KHO_TEP_RIENG`; tải lên giới hạn 10 MB và kiểm tra định dạng PDF/JPG/PNG. Không ghi nội dung tệp vào CSDL hoặc audit.
+
+API ngoài PTIT dùng `SINH_HOAT_XEM_LICH_SU`/`SINH_HOAT_SUA_LICH_SU`; lớp bồi dưỡng có Permission riêng `DAO_TAO_DANG_XEM`, `DAO_TAO_DANG_TAO`, `DAO_TAO_DANG_SUA`; tài liệu dùng `HO_SO_TAI_LIEU_XEM`, `HO_SO_TAI_LIEU_TAI_LEN`, `HO_SO_TAI_LIEU_TAI_XUONG`. Guard và service cùng kiểm tra Permission + Assignment + Scope. Theo yêu cầu nghiệp vụ, thao tác tạo thông tin chuyển ngoài chỉ chấp nhận tài khoản đang liên kết chính xác với hồ sơ đó; vẫn cần `SINH_HOAT_SUA_LICH_SU`, không tự cấp Permission. Thông tin bổ sung `noi_dung` là văn bản tùy chọn, tối đa 2.000 ký tự, hiển thị trên chi tiết hồ sơ. Audit chỉ ghi nhận có/không có nội dung, không lưu phần nội dung tự khai. Metadata Permission được đồng bộ vào danh mục để người quản trị có thể tự gán; không tự cấp cho Role nào. Mọi thay đổi được audit với nội dung nhạy cảm được lược bỏ.
 
 ### Nhập/Xuất dữ liệu
 

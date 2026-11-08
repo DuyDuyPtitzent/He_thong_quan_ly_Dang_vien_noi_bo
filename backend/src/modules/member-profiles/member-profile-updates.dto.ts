@@ -5,8 +5,9 @@ import { sanitizeRejectionHtml } from './rich-text-sanitizer'
 export const editableProfileFields = [
   'hoVaTen', 'khoaDangVien', 'thongTinCaNhan.ngaySinh', 'thongTinCaNhan.gioiTinh', 'thongTinCaNhan.soCccd',
   'thongTinCaNhan.ngayCapCccd', 'thongTinCaNhan.noiCapCccd', 'thongTinCaNhan.quocTich',
-  'thongTinCaNhan.danToc', 'thongTinCaNhan.tonGiao', 'thongTinCaNhan.soDienThoai', 'thongTinCaNhan.emailLienHe',
-  'diaChi.NOI_SINH', 'diaChi.QUE_QUAN', 'diaChi.THUONG_TRU',
+  'thongTinCaNhan.danToc', 'thongTinCaNhan.tonGiao', 'thongTinCaNhan.soDienThoai',
+  'thongTinCaNhan.soDienThoaiBoNguoiNuoiDuong', 'thongTinCaNhan.soDienThoaiMeNguoiNuoiDuong', 'thongTinCaNhan.emailLienHe',
+  'diaChi.NOI_SINH', 'diaChi.QUE_QUAN', 'diaChi.THUONG_TRU', 'diaChi.NOI_O_HIEN_NAY',
   'anhDaiDien',
 ] as const
 

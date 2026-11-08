@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount } from '@/shared/
 import { ButtonGroup, ButtonGroupText } from '@/shared/components/ui/button-group'
 import { Pagination, PaginationContent, PaginationItem, PaginationLink } from '@/shared/components/ui/pagination'
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from '@/shared/components/ui/popover'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/components/ui/collapsible'
 import { AspectRatio } from '@/shared/components/ui/aspect-ratio'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
@@ -169,7 +169,7 @@ function Preview({ file }: { file: string }) {
   if (file === 'avatar.tsx') return <AvatarGroup><Avatar><AvatarFallback>NA</AvatarFallback></Avatar><Avatar><AvatarFallback>BT</AvatarFallback></Avatar><AvatarGroupCount>+3</AvatarGroupCount></AvatarGroup>
   if (file === 'pagination.tsx') return <Pagination aria-label="Phân trang minh họa"><PaginationContent><PaginationItem><PaginationLink href="#" aria-label="Trang trước" onClick={(event) => {event.preventDefault(); setValue([Math.max(1, (value[0] ?? 1) - 1)])}}>‹</PaginationLink></PaginationItem><PaginationItem><PaginationLink href="#" isActive onClick={(event) => event.preventDefault()}>{value[0] ?? 1}</PaginationLink></PaginationItem><PaginationItem><PaginationLink href="#" aria-label="Trang tiếp theo" onClick={(event) => {event.preventDefault(); setValue([(value[0] ?? 1) + 1])}}>›</PaginationLink></PaginationItem></PaginationContent></Pagination>
   if (file === 'popover.tsx') return <Popover><PopoverTrigger asChild><Button variant="outline">Mở popover</Button></PopoverTrigger><PopoverContent><PopoverHeader><PopoverTitle>Tùy chọn</PopoverTitle><PopoverDescription>Các thay đổi chỉ để xem thử.</PopoverDescription></PopoverHeader><Input className="mt-3" placeholder="Nội dung minh họa" /></PopoverContent></Popover>
-  if (file === 'tooltip.tsx') return <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="outline">Di chuột hoặc nhấn Tab</Button></TooltipTrigger><TooltipContent>Tooltip từ component nguồn</TooltipContent></Tooltip></TooltipProvider>
+  if (file === 'tooltip.tsx') return <Tooltip><TooltipTrigger asChild><Button variant="outline">Di chuột hoặc nhấn Tab</Button></TooltipTrigger><TooltipContent>Tooltip từ component nguồn</TooltipContent></Tooltip>
   if (file === 'collapsible.tsx') return <Collapsible open={enabled} onOpenChange={setEnabled}><CollapsibleTrigger asChild><Button variant="outline">{enabled ? 'Đóng nội dung' : 'Mở nội dung'}</Button></CollapsibleTrigger><CollapsibleContent className="pt-3 text-sm">Vùng nội dung có thể thu gọn.</CollapsibleContent></Collapsible>
   if (file === 'aspect-ratio.tsx') return <AspectRatio ratio={16 / 5} className="flex items-center justify-center rounded-md bg-muted text-sm text-muted-foreground">Khung tỷ lệ 16:5</AspectRatio>
   if (file === 'table.tsx') return <Table><TableHeader><TableRow><TableHead>Mục</TableHead><TableHead>Trạng thái</TableHead></TableRow></TableHeader><TableBody><TableRow><TableCell>Mẫu A</TableCell><TableCell>Hoạt động</TableCell></TableRow><TableRow><TableCell>Mẫu B</TableCell><TableCell>Bản nháp</TableCell></TableRow></TableBody></Table>

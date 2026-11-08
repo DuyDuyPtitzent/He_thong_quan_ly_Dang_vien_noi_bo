@@ -1,3 +1,34 @@
+# Header: phạm vi và danh tính Assignment hiện hành — 2026-11-08
+
+## Tên chương trình đào tạo, bồi dưỡng Đảng — 2026-11-08
+
+- Nguyên nhân: form trước đây không có trường nhập tên chương trình; Frontend luôn gửi `loaiLop: LOP_DANG_VIEN_MOI` và hiển thị nhãn cố định, nên tên trên bảng không đến từ dữ liệu người dùng nhập.
+- Thêm `tenChuongTrinh` vào hồ sơ đào tạo, DTO/API và modal thêm/sửa; tên trong bảng, chi tiết và lựa chọn giấy chứng nhận lấy từ giá trị đã lưu. `loaiLop` vẫn giữ mã loại lớp hiện tại để không ảnh hưởng liên kết giấy chứng nhận. Bản ghi cũ được backfill từ giá trị loại lớp hiện có.
+- Migration `20261108180000_add_training_program_name` đã áp dụng vào PostgreSQL phát triển `quan_ly_dang_vien_dev` tại `127.0.0.1:55432`; `prisma migrate status` xác nhận 19 migration, database schema up to date.
+- Kiểm tra đạt: Backend và Frontend TypeScript, Prisma validate, ESLint các tệp Frontend liên quan, `git diff --check`. Không chạy test suite.
+- Files: `backend/prisma/schema.prisma`, migration mới, `backend/src/modules/member-profiles/member-profiles.dto.ts`, `member-profiles.service.ts`, `frontend/src/features/member-profiles/api/member-profiles.api.ts`, `components/MemberProfileSupplementarySections.tsx`.
+
+## Bổ sung thông tin hồ sơ Đảng viên — 2026-11-08
+
+- Bổ sung số điện thoại bố/người nuôi dưỡng và mẹ/người nuôi dưỡng vào hồ sơ cá nhân; bổ sung loại địa chỉ `NOI_O_HIEN_NAY` vào form, danh sách trường mở đợt cập nhật, trang Hồ sơ của tôi và nhập/xuất Excel. Giữ các bảng hồ sơ hiện tại.
+- Thêm lịch sử chuyển sinh hoạt ngoài PTIT gắn với mốc lịch sử đơn vị tiếp nhận có sẵn; thêm thông tin đào tạo/bồi dưỡng Đảng; thêm metadata tài liệu, lưu bytes vào `KHO_TEP_RIENG` (PDF/JPG/PNG, tối đa 10 MB). Quyết định/tài liệu bắt buộc liên kết với quá trình phù hợp; nội dung tệp và PII không ghi vào audit.
+- API kiểm tra Permission + Scope; bổ sung Permission đào tạo (`DAO_TAO_DANG_*`) và tài liệu (`HO_SO_TAI_LIEU_*`) vào catalog. Đã chạy `npm run sync:permissions`, chỉ đồng bộ metadata danh mục; không cấp Permission cho bất kỳ Role nào. Quản trị viên cần tự gán quyền theo nhu cầu.
+- Migration `20261108123435_member_profile_supplementary_records` đã áp dụng vào PostgreSQL phát triển `quan_ly_dang_vien_dev` tại `127.0.0.1:55432`; `prisma migrate status`: 17 migration, “Database schema is up to date!”. Migration chỉ thêm enum value, hai cột điện thoại và ba bảng bổ sung cùng index/FK; không chuyển đổi/xóa dữ liệu cũ.
+- Kiểm tra đạt: Prisma validate; Backend và Frontend typecheck; Backend 30/30 test trong `member-profiles.service.spec.ts`, `member-profiles.controller.spec.ts`, `member-profile-updates.service.spec.ts`; Frontend 15/15 trong `my-member-profile.test.tsx`, `member-profile-detail.test.tsx`, `member-profiles.validation.test.ts`. Bỏ Tooltip không cần thiết ở nút tab tràn vì nút đã có nhãn trợ năng; `git diff --check` đạt. Chưa kiểm tra tải tệp qua trình duyệt hoặc kiểm tra thủ công trên môi trường UI.
+
+- Bỏ tiêu đề route khỏi Header; cạnh nút Sidebar hiển thị phạm vi của đúng Assignment đang hoạt động: tên đơn vị gốc cho `CAY_DON_VI`, tên đơn vị đơn lẻ hoặc số lượng đơn vị cho `DON_VI_CHI_DINH`, “Toàn hệ thống” cho `TOAN_HE_THONG`, “Phạm vi cá nhân” cho `CA_NHAN`. Không cộng Scope qua các Assignment; session loading/lỗi/thiếu dữ liệu có trạng thái riêng.
+- Bên phải theo thứ tự chuông, theme, avatar và hai dòng tên/ngạch vai trò của Assignment hiện hành. Chuông mở thông báo “Chức năng thông báo đang được phát triển.” Theme đổi dựa trên `resolvedTheme`, giữ lưu theme của `next-themes`. Avatar dùng shadcn Avatar, tải ảnh qua API hiện có chỉ khi Permission xem hồ sơ trong Assignment hiện hành cho phép; nếu ảnh lỗi/không có thì hiện chữ cái đầu.
+- `GET /xac-thuc/phien-hien-tai` nay kèm `hoVaTen` lấy từ hồ sơ liên kết với chính tài khoản đăng nhập; không thêm schema/API phân quyền. Tên Role và nhãn đơn vị lấy từ Assignment đã có trong session. Chuyển Assignment làm session và Header cập nhật theo cơ chế hiện hành.
+- Kiểm tra: Backend và Frontend typecheck đạt; `frontend/tests/admin-layout-header.test.tsx` đạt 5/5; `git diff --check` đạt. Không đổi schema/migration hoặc Permission/Role/Assignment. Ảnh chỉ tải khi có Permission `HO_SO_DANG_VIEN_XEM_TONG_QUAN`; nếu thiếu, Header giữ avatar chữ cái và không vượt qua kiểm soát ảnh hiện tại.
+
+# Chính sách Permission cho danh mục năm học dùng chung — 2026-11-08
+
+- Nguyên nhân hạn chế trước đây: `NamHocService.check` tự truy vấn Assignment đang hoạt động nhưng bắt buộc `TOAN_HE_THONG` khi tạo/sửa/xóa; Frontend `SchoolYearsPage` cũng chỉ hiện thao tác khi Assignment có Scope đó. Vì vậy Permission `NAM_HOC_*` trong Role không đủ với Assignment Scope tổ chức/đơn vị chỉ định.
+- Chính sách riêng hiện gọi `PhanQuyenService.kiemTraQuyenDanhMucNamHoc` cho các API danh sách, chi tiết, tạo, sửa, xóa. Yêu cầu đúng Permission trên Assignment được phiên chọn, đã qua lọc hết hạn/thu hồi/tài khoản hoặc Role không hoạt động; chấp nhận `CAY_DON_VI`, `DON_VI_CHI_DINH`, `TOAN_HE_THONG`; từ chối `CA_NHAN`. Không đổi `kiemTra()` chung, Scope lưu, Role/Permission/Assignment hay chính sách module khác.
+- Frontend hiện từng thao tác theo Permission phiên và ba Scope được chấp nhận. Mô tả trang là “Danh mục năm học dùng chung, được quản lý theo quyền hạn đã cấp.” `AuthProvider` làm mới session mỗi 60 giây khi trang hoạt động và khi focus; đổi Assignment vẫn tải phiên mới, xóa cache. Backend luôn xác minh quyền trực tiếp.
+- Kiểm tra đạt: Backend typecheck; `authorization.service.spec.ts` + `school-years.service.spec.ts` 22/22; Frontend typecheck và `school-years.test.tsx` 9/9; HTTP tích hợp PostgreSQL phát triển 1/1, chọn Assignment hiện hành có Scope không phải `TOAN_HE_THONG` và gọi trực tiếp `GET /api/v1/nam-hoc` thành công. Lượt đầu bị `EACCES` trong sandbox; cùng kiểm tra chỉ đọc được chạy thành công sau khi được duyệt truy cập DB cục bộ. `git diff --check` đạt.
+- Schema/migration và dữ liệu phân quyền không thay đổi; không ghi dữ liệu thử. Bảng `NamHoc` hiện không có quan hệ nghiệp vụ tham chiếu trong Prisma/schema migration; unique mã, CHECK ngày và exclusion khoảng thời gian được giữ. Do hiện chưa có bảng nghiệp vụ tham chiếu, chưa thể tạo trường hợp xóa năm học đang được dữ liệu nghiệp vụ sử dụng; nếu quan hệ được bổ sung, cần FK/kiểm tra nghiệp vụ trước khi bật xóa bản ghi đang được tham chiếu.
+
 ## Tích hợp bộ chọn ngày và thời gian dùng chung — 2026-11-08
 
 - Kiểm kê trước thay đổi trong Frontend: hồ sơ Đảng viên (ngày nhập hồ sơ và ngày sinh hoạt bị khóa khi sửa); hồ sơ của tôi (ngày sinh và ngày cấp CCCD được chọn động theo kiểu `date`); nhập Excel (ngày áp dụng hàng loạt và ngày từng dòng); cập nhật hồ sơ (mốc bắt đầu/kết thúc đợt, bộ lọc yêu cầu và bộ lọc danh sách đợt); tổ chức (thời điểm hiệu lực khi tạo/sửa); năm học (bộ lọc và ngày bắt đầu/kết thúc); phân quyền tài khoản (thời hạn phân công); nhật ký (lọc và xem trước xóa theo ngày); thư viện component (ví dụ Input và Sheet). Không thấy bộ chọn native cho tháng/năm riêng.
@@ -846,3 +877,34 @@ Cập nhật lần cuối: 2026-11-06
 - Bổ sung kiểm thử date-only, nhập trực tiếp, ngày nhuận/ngày sai, chọn ngày/tháng/năm và preview/freeze khoảng ngày.
 - Không thay đổi Backend, CSDL, Sidebar hoặc dependency.
 - Kiểm tra cuối: Frontend typecheck đạt; ESLint các file picker, thư viện component và test đạt; `date-time-components.test.tsx` đạt 7/7 (ngày nhuận/không hợp lệ, nhập trực tiếp, chọn ngày/tháng/năm, keyboard giờ, khoảng hover/freeze và xác nhận khoảng ngày giờ); `git diff --check` đạt. Đã xem thư viện component trong Edge và xác nhận sáu demo tương tác được hiển thị; chưa chạy kiểm tra thủ công mọi kích thước viewport hoặc toàn bộ bộ test frontend.
+
+## Rà soát giao diện và quyền trang chi tiết hồ sơ Đảng viên — 2026-11-08
+
+- Đối chiếu chỉ đọc Assignment đang hoạt động của tài khoản: Role `CHANH_VAN_PHONG_DANG_UY` (Chánh văn phòng Đảng ủy), Scope `CAY_DON_VI` tại Đảng ủy Học viện Công nghệ Bưu chính Viễn thông. Assignment có quyền tổng quan hồ sơ, xem lịch sử thay đổi và xem quá trình Đảng; thiếu `SINH_HOAT_XEM_HIEN_TAI`, `SINH_HOAT_XEM_LICH_SU`, `DAO_TAO_DANG_XEM`. Không cấp thêm quyền và không đổi Scope/Role/Assignment. Catalog/controller/service hiện có endpoint tương ứng với Permission + Scope.
+- Trang chi tiết: quá trình Đảng nay mặc định chọn sự kiện mới nhất, hiển thị đủ 7 trường và có bảng chọn sự kiện; lịch sử thay đổi dùng bảng sắp xếp mới nhất, phân trang 10 dòng và Dialog chỉ hiển thị giá trị thay đổi, bỏ trường CCCD/định danh nhạy cảm. Đào tạo Đảng dùng bảng và Dialog xem; trạng thái thiếu quyền, không có dữ liệu và lỗi API có nội dung riêng, lỗi có nút thử lại.
+- Thay đổi trong `frontend/src/features/member-profiles/pages/MemberProfileDetailPage.tsx` và `frontend/src/features/member-profiles/components/MemberProfileSupplementarySections.tsx`. Không thay Backend, CSDL hoặc dữ liệu hồ sơ.
+- Kiểm tra: Frontend typecheck đạt; ESLint riêng hai file thay đổi đạt; build production đạt. Lệnh ESLint toàn dự án không đạt do lỗi hiện có trong tài sản TinyMCE và các file ngoài phạm vi (5.480 lỗi/190 cảnh báo). Build có cảnh báo chunk chính lớn hơn 500 kB. Không chạy test suite và chưa thực hiện kiểm tra trực quan trên trình duyệt.
+
+## Tinh chỉnh giao diện chi tiết hồ sơ Đảng viên — 2026-11-08 (bổ sung)
+
+- Đối chiếu read-only PostgreSQL dev với hồ sơ mã `002`: hồ sơ tồn tại, không có bản ghi `PhanCongChucVu`; trạng thái Empty State chức vụ/nhiệm kỳ là đúng dữ liệu, không tạo dữ liệu mẫu. Tab chức vụ hiện phân biệt thiếu Permission, lỗi API/403 phạm vi, đang tải và dữ liệu trống; chỉ gọi API khi có `PHAN_CONG_CHUC_VU_XEM`.
+- Assignment `CHANH_VAN_PHONG_DANG_UY` hiện tại tiếp tục thiếu `SINH_HOAT_XEM_HIEN_TAI` và `DAO_TAO_DANG_XEM` (ngoài quyền lịch sử sinh hoạt); không cấp quyền, không bỏ RBAC. Card sinh hoạt giữ thông báo thiếu quyền; nếu có quyền nhưng không có đơn vị hiện hành thì dùng Empty State “Chưa có thông tin sinh hoạt hiện tại”.
+- Tab Quá trình Đảng nay chỉ có bảng sự kiện 6 cột, sắp mới nhất trước với ngày thiếu/không hợp lệ cuối danh sách và mã sự kiện làm khóa ổn định. Nút Xem chi tiết mở Dialog responsive hai cột có đủ 7 trường và nút Đóng. Cột thao tác sticky bên phải; Tooltip dùng token màu xanh đã chuẩn hóa. Bỏ hoàn toàn Alert phụ phía dưới.
+- Kiểm tra: Frontend typecheck, ESLint hai file liên quan, production build và `git diff --check` đạt. Build vẫn có cảnh báo hiện hữu về chunk lớn hơn 500 kB. Không chạy tests và chưa thực hiện visual QA trên trình duyệt.
+
+## Đồng bộ tab Hồ sơ của tôi với trang chi tiết — 2026-11-08
+
+- Tái sử dụng `PartyProcessRecordsSection`, `PositionAssignmentsSection`, `PartyTrainingSection`, `EmptyState`, shadcn Table/Dialog/Tooltip/Badge giữa trang cá nhân và trang quản lý. Quá trình Đảng cùng có 6 cột, sắp xếp có tính ổn định, Dialog đầy đủ 7 trường; đào tạo dùng cùng bảng/Dialog; phân công hiển thị cùng cấu trúc dữ liệu. Tab chức vụ của Hồ sơ của tôi có Empty State “Chưa có thông tin chức vụ và nhiệm kỳ.”
+- Chuẩn hóa định dạng ngày và nhãn Enum chung qua `member-profile-display.service.ts`. Giữ nguyên thông tin/các quy trình hiện có; xóa Alert cuối trang mà không đổi logic cập nhật. Hồ sơ cá nhân tiếp tục lấy qua `/ho-so-dang-vien/cua-toi` và không nhận ID hồ sơ từ URL/người dùng.
+- Rà quyền: lần kiểm kê Assignment hiện hành gần nhất cho Role `CHANH_VAN_PHONG_DANG_UY` ghi nhận có `QUA_TRINH_DANG_XEM`; API quá trình dùng guard và kiểm tra lại Permission + Scope trên Assignment phiên. `PhanQuyenService` hỗ trợ `CA_NHAN` bằng cách xác nhận `maHoSo` có liên kết với đúng `maTaiKhoan`; Assignment theo cây/đơn vị chỉ được truy cập khi hồ sơ nằm trong Scope đó. API `/cua-toi` luôn truy hồ sơ theo `maTaiKhoan` ở máy chủ trước khi giao diện gọi các API đọc theo ID nội bộ. Không thấy logic Backend bỏ nhầm Assignment hoặc cho phép vượt Scope; không sửa API/RBAC. Phân biệt thiếu Permission ở giao diện với lỗi API/phạm vi, có nút thử lại.
+- Files thay đổi: `frontend/src/features/my-profile/pages/MyMemberProfilePage.tsx`, `frontend/src/features/member-profiles/pages/MemberProfileDetailPage.tsx`, `frontend/src/features/member-profiles/components/MemberProfileDetailSections.tsx`, `frontend/src/features/member-profiles/services/member-profile-display.service.ts`.
+- Kiểm tra: Frontend typecheck, ESLint bốn file liên quan, production build và `git diff --check` đạt. Build còn cảnh báo chunk chính lớn hơn 500 kB. Không chạy test suite; chưa kiểm tra trực quan trình duyệt.
+
+## Chuyển khai báo sinh hoạt ngoài PTIT sang Hồ sơ của tôi — 2026-11-08
+
+- Chuyển biểu mẫu “Thông tin chuyển sinh hoạt từ ngoài PTIT” sang tab Thông tin Đảng viên của Hồ sơ của tôi. Chi tiết hồ sơ Đảng viên chỉ đọc danh sách và nội dung đã lưu; không hiển thị biểu mẫu thêm.
+- Giữ `SINH_HOAT_XEM_LICH_SU` và `SINH_HOAT_SUA_LICH_SU` cùng kiểm tra Assignment + Scope hiện có. Service từ chối POST nếu tài khoản hiện tại không liên kết chính xác với hồ sơ được gửi; không cấp hoặc đổi Permission. Giao diện chỉ hiện biểu mẫu khi có quyền sửa.
+- Bổ sung trường `noi_dung` tùy chọn (tối đa 2.000 ký tự) vào bản ghi chuyển sinh hoạt ngoài; API đọc/trả trường này, giao diện hiển thị sau khi lưu và trên trang chi tiết. Audit chỉ ghi cờ có nội dung, không ghi phần tự khai.
+- Migration `20261108160000_add_outside_membership_content` đã áp dụng vào PostgreSQL phát triển `quan_ly_dang_vien_dev` tại `127.0.0.1:55432`; `prisma migrate status` xác nhận schema up to date.
+- Files: `backend/prisma/schema.prisma`, migration mới, DTO/service Backend, `frontend/src/features/member-profiles/api/member-profiles.api.ts`, `MemberProfileSupplementarySections.tsx`, `MemberProfileDetailPage.tsx`, `frontend/src/features/my-profile/pages/MyMemberProfilePage.tsx`, `docs/architecture.md`.
+- Kiểm tra: Backend/Frontend TypeScript, Backend build, Frontend build, Prisma validate, ESLint bốn file Frontend và `git diff --check` đạt. Frontend build còn cảnh báo chunk chính vượt 500 kB. Không chạy test suite.

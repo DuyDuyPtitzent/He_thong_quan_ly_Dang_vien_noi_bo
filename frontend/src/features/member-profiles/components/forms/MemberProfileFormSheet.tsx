@@ -136,20 +136,22 @@ export function MemberProfileFormSheet({ open, onOpenChange, confirmOpen, onConf
                   {field('danToc', 'Dân tộc')}
                   {field('tonGiao', 'Tôn giáo')}
                   {field('soDienThoai', 'Số điện thoại liên hệ', 'tel')}
+                  {field('soDienThoaiBoNguoiNuoiDuong', 'Số điện thoại bố/người nuôi dưỡng', 'tel')}
+                  {field('soDienThoaiMeNguoiNuoiDuong', 'Số điện thoại mẹ/người nuôi dưỡng', 'tel')}
                   {field('emailLienHe', 'Email liên hệ', 'email')}
                   {field('quocTich', 'Quốc tịch')}
                 </>}
               </div>
             </FormSection>
             {(!editing || can('HO_SO_DIA_CHI_SUA')) && (
-              <FormSection title="Địa chỉ" aside="Nơi sinh · Quê quán · Thường trú">
+              <FormSection title="Địa chỉ" aside="Nơi sinh · Quê quán · Thường trú · Nơi ở hiện nay">
                 <div className="space-y-3">
-                  {(['QUE_QUAN', 'THUONG_TRU', 'NOI_SINH'] as const).map((type) => (
+                  {(['QUE_QUAN', 'THUONG_TRU', 'NOI_SINH', 'NOI_O_HIEN_NAY'] as const).map((type) => (
                     <div key={type} className="grid gap-3 sm:grid-cols-2">
-                      <h4 className="font-medium sm:col-span-2">{{ QUE_QUAN: 'Quê quán', THUONG_TRU: 'Địa chỉ thường trú', NOI_SINH: 'Nơi sinh' }[type]}</h4>
-                      {(['tinhThanhPho', 'quanHuyen', 'xaPhuong', 'diaChiChiTiet'] as const).map((key) => (
+                      <h4 className="font-medium sm:col-span-2">{{ QUE_QUAN: 'Quê quán', THUONG_TRU: 'Địa chỉ thường trú', NOI_SINH: 'Nơi sinh, cấp giấy khai sinh', NOI_O_HIEN_NAY: 'Nơi ở hiện nay' }[type]}</h4>
+                      {(['tinhThanhPho', 'xaPhuong', 'quanHuyen', 'diaChiChiTiet'] as const).map((key) => (
                         <div key={key} className="space-y-1.5">
-                          <Label>{({ tinhThanhPho: 'Tỉnh/Thành phố', quanHuyen: 'Quận/Huyện', xaPhuong: 'Xã/Phường', diaChiChiTiet: 'Địa chỉ chi tiết' } as const)[key]}</Label>
+                          <Label>{({ tinhThanhPho: 'Tỉnh/Thành phố', xaPhuong: 'Xã/Phường/Đặc khu', quanHuyen: 'Quận/Huyện (dữ liệu lịch sử, nếu có)', diaChiChiTiet: 'Địa chỉ chi tiết' } as const)[key]}</Label>
                           <Input className="h-10 bg-muted" value={form.diaChi?.find((a) => a.loaiDiaChi === type)?.[key] ?? ''} onChange={(e) => setForm((f) => { const entries = (f.diaChi ?? []).filter((a) => a.loaiDiaChi !== type); const current = f.diaChi?.find((a) => a.loaiDiaChi === type); return { ...f, diaChi: [...entries, { loaiDiaChi: type, ...current, [key]: e.target.value }] } })} />
                         </div>
                       ))}

@@ -19,7 +19,8 @@ const personalFieldMap = {
   'thongTinCaNhan.soCccd': 'soCccd', 'thongTinCaNhan.ngayCapCccd': 'ngayCapCccd',
   'thongTinCaNhan.noiCapCccd': 'noiCapCccd', 'thongTinCaNhan.quocTich': 'quocTich',
   'thongTinCaNhan.danToc': 'danToc', 'thongTinCaNhan.tonGiao': 'tonGiao',
-  'thongTinCaNhan.soDienThoai': 'soDienThoai', 'thongTinCaNhan.emailLienHe': 'emailLienHe',
+  'thongTinCaNhan.soDienThoai': 'soDienThoai', 'thongTinCaNhan.soDienThoaiBoNguoiNuoiDuong': 'soDienThoaiBoNguoiNuoiDuong',
+  'thongTinCaNhan.soDienThoaiMeNguoiNuoiDuong': 'soDienThoaiMeNguoiNuoiDuong', 'thongTinCaNhan.emailLienHe': 'emailLienHe',
 } as const
 const addressKeys = ['phanLoaiNoiSinh', 'quocGia', 'tinhThanhPho', 'quanHuyen', 'xaPhuong', 'diaChiChiTiet'] as const
 type Upload = { buffer: Buffer; mimetype: string; size: number }
@@ -557,7 +558,7 @@ export class YeuCauCapNhatHoSoService {
       if (!editableProfileFields.includes(field as never) || !allowed.includes(field)) throw this.badRequest(`Trường ${field} không được mở trong đợt cập nhật này.`)
       if (field.startsWith('diaChi.')) {
         const type = field.slice('diaChi.'.length)
-        if (!['NOI_SINH', 'QUE_QUAN', 'THUONG_TRU'].includes(type) || !raw || typeof raw !== 'object' || Array.isArray(raw)) throw this.badRequest('Thông tin địa chỉ không hợp lệ.')
+        if (!['NOI_SINH', 'QUE_QUAN', 'THUONG_TRU', 'NOI_O_HIEN_NAY'].includes(type) || !raw || typeof raw !== 'object' || Array.isArray(raw)) throw this.badRequest('Thông tin địa chỉ không hợp lệ.')
         const address = raw as Record<string, unknown>
         if (Object.keys(address).some((key) => !addressKeys.includes(key as never))) throw this.badRequest('Địa chỉ có trường không được phép cập nhật.')
         for (const [key, value] of Object.entries(address)) if (value !== null && (typeof value !== 'string' || value.length > 500)) throw this.badRequest('Giá trị địa chỉ không hợp lệ.')
@@ -571,11 +572,12 @@ export class YeuCauCapNhatHoSoService {
       if (field === 'khoaDangVien' && value && value.length > 50) throw this.badRequest('Khóa Đảng viên không được vượt quá 50 ký tự.')
       if (value && field.endsWith('.soCccd') && !/^\d{12}$/.test(value)) throw this.badRequest('Số CCCD phải gồm đúng 12 chữ số.')
       if (value && field.endsWith('.emailLienHe') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) throw this.badRequest('Thư điện tử không đúng định dạng.')
+      if (value && /\.soDienThoai(?:BoNguoiNuoiDuong|MeNguoiNuoiDuong)?$/.test(field) && !/^\+?[0-9 ().-]{7,30}$/.test(value)) throw this.badRequest('Số điện thoại chỉ được gồm số và các ký tự + ( ) . -; độ dài từ 7 đến 30 ký tự.')
       if (value && field.endsWith('.ngaySinh') || value && field.endsWith('.ngayCapCccd')) {
         const parsed = /^\d{4}-\d{2}-\d{2}$/.test(value!) ? new Date(`${value}T00:00:00.000Z`) : null
         if (!parsed || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) throw this.badRequest('Ngày tháng không đúng định dạng.')
       }
-      const max = field === 'hoVaTen' ? 200 : field.endsWith('.soDienThoai') ? 30 : field.endsWith('.noiCapCccd') ? 250 : 100
+      const max = field === 'hoVaTen' ? 200 : /\.soDienThoai(?:BoNguoiNuoiDuong|MeNguoiNuoiDuong)?$/.test(field) ? 30 : field.endsWith('.noiCapCccd') ? 250 : 100
       if (value && value.length > max) throw this.badRequest(`Giá trị ${field} vượt quá giới hạn.`)
       output[field] = value
     }
@@ -612,7 +614,7 @@ export class YeuCauCapNhatHoSoService {
     }
     if (Object.keys(personalData).length > 1) await tx.thongTinCaNhanDangVien.upsert({ where: { maHoSo }, create: personalData, update: Object.fromEntries(Object.entries(personalData).filter(([key]) => key !== 'maHoSo')) })
     for (const [type, values] of addressData) {
-      const loaiDiaChi = type as 'NOI_SINH' | 'QUE_QUAN' | 'THUONG_TRU'
+      const loaiDiaChi = type as 'NOI_SINH' | 'QUE_QUAN' | 'THUONG_TRU' | 'NOI_O_HIEN_NAY'
       const phanLoaiNoiSinh = type === 'NOI_SINH' ? values.phanLoaiNoiSinh as 'TRONG_NUOC' | 'NUOC_NGOAI' | null ?? null : null
       const createData: Prisma.DiaChiDangVienUncheckedCreateInput = { maHoSo, loaiDiaChi, ...values, phanLoaiNoiSinh }
       const updateData: Prisma.DiaChiDangVienUncheckedUpdateInput = { ...values, phanLoaiNoiSinh }
