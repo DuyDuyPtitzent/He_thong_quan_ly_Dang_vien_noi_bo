@@ -48,12 +48,12 @@ export function StandardSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className={`w-screen max-w-none gap-0 bg-modal text-modal-foreground p-0 ${sizeClassName} sm:max-w-none ${contentClassName ?? ''}`}>
-        <SheetHeader className={`h-[74px] shrink-0 justify-center border-b bg-modal px-6 py-3 pr-14 shadow-sm sm:px-6 ${headerClassName ?? ''}`}>
+        <SheetHeader className={`h-[74px] shrink-0 justify-center border-b bg-modal px-6 py-3 pr-14 sm:px-6 ${headerClassName ?? ''}`}>
           <SheetTitle className="text-base font-bold tracking-tight">{title}</SheetTitle>
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
         <SheetBody className={`space-y-6 bg-modal px-6 py-6 ${bodyClassName ?? ''}`}>{children}</SheetBody>
-        <SheetFooter className={`mt-0 min-h-20 shrink-0 flex-col items-stretch justify-end gap-3 border-t bg-modal px-6 py-4 shadow-sm sm:flex-row sm:items-center ${footerClassName ?? ''}`}>{footer}</SheetFooter>
+        <SheetFooter className={`mt-0 min-h-20 shrink-0 flex-col items-stretch justify-end gap-3 border-t bg-modal px-6 py-4 sm:flex-row sm:items-center ${footerClassName ?? ''}`}>{footer}</SheetFooter>
       </SheetContent>
     </Sheet>
   )

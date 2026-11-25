@@ -26,7 +26,7 @@ export function RequireAuth({ children }: RequireAuthProps) {
   if (loiTaiPhien) {
     return (
       <main className="grid min-h-svh place-items-center bg-background p-6">
-        <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-xl border bg-card p-8 text-center shadow-sm">
+        <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-xl border bg-card p-8 text-center">
           <AlertCircle className="size-8 text-destructive" aria-hidden="true" />
           <div className="space-y-1">
             <h1 className="font-semibold">Không thể kiểm tra phiên đăng nhập</h1>

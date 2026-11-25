@@ -125,7 +125,7 @@ export function RoleDetailPage() {
     {error && <div role="alert" className="mb-4 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</div>}
 
     <div className="min-w-0 space-y-3">
-        <Card className="gap-0 border-border py-0 shadow-sm">
+        <Card className="gap-0 border-border py-0">
           <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-semibold tracking-tight">{role.ten}</h2><Badge variant={role.trangThai === 'DANG_HOAT_DONG' ? 'success' : 'outline'}>{role.trangThai === 'DANG_HOAT_DONG' ? 'Đang hoạt động' : 'Đang tạm ngừng'}</Badge>{locked && <Badge variant="outline">Vai trò hệ thống</Badge>}</div>

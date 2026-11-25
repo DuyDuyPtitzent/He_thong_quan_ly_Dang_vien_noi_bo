@@ -103,7 +103,7 @@ export function LoginPage() {
               
             </div>
 
-            <Card className="max-w-[640px] gap-0 rounded-lg border-secondary-container/40 bg-accent/80 py-0 shadow-sm">
+            <Card className="max-w-[640px] gap-0 rounded-lg border-secondary-container/40 bg-accent/80 py-0">
               <CardContent className="flex flex-col items-start justify-between gap-2.5 p-3 sm:flex-row sm:items-center sm:p-3">
                 <div className="flex items-start gap-3">
                   <Info className="mt-1 size-5 shrink-0 text-secondary" aria-hidden="true" />
@@ -128,7 +128,7 @@ export function LoginPage() {
           </section>
 
           <section className="w-full xl:col-span-6" aria-labelledby="login-title">
-            <Card className="mx-auto w-full max-w-[440px] gap-0 rounded-2xl border-0 bg-card/95 p-4 shadow-xl backdrop-blur-2xl sm:p-5">
+            <Card className="mx-auto w-full max-w-[440px] gap-0 rounded-2xl border-0 bg-card/95 p-4 backdrop-blur-2xl sm:p-5">
               <CardHeader className="space-y-2 px-0 pt-0 text-center">
                 <CardTitle
                   id="login-title"
@@ -283,7 +283,7 @@ export function LoginPage() {
         </div>
       </main>
 
-      <footer className="border-t border-outline-variant/30 bg-muted px-4 py-3 shadow-sm sm:px-8 lg:px-12 xl:px-10">
+      <footer className="border-t border-outline-variant/30 bg-muted px-4 py-3 sm:px-8 lg:px-12 xl:px-10">
         <div className="mx-auto flex w-full max-w-[1200px] flex-col items-center justify-between gap-2 text-center text-xs text-muted-foreground sm:flex-row sm:text-left sm:text-sm">
           <span>Văn phòng Đảng ủy PTIT: Km10, Đường Nguyễn Trãi, Q. Hà Đông, Hà Nội</span>
           <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-4">

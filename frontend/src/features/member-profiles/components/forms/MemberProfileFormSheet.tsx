@@ -339,5 +339,5 @@ function Required() {
 }
 
 function FormSection({ title, aside, children }: { title: string; aside?: string; children: ReactNode }) {
-  return <section className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-6"><header className="flex flex-wrap items-center justify-between gap-3 pb-2"><div className="flex min-w-0 items-center gap-3"><span className="h-5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true"/><h2 className="text-sm font-semibold text-foreground">{title}</h2></div>{aside && <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{aside}</span>}</header>{children}</section>
+  return <section className="space-y-4 rounded-xl border bg-card p-4 sm:p-6"><header className="flex flex-wrap items-center justify-between gap-3 pb-2"><div className="flex min-w-0 items-center gap-3"><span className="h-5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true"/><h2 className="text-sm font-semibold text-foreground">{title}</h2></div>{aside && <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{aside}</span>}</header>{children}</section>
 }
