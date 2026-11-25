@@ -113,6 +113,12 @@ export class DataTransferService {
 
   async write(workbook: ExcelJS.Workbook) { return Buffer.from(await workbook.xlsx.writeBuffer()) }
 
+  /** Prefixes formula-like text even when hidden behind leading spaces/control characters. */
+  sanitizeCellValue(value: unknown): unknown {
+    if (typeof value !== 'string') return value
+    return /^[\u0000-\u0020\u007f-\u009f\u00a0\u2000-\u200f\u2028-\u202f\u205f\u2060\u3000\ufeff]*[=+\-@]/u.test(value) ? `’${value}` : value
+  }
+
   createWorkbook() {
     const workbook = new ExcelJS.Workbook()
     workbook.creator = 'Hệ thống quản lý Đảng viên PTIT'

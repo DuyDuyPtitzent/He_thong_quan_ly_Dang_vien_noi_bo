@@ -1,4 +1,5 @@
 import { BadRequestException, ValidationPipe, type INestApplication, type ValidationError } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { BoLocLoiHttp } from './common/errors/http-exception.filter'
 import { GhiLogYeuCauMiddleware } from './common/logging/request-logging.middleware'
 
@@ -12,6 +13,8 @@ function chiTietLoiValidation(lois: ValidationError[], cha = ''): { tenTruong: s
 
 export function cauHinhUngDung(ungDung: INestApplication) {
   ungDung.setGlobalPrefix('api/v1')
+  const proxyTinCay = ungDung.get(ConfigService).get<string>('DIA_CHI_PROXY_TIN_CAY', '')
+  if (proxyTinCay) ungDung.getHttpAdapter().getInstance().set('trust proxy', proxyTinCay.split(',').map(address => address.trim()).filter(Boolean))
   const ghiLog = new GhiLogYeuCauMiddleware()
   ungDung.use(ghiLog.use.bind(ghiLog))
   ungDung.useGlobalFilters(new BoLocLoiHttp())

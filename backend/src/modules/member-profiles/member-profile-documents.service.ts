@@ -1,12 +1,11 @@
-import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
-import { basename, isAbsolute, join, resolve, sep } from 'node:path'
+import { basename } from 'node:path'
 import { Prisma } from '../../infrastructure/database/generated/prisma/client'
 import { DichVuPrisma } from '../../infrastructure/database/prisma.service'
 import type { TaiKhoanDaXacThuc } from '../auth/auth.types'
 import { PhanQuyenService } from '../authorization/authorization.service'
+import { PrivateFileStorageService } from '../../common/private-storage/private-file-storage.service'
 import type { TaoTaiLieuHoSoDto } from './member-profiles.dto'
 
 const MAX_BYTES = 10 * 1024 * 1024
@@ -16,16 +15,11 @@ const reservedTypeLabels = new Set([...allowedTypes, 'Ảnh CCCD từ VNeID', 'Q
 
 @Injectable()
 export class MemberProfileDocumentsService {
-  private readonly storageRoot: string
-
   constructor(
     @Inject(DichVuPrisma) private readonly prisma: DichVuPrisma,
     @Inject(PhanQuyenService) private readonly phanQuyen: PhanQuyenService,
-    @Inject(ConfigService) config: ConfigService,
-  ) {
-    const configured = config.get<string>('KHO_TEP_RIENG') ?? './storage/private'
-    this.storageRoot = isAbsolute(configured) ? configured : resolve(process.cwd(), configured)
-  }
+    @Inject(PrivateFileStorageService) private readonly storage: PrivateFileStorageService,
+  ) {}
 
   async danhSach(actor: TaiKhoanDaXacThuc, maHoSo: string) {
     await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'HO_SO_TAI_LIEU_XEM', { maHoSo }, actor.maPhien)
@@ -37,6 +31,7 @@ export class MemberProfileDocumentsService {
     if (!file || file.size < 1 || file.size > MAX_BYTES) throw new BadRequestException({ maLoi: 'TEP_HO_SO_KHONG_HOP_LE', thongBao: 'Chọn tệp PDF, JPG hoặc PNG có dung lượng không quá 10 MB.' })
     if (!allowedTypes.has(dto.loaiTaiLieu) && reservedTypeLabels.has(dto.loaiTaiLieu.toLocaleLowerCase('vi'))) throw new BadRequestException({ maLoi: 'LOAI_TAI_LIEU_KHONG_HOP_LE', thongBao: 'Loại tài liệu này đã có sẵn trong danh sách. Hãy chọn loại tương ứng.' })
     if (!this.signatureMatches(file.buffer, file.mimetype)) throw new BadRequestException({ maLoi: 'DINH_DANG_TEP_KHONG_HOP_LE', thongBao: 'Định dạng thực tế của tệp không đúng PDF, JPG hoặc PNG.' })
+    if (!MIME_EXT[file.mimetype]) throw new BadRequestException({ maLoi: 'DINH_DANG_TEP_KHONG_HOP_LE', thongBao: 'Định dạng tệp không được hỗ trợ.' })
     if (dto.loaiTaiLieu === 'QUYET_DINH_KET_NAP') {
       if (!dto.maQuaTrinhDangVien || dto.maDaoTaoDang) throw new BadRequestException({ maLoi: 'LIEN_KET_TAI_LIEU_KHONG_HOP_LE', thongBao: 'Quyết định kết nạp phải gắn với sự kiện kết nạp trong quá trình Đảng.' })
       const process = await this.prisma.quaTrinhDangVien.findFirst({ where: { ma: dto.maQuaTrinhDangVien, maHoSo, loaiSuKien: 'VAO_DANG_DU_BI' }, select: { ma: true } })
@@ -48,10 +43,8 @@ export class MemberProfileDocumentsService {
     } else if (dto.maQuaTrinhDangVien || dto.maDaoTaoDang) throw new BadRequestException({ maLoi: 'LIEN_KET_TAI_LIEU_KHONG_HOP_LE', thongBao: 'Loại tài liệu này không liên kết với sự kiện hoặc khóa học.' })
 
     const extension = MIME_EXT[file.mimetype]
-    const key = `${randomUUID()}${extension}`
-    const target = this.safePath(key)
-    await mkdir(this.storageRoot, { recursive: true })
-    await writeFile(target, file.buffer, { flag: 'wx', mode: 0o600 })
+    const key = this.storage.taoKhoa(extension!.slice(1))
+    await this.storage.ghi(key, file.buffer)
     try {
       const name = basename(file.originalname).replace(/[\r\n\0]/g, '').slice(0, 255) || 'tai-lieu'
       const created = await this.prisma.$transaction(async (tx) => {
@@ -61,7 +54,7 @@ export class MemberProfileDocumentsService {
       })
       return created
     } catch (error) {
-      await unlink(target).catch(() => undefined)
+      await this.storage.donDep(key).catch(() => undefined)
       throw error
     }
   }
@@ -70,7 +63,7 @@ export class MemberProfileDocumentsService {
     await this.phanQuyen.kiemTra(actor.maTaiKhoan, 'HO_SO_TAI_LIEU_TAI_XUONG', { maHoSo }, actor.maPhien)
     const document = await this.prisma.taiLieuHoSoDangVien.findFirst({ where: { ma: maTaiLieu, maHoSo, trangThai: 'DANG_SU_DUNG' }, select: { khoaLuuTru: true, tenTepGoc: true, kieuNoiDung: true } })
     if (!document) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_TAI_LIEU', thongBao: 'Không tìm thấy tài liệu trong hồ sơ này.' })
-    try { return { buffer: await readFile(this.safePath(document.khoaLuuTru)), tenTepGoc: document.tenTepGoc, kieuNoiDung: document.kieuNoiDung } }
+    try { return { buffer: await this.storage.doc(document.khoaLuuTru), tenTepGoc: document.tenTepGoc, kieuNoiDung: document.kieuNoiDung } }
     catch { throw new NotFoundException({ maLoi: 'KHONG_DOC_DUOC_TAI_LIEU', thongBao: 'Tệp không còn trong kho lưu trữ riêng tư.' }) }
   }
 
@@ -81,10 +74,4 @@ export class MemberProfileDocumentsService {
     return false
   }
 
-  private safePath(key: string) {
-    if (!/^[0-9a-f-]{36}\.(pdf|jpg|png)$/i.test(key)) throw new ForbiddenException()
-    const path = resolve(this.storageRoot, key)
-    if (!path.startsWith(`${resolve(this.storageRoot)}${sep}`)) throw new ForbiddenException()
-    return join(this.storageRoot, key)
-  }
 }

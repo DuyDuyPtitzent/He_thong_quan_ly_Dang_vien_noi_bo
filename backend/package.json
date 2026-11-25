@@ -19,6 +19,7 @@
     "prisma:migrate:status": "prisma migrate status",
     "bootstrap:admin": "npm run prisma:generate && tsx src/scripts/bootstrap-admin.ts",
     "sync:permissions": "npm run prisma:generate && tsx src/scripts/sync-permissions.ts",
+    "initialize:resolution-learning-catalogs": "npm run prisma:generate && tsx src/scripts/initialize-resolution-learning-catalogs.ts",
     "initialize:root-organization": "npm run prisma:generate && tsx src/scripts/initialize-root-organization.ts",
     "manage:system-administrator": "npm run prisma:generate && tsx src/scripts/manage-system-administrator.ts"
   },

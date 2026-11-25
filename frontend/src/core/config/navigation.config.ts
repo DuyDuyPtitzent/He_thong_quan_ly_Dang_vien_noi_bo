@@ -1,4 +1,4 @@
-import { BarChart3, BookOpenCheck, Building2, CalendarDays, LayoutDashboard, Network, Settings, ShieldCheck, UserRound, UsersRound, type LucideIcon } from 'lucide-react'
+import { BarChart3, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, LayoutDashboard, Network, Settings, ShieldCheck, UserRound, UsersRound, type LucideIcon } from 'lucide-react'
 
 export type NavigationItem = {
   id: string
@@ -23,8 +23,24 @@ export const navigationConfig: { title: string; items: NavigationItem[] }[] = [
       { id: 'member-profiles', title: 'Hồ sơ Đảng viên', path: '/ho-so-dang-vien', icon: UserRound, permission: 'HO_SO_DANG_VIEN_XEM_DANH_SACH' },
       { id: 'my-member-profile', title: 'Hồ sơ của tôi', path: '/ho-so-cua-toi', icon: UserRound, permission: 'HO_SO_CA_NHAN_XEM' },
       { id: 'profile-updates', title: 'Cập nhật hồ sơ', path: '/cap-nhat-ho-so', icon: CalendarDays, permission: ['HO_SO_CA_NHAN_MO_DOT_CAP_NHAT', 'HO_SO_CA_NHAN_XEM_YEU_CAU_CAP_NHAT', 'HO_SO_CA_NHAN_DUYET_CAP_NHAT'] },
-      { id: 'resolution-learning', title: 'Học tập nghị quyết (Đang phát triển)', icon: BookOpenCheck, disabled: true },
     ],
+  },
+  {
+    title: 'Học tập nghị quyết',
+    items: [
+      { id: 'resolution-learning', title: 'Học tập nghị quyết', icon: BookOpenCheck, children: [
+        { id: 'resolution-learning-campaigns', title: 'Quản lý đợt học', path: '/hoc-tap-nghi-quyet/dot', icon: BookOpenCheck, permission: 'HOC_TAP_NGHI_QUYET_DOT_XEM' },
+        { id: 'resolution-learning-sessions', title: 'Quản lý buổi học (Đang phát triển)', path: '/hoc-tap-nghi-quyet/buoi', icon: CalendarDays, permission: 'HOC_TAP_NGHI_QUYET_BUOI_XEM' },
+        { id: 'resolution-learning-reports', title: 'Thống kê và báo cáo', path: '/hoc-tap-nghi-quyet/thong-ke', icon: BarChart3, permission: 'HOC_TAP_NGHI_QUYET_THONG_KE_XEM' },
+      ] },
+    ],
+  },
+  {
+    title: 'Học tập của tôi',
+    items: [{ id: 'personal-learning', title: 'Học tập của tôi', icon: UserRound, children: [
+      { id: 'personal-learning-calendar', title: 'Lịch học (Đang phát triển)', icon: CalendarDays, disabled: true },
+      { id: 'personal-learning-history', title: 'Lịch sử tham gia (Đang phát triển)', icon: ClipboardCheck, disabled: true },
+    ] }],
   },
   {
     title: 'Tổ chức và danh mục',

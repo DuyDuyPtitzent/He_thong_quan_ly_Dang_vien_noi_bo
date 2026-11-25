@@ -3,6 +3,20 @@ import JSZip from 'jszip'
 import { DataTransferService } from '../src/modules/data-transfer/data-transfer.service'
 
 describe('DataTransferService', () => {
+  it.each(['=1+1', '+1+1', '-1+1', '@SUM(A1:A2)', '  =1+1', '\t+1+1', '\r\n@SUM(A1:A2)', '\u0001-1+1'])('sanitizes formula-like strings with direct or hidden prefixes: %s', (value) => {
+    const service = new DataTransferService()
+    expect(service.sanitizeCellValue(value)).toBe(`’${value}`)
+  })
+
+  it('leaves ordinary text, numeric values and dates unchanged', () => {
+    const service = new DataTransferService()
+    const date = new Date('2026-11-12T00:00:00Z')
+    expect(service.sanitizeCellValue('  Nguyễn An')).toBe('  Nguyễn An')
+    expect(service.sanitizeCellValue('001234')).toBe('001234')
+    expect(service.sanitizeCellValue(12)).toBe(12)
+    expect(service.sanitizeCellValue(date)).toBe(date)
+  })
+
   it('writes and reads a real xlsx workbook', async () => {
     const service = new DataTransferService()
     const workbook = service.createWorkbook()

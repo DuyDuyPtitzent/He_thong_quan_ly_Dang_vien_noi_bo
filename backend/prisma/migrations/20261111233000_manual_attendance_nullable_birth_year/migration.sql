@@ -1,0 +1,1 @@
+ALTER TABLE "yeu_cau_diem_danh" ALTER COLUMN "nam_sinh_doi_chieu" DROP NOT NULL;

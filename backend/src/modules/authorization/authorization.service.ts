@@ -4,7 +4,7 @@ import type { YeuCauPhamVi } from './authorization.types'
 import { systemAdministratorRoleCode } from './system-administrator.policy'
 
 const trangThaiHoatDong = 'DANG_HOAT_DONG'
-const phamViDanhMucNamHoc = new Set(['CAY_DON_VI', 'DON_VI_CHI_DINH', 'TOAN_HE_THONG'])
+const phamViDanhMucDungChung = new Set(['CAY_DON_VI', 'DON_VI_CHI_DINH', 'TOAN_HE_THONG'])
 
 @Injectable()
 export class PhanQuyenService {
@@ -49,22 +49,39 @@ export class PhanQuyenService {
     })
   }
 
-  /** Shared school-year catalog policy: the active Assignment must carry the requested NAM_HOC permission.
-   * Organizational Scopes do not restrict this shared catalog, but personal-only assignments are not eligible.
-   */
+  /** Personal learning APIs require the selected, active Assignment itself to be CA_NHAN. */
+  async kiemTraQuyenCaNhan(maTaiKhoan: string, maQuyen: string, maPhien?: string): Promise<void> {
+    if (!maPhien) throw new ForbiddenException({ maLoi: 'KHONG_CO_QUYEN_CA_NHAN', thongBao: 'Cần phiên đăng nhập với Assignment cá nhân đang hoạt động để xem học tập cá nhân.' })
+    const assignments = await this.layAssignments(maTaiKhoan, maPhien)
+    if (assignments.some((assignment) => assignment.loaiPhamVi === 'CA_NHAN'
+      && assignment.vaiTro.quyen.some(({ quyen }) => quyen.maDinhDanh === maQuyen))) return
+    throw new ForbiddenException({ maLoi: 'KHONG_CO_QUYEN_CA_NHAN', thongBao: 'Assignment đang hoạt động chưa có quyền xem học tập cá nhân trong Scope cá nhân.' })
+  }
+
+  /** Year catalog is one use of the shared business-catalog policy. */
   async kiemTraQuyenDanhMucNamHoc(
     maTaiKhoan: string,
     maQuyen: 'NAM_HOC_XEM' | 'NAM_HOC_TAO' | 'NAM_HOC_SUA' | 'NAM_HOC_XOA',
     maPhien?: string,
   ): Promise<void> {
+    return this.kiemTraQuyenDanhMucChung(maTaiKhoan, maQuyen, maPhien)
+  }
+
+  /** Shared business catalogs are global data: organizational Assignments may manage them, personal-only may not. */
+  async kiemTraQuyenDanhMucChung(
+    maTaiKhoan: string,
+    maQuyen: string,
+    maPhien?: string,
+    cacScopeDuocPhep: readonly string[] = [...phamViDanhMucDungChung],
+  ): Promise<void> {
     const assignments = await this.layAssignments(maTaiKhoan, maPhien)
     if (assignments.some((assignment) =>
-      phamViDanhMucNamHoc.has(assignment.loaiPhamVi)
+      cacScopeDuocPhep.includes(assignment.loaiPhamVi)
       && assignment.vaiTro.quyen.some(({ quyen }) => quyen.maDinhDanh === maQuyen),
     )) return
     throw new ForbiddenException({
       maLoi: 'KHONG_DU_QUYEN',
-      thongBao: 'Tài khoản chưa được cấp quyền phù hợp để thao tác với danh mục năm học.',
+      thongBao: 'Tài khoản chưa được cấp quyền phù hợp để thao tác với danh mục dùng chung.',
     })
   }
 

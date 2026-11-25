@@ -7,6 +7,7 @@ export function toMemberProfile(profile: NonNullable<TaiKhoan['hoSoDangVien']>):
     code: profile.maHoSoNoiBo,
     name: profile.hoVaTen,
     cccd: profile.cccd,
+    coQuyenXemCccd: profile.coQuyenXemCccd,
     birthDate: profile.ngaySinh ?? null,
     partyBranch: profile.chiBoHienTai ?? 'Chưa ghi nhận Chi bộ',
     branchId: profile.maChiBoHienTai,

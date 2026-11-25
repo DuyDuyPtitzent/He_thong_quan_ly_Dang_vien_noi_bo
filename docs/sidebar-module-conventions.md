@@ -10,7 +10,11 @@ Tài liệu này là quy hoạch chính thức để sắp xếp điều hướn
 | Quản lý Đảng viên | Hồ sơ Đảng viên | Hiện có |
 | Quản lý Đảng viên | Hồ sơ của tôi | Hiện có |
 | Quản lý Đảng viên | Cập nhật hồ sơ | Hiện có; giữ là mục độc lập |
-| Quản lý Đảng viên | Học tập nghị quyết (Đang phát triển) | Dự kiến; hiển thị theo yêu cầu, chưa có route/chức năng |
+| Học tập nghị quyết | Quản lý đợt học | Đã triển khai; route `/hoc-tap-nghi-quyet/dot` |
+| Học tập nghị quyết | Quản lý buổi học (Đang phát triển) | Có route placeholder `/hoc-tap-nghi-quyet/buoi`, yêu cầu Permission xem buổi; nghiệp vụ quản lý triển khai ở Prompt 3.4.2 |
+| Học tập nghị quyết | Thống kê và báo cáo | Có route placeholder `/hoc-tap-nghi-quyet/thong-ke`; không có dashboard trong giai đoạn placeholder |
+| Học tập của tôi | Lịch học (Đang phát triển) | Đã quy hoạch; chưa triển khai Frontend |
+| Học tập của tôi | Lịch sử tham gia (Đang phát triển) | Đã quy hoạch; chưa triển khai Frontend |
 | Tổ chức và danh mục | Cơ cấu tổ chức | Hiện có |
 | Tổ chức và danh mục | Quản lý năm học | Hiện có |
 | Quản trị hệ thống | Quản lý tài khoản | Hiện có |
@@ -18,17 +22,17 @@ Tài liệu này là quy hoạch chính thức để sắp xếp điều hướn
 | Quản trị hệ thống | Ma trận phân quyền | Hiện có |
 | Quản trị hệ thống | Cài đặt hệ thống → Hồ sơ, Giao diện | Hiện có; hai mục con |
 | Quản trị hệ thống | Nhật ký hệ thống (Đang phát triển) | Dự kiến; hiển thị theo yêu cầu, chưa có trang nhật ký |
-| Thống kê và báo cáo | Báo cáo, thống kê (Đang phát triển) | Đang phát triển; chưa có route/chức năng |
+| Thống kê và báo cáo | Báo cáo, thống kê chung | Giữ nguyên menu/module báo cáo hiện có; không nhập vào thống kê học tập nghị quyết |
 
-Các mục chưa triển khai ở trên chỉ là nhãn trạng thái điều hướng, không được tạo liên kết hoặc chức năng giả. Không tự thêm những module tương lai khác vào Sidebar. Không có nhóm hoặc mục Sidebar riêng cho “Nhập / xuất dữ liệu”.
+Học tập nghị quyết và Học tập của tôi là hai nhóm Sidebar độc lập thuộc phân hệ Quản lý Đảng viên. Quản lý buổi học có route placeholder thông báo đang phát triển cho tới Prompt 3.4.2; Thống kê và báo cáo học tập cũng có route placeholder. Cả hai mục kiểm tra Permission tương ứng. Lịch học/lịch sử chưa có route Frontend. Không tự thêm những module tương lai khác vào Sidebar. Không có nhóm hoặc mục Sidebar riêng cho “Nhập / xuất dữ liệu”.
 
 ## Mục đích các nhóm
 
 - **Tổng quan:** điểm vào và thông tin tổng hợp chung của hệ thống.
-- **Quản lý Đảng viên:** tra cứu hồ sơ, xem hồ sơ cá nhân và vận hành quy trình cập nhật hồ sơ; các chức năng theo dõi học tập nghị quyết thuộc nhóm này khi được phát triển.
+- **Quản lý Đảng viên:** tra cứu hồ sơ, xem hồ sơ cá nhân, cập nhật hồ sơ và các nhóm điều hướng học tập nghị quyết/học tập của tôi.
 - **Tổ chức và danh mục:** quản lý cây tổ chức Đảng và các danh mục nền dùng chung như năm học.
 - **Quản trị hệ thống:** quản lý tài khoản, phân công quyền, ma trận quyền và cài đặt người dùng/hệ thống; nhật ký hệ thống thuộc nhóm này khi triển khai.
-- **Thống kê và báo cáo:** tổng hợp, tra cứu và xuất báo cáo nghiệp vụ khi chức năng được phát triển.
+- **Thống kê và báo cáo:** tổng hợp, tra cứu và xuất báo cáo nghiệp vụ chung. Thống kê học tập nghị quyết được đặt trong nhóm Học tập nghị quyết.
 
 ## Quy tắc bổ sung module
 

@@ -119,7 +119,7 @@ export class TaiKhoanService {
     return {
       duLieu: accounts.map((row) => ({
         maTaiKhoan: row.ma, tenDangNhap: row.tenDangNhap, email: row.email, trangThai: row.trangThai, ngayTao: row.ngayTao, ngayCapNhat: row.ngayCapNhat, khoaDen: row.khoaDen, doiMatKhauLanDau: row.doiMatKhauLanDau,
-        hoSoDangVien: row.hoSoDangVien ? { ma: row.hoSoDangVien.ma, maHoSoNoiBo: row.hoSoDangVien.maHoSoNoiBo, hoVaTen: row.hoSoDangVien.hoVaTen, trangThai: row.hoSoDangVien.trangThai, cccd: cccdByProfile.get(row.hoSoDangVien.ma) ?? null, chiBoHienTai: row.hoSoDangVien.lichSuDonVi[0]?.chiBo.tenDonVi[0]?.ten ?? row.hoSoDangVien.lichSuDonVi[0]?.chiBo.maDinhDanh ?? null, maChiBoHienTai: row.hoSoDangVien.lichSuDonVi[0]?.chiBo.ma ?? null } : null,
+        hoSoDangVien: row.hoSoDangVien ? { ma: row.hoSoDangVien.ma, maHoSoNoiBo: row.hoSoDangVien.maHoSoNoiBo, hoVaTen: row.hoSoDangVien.hoVaTen, trangThai: row.hoSoDangVien.trangThai, cccd: cccdByProfile.get(row.hoSoDangVien.ma) ?? null, coQuyenXemCccd: visibleProfileIds.includes(row.hoSoDangVien.ma), chiBoHienTai: row.hoSoDangVien.lichSuDonVi[0]?.chiBo.tenDonVi[0]?.ten ?? row.hoSoDangVien.lichSuDonVi[0]?.chiBo.maDinhDanh ?? null, maChiBoHienTai: row.hoSoDangVien.lichSuDonVi[0]?.chiBo.ma ?? null } : null,
         hoVaTen: row.hoSoDangVien?.hoVaTen ?? null,
         chiBoHienTai: row.hoSoDangVien?.lichSuDonVi[0]?.chiBo.tenDonVi[0]?.ten ?? row.hoSoDangVien?.lichSuDonVi[0]?.chiBo.maDinhDanh ?? null,
         maChiBoHienTai: row.hoSoDangVien?.lichSuDonVi[0]?.chiBo.ma ?? null,
@@ -164,7 +164,7 @@ export class TaiKhoanService {
       if (profile) {
         const currentUnit = profile.lichSuDonVi[0]
         hoSoDangVien = {
-          ma: profile.ma, maHoSoNoiBo: profile.maHoSoNoiBo, hoVaTen: profile.hoVaTen, trangThai: profile.trangThai,
+          ma: profile.ma, maHoSoNoiBo: profile.maHoSoNoiBo, hoVaTen: profile.hoVaTen, trangThai: profile.trangThai, coQuyenXemCccd: caNhanDuocXem,
           ngaySinh: profile.thongTinCaNhan?.ngaySinh ?? null, cccd: profile.thongTinCaNhan?.soCccd ?? null,
           chiBoHienTai: currentUnit?.chiBo.tenDonVi[0]?.ten ?? currentUnit?.chiBo.maDinhDanh ?? null,
           maChiBoHienTai: currentUnit?.maChiBo ?? null,

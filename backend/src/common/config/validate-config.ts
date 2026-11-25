@@ -3,6 +3,7 @@ import Joi from 'joi'
 const mauCauHinh = Joi.object({
   MOI_TRUONG: Joi.string().valid('PHAT_TRIEN', 'KIEM_THU', 'VAN_HANH').default('PHAT_TRIEN'),
   DIA_CHI_MAY_CHU: Joi.string().min(1).default('127.0.0.1'),
+  DIA_CHI_PROXY_TIN_CAY: Joi.string().allow('').default(''),
   CONG_MAY_CHU: Joi.number().integer().min(1).max(65_535).default(3001),
   URL_GIAO_DIEN_DUOC_PHEP: Joi.string().uri({ scheme: ['http', 'https'] }).default('http://127.0.0.1:5173'),
   THOI_HAN_PHIEN_DANG_NHAP_GIO: Joi.number().integer().min(1).max(72).default(8),
@@ -12,6 +13,11 @@ const mauCauHinh = Joi.object({
     .uri({ scheme: ['postgres', 'postgresql'] })
     .required(),
   KHO_TEP_RIENG: Joi.string().min(1).default('./storage/private'),
+  HOC_TAP_NGHI_QUYET_HMAC_KEY_HIEN_TAI: Joi.string().pattern(/^[A-Za-z0-9_-]{1,40}$/).required(),
+  HOC_TAP_NGHI_QUYET_HMAC_KEYS: Joi.string().min(45).required(),
+  HOC_TAP_GIOI_HAN_TRUY_CAP_MOI_PHUT: Joi.number().integer().min(1).max(1000).default(60),
+  HOC_TAP_GIOI_HAN_GUI_MOI_PHUT: Joi.number().integer().min(1).max(100).default(5),
+  HOC_TAP_LUU_IDEMPOTENCY_GIO: Joi.number().integer().min(1).max(168).default(24),
 }).unknown(true)
 
 export function kiemTraCauHinh(bienMoiTruong: Record<string, unknown>) {
@@ -27,6 +33,18 @@ export function kiemTraCauHinh(bienMoiTruong: Record<string, unknown>) {
       .join(', ')
     throw new Error(`Cấu hình môi trường không hợp lệ: ${tenBien || 'kiểm tra lại các giá trị'}.`)
   }
+
+  const currentKey = String(value.HOC_TAP_NGHI_QUYET_HMAC_KEY_HIEN_TAI)
+  const ring = String(value.HOC_TAP_NGHI_QUYET_HMAC_KEYS)
+  const versions = new Set<string>()
+  for (const entry of ring.split(';')) {
+    const [version, encoded, extra] = entry.split(':')
+    if (!version || !encoded || extra !== undefined || !/^[A-Za-z0-9_-]{1,40}$/.test(version) || versions.has(version)) throw new Error('Cấu hình môi trường không hợp lệ: HOC_TAP_NGHI_QUYET_HMAC_KEYS.')
+    const key = Buffer.from(encoded, 'base64url')
+    if (key.length < 32 || key.toString('base64url') !== encoded) throw new Error('Cấu hình môi trường không hợp lệ: HOC_TAP_NGHI_QUYET_HMAC_KEYS.')
+    versions.add(version)
+  }
+  if (!versions.has(currentKey)) throw new Error('Cấu hình môi trường không hợp lệ: HOC_TAP_NGHI_QUYET_HMAC_KEY_HIEN_TAI.')
 
   return value as Record<string, unknown>
 }

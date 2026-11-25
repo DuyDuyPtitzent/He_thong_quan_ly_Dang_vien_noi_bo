@@ -33,6 +33,10 @@ const MemberProfileDetailPage = lazy(() => import('@/features/member-profiles/pa
 const MyMemberProfilePage = lazy(() => import('@/features/my-profile/pages/MyMemberProfilePage').then((module) => ({ default: module.MyMemberProfilePage })))
 const MemberProfileUpdatesPage = lazy(() => import('@/features/profile-updates/pages/MemberProfileUpdatesPage').then((module) => ({ default: module.MemberProfileUpdatesPage })))
 const SchoolYearsPage = lazy(() => import('@/features/school-years/SchoolYearsPage').then((module) => ({ default: module.SchoolYearsPage })))
+const ResolutionLearningCampaignsPage = lazy(() => import('@/features/resolution-learning/pages/CampaignsPage').then((module) => ({ default: module.CampaignsPage })))
+const ResolutionLearningCampaignDetailPage = lazy(() => import('@/features/resolution-learning/pages/CampaignDetailPage').then((module) => ({ default: module.CampaignDetailPage })))
+const ResolutionLearningSessionsPlaceholderPage = lazy(() => import('@/features/resolution-learning/pages/SessionsPlaceholderPage').then((module) => ({ default: module.SessionsPlaceholderPage })))
+const ResolutionLearningStatisticsPlaceholderPage = lazy(() => import('@/features/resolution-learning/pages/StatisticsPlaceholderPage').then((module) => ({ default: module.StatisticsPlaceholderPage })))
 const SystemLogsPage = lazy(() => import('@/features/system-logs/pages/SystemLogsPage').then((module) => ({ default: module.SystemLogsPage })))
 const ComponentLibraryPage = import.meta.env.DEV
   ? lazy(() => import('@/features/developer/ComponentLibraryPage').then((module) => ({ default: module.ComponentLibraryPage })))
@@ -66,6 +70,10 @@ export const router = createBrowserRouter([
       { index: true, element: loadPage(<DashboardPage />), handle: { title: 'Tổng quan' } },
       { path: 'to-chuc', element: loadPage(<OrganizationsPage />), handle: { title: 'Cơ cấu tổ chức' } },
       { path: 'nam-hoc', element: loadPage(<SchoolYearsPage />), handle: { title: 'Quản lý năm học' } },
+      { path: 'hoc-tap-nghi-quyet/dot', element: loadPage(<ResolutionLearningCampaignsPage />), handle: { title: 'Quản lý đợt học nghị quyết' } },
+      { path: 'hoc-tap-nghi-quyet/dot/:id', element: loadPage(<ResolutionLearningCampaignDetailPage />), handle: { title: 'Chi tiết đợt học nghị quyết' } },
+      { path: 'hoc-tap-nghi-quyet/buoi', element: loadPage(<ResolutionLearningSessionsPlaceholderPage />), handle: { title: 'Quản lý buổi học' } },
+      { path: 'hoc-tap-nghi-quyet/thong-ke', element: loadPage(<ResolutionLearningStatisticsPlaceholderPage />), handle: { title: 'Thống kê và báo cáo học tập nghị quyết' } },
       { path: 'nhat-ky-he-thong', element: loadPage(<SystemLogsPage />), handle: { title: 'Nhật ký hệ thống' } },
       { path: 'ho-so-dang-vien', element: loadPage(<MemberProfilesPage />), handle: { title: 'Hồ sơ Đảng viên' } },
       { path: 'ho-so-cua-toi', element: loadPage(<MyMemberProfilePage />), handle: { title: 'Hồ sơ của tôi' } },

@@ -31,6 +31,7 @@ export const memberProfilesApi = {
     (
       await apiClient.get<HoSoInput & {
         ma: string
+        coQuyenXemCccd?: boolean
         thongTinCaNhan?: { ngaySinh?: string | null; gioiTinh?: string | null; soCccd?: string | null; ngayCapCccd?: string | null; noiCapCccd?: string | null; quocTich?: string | null; danToc?: string | null; tonGiao?: string | null; soDienThoai?: string | null; soDienThoaiBoNguoiNuoiDuong?: string | null; soDienThoaiMeNguoiNuoiDuong?: string | null; emailLienHe?: string | null }
         thongTinSinhVien?: { maSinhVien: string; khoaHoc?: string | null; donViPhuTrach?: string | null; chuongTrinhDaoTao?: string | null; nganh?: string | null; chuyenNganh?: string | null; lopHanhChinh?: string | null; trangThaiHocTap?: string | null }
         quaTrinh?: { soQuyetDinh?: string | null; ngayQuyetDinh?: string | null; donViBanHanhQuyetDinh?: string | null; nguoiGioiThieuThuNhat?: string | null; nguoiGioiThieuThuHai?: string | null }[]

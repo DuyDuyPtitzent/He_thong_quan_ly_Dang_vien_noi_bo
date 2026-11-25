@@ -471,7 +471,7 @@ export class HoSoDangVienService {
         },
       },
     })
-    const safeCell = (value: unknown) => typeof value === 'string' && /^[=+\-@]/.test(value) ? `’${value}` : value
+    const safeCell = (value: unknown) => this.transfer.sanitizeCellValue(value)
     const statusLabel: Record<string, string> = { DANG_HOAT_DONG: 'Đang hoạt động', TAM_NGUNG: 'Tạm ngừng', NGUNG_HOAT_DONG: 'Ngừng hoạt động', DU_BI: 'Dự bị', CHINH_THUC: 'Chính thức', DA_RA_KHOI_DANG: 'Đã ra khỏi Đảng', TU_TRAN: 'Từ trần', NAM: 'Nam', NU: 'Nữ', DANG_HOAT_DONG_TK: 'Đang hoạt động', TAM_KHOA: 'Tạm khóa', NGUNG_HOAT_DONG_TK: 'Ngừng hoạt động' }
     const workbook = this.transfer.createWorkbook(), sheet = workbook.addWorksheet('Hồ sơ Đảng viên')
     sheet.addRow(selectedFields.map((field) => field.label))
@@ -675,7 +675,8 @@ export class HoSoDangVienService {
       { maHoSo: id },
       actor.maPhien,
     )
-    const personal = await this.coQuyen(actor, 'HO_SO_CA_NHAN_XEM', id) || await this.coQuyen(actor, 'HO_SO_CA_NHAN_SUA', id)
+    const canViewCccd = await this.coQuyen(actor, 'HO_SO_CA_NHAN_XEM', id)
+    const personal = canViewCccd || await this.coQuyen(actor, 'HO_SO_CA_NHAN_SUA', id)
     const address = await this.coQuyen(actor, 'HO_SO_DIA_CHI_XEM', id) || await this.coQuyen(actor, 'HO_SO_DIA_CHI_SUA', id)
     const student = await this.coQuyen(actor, 'HO_SO_SINH_VIEN_XEM', id) || await this.coQuyen(actor, 'HO_SO_SINH_VIEN_SUA', id)
     const currentMembership = await this.coQuyen(actor, 'SINH_HOAT_XEM_HIEN_TAI', id)
@@ -692,6 +693,12 @@ export class HoSoDangVienService {
       } } : false,
     } })
     if (!row) throw new NotFoundException({ maLoi: 'KHONG_TIM_THAY_HO_SO', thongBao: 'Không tìm thấy hồ sơ Đảng viên.' })
+    let personalWithoutCccd = row.thongTinCaNhan
+    if (!canViewCccd && row.thongTinCaNhan && typeof row.thongTinCaNhan === 'object') {
+      const { soCccd, ...withoutCccd } = row.thongTinCaNhan
+      void soCccd
+      personalWithoutCccd = withoutCccd as typeof row.thongTinCaNhan
+    }
     const foundMemberships = (Array.isArray(row.lichSuDonVi) ? row.lichSuDonVi : []) as unknown as {
       ma: string; maChiBo: string; maTo: string | null
       chiBo: { maDinhDanh: string | null; loaiDonVi: string; trangThai: string; tenDonVi: { ten: string }[] }
@@ -706,7 +713,7 @@ export class HoSoDangVienService {
       const parent = parents.length === 1 && firstParent ? firstParent.donViCha : null
       if (current.chiBo.loaiDonVi === 'CHI_BO' && current.chiBo.trangThai === 'DANG_HOAT_DONG' && parent?.loaiDonVi === 'DANG_UY' && parent.trangThai === 'DANG_HOAT_DONG') tenDangUy = parent.tenDonVi[0]?.ten ?? parent.maDinhDanh
     }
-    return { ...row, lichSuDonVi: memberships.map((membership) => ({ ...membership, tenDangUy: membership.ma === current?.ma ? tenDangUy : null })) }
+    return { ...row, thongTinCaNhan: personalWithoutCccd, coQuyenXemCccd: canViewCccd, lichSuDonVi: memberships.map((membership) => ({ ...membership, tenDangUy: membership.ma === current?.ma ? tenDangUy : null })) }
   }
 
   async lichSuSinhHoat(actor: TaiKhoanDaXacThuc, id: string) {

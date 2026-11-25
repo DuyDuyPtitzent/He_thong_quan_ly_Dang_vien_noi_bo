@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { kiemTraCauHinh } from '../src/common/config/validate-config'
 
+const hmacConfig = { HOC_TAP_NGHI_QUYET_HMAC_KEY_HIEN_TAI: 'dev-v1', HOC_TAP_NGHI_QUYET_HMAC_KEYS: `dev-v1:${Buffer.alloc(32, 1).toString('base64url')}` }
+
 describe('kiemTraCauHinh', () => {
   it('chấp nhận cấu hình PostgreSQL và điền giá trị mặc định', () => {
     const cauHinh = kiemTraCauHinh({
       KET_NOI_CO_SO_DU_LIEU:
         'postgresql://ptit_dev:mat_khau@127.0.0.1:5432/quan_ly_dang_vien?schema=public',
+      ...hmacConfig,
     })
 
     expect(cauHinh['MOI_TRUONG']).toBe('PHAT_TRIEN')
@@ -23,7 +26,12 @@ describe('kiemTraCauHinh', () => {
       kiemTraCauHinh({
         KET_NOI_CO_SO_DU_LIEU: 'postgresql://ptit_dev:mat_khau@127.0.0.1:5432/quan_ly',
         CONG_MAY_CHU: '70000',
+        ...hmacConfig,
       }),
     ).toThrow('CONG_MAY_CHU')
+  })
+
+  it('từ chối khóa HMAC thiếu hoặc sai định dạng', () => {
+    expect(() => kiemTraCauHinh({ KET_NOI_CO_SO_DU_LIEU: 'postgresql://ptit_dev:mat_khau@127.0.0.1:5432/quan_ly', ...hmacConfig, HOC_TAP_NGHI_QUYET_HMAC_KEYS: 'v1:weak' })).toThrow('HOC_TAP_NGHI_QUYET_HMAC_KEYS')
   })
 })

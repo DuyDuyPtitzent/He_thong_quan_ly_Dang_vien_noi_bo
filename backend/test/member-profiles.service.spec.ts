@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { BadRequestException, ForbiddenException } from '@nestjs/common'
+import { DataTransferService } from '../src/modules/data-transfer/data-transfer.service'
 import { HoSoDangVienService } from '../src/modules/member-profiles/member-profiles.service'
 
 describe('HoSoDangVienService', () => {
@@ -9,7 +10,7 @@ describe('HoSoDangVienService', () => {
     const workbook = { addWorksheet: vi.fn(() => sheet) }
     const write = vi.fn().mockResolvedValue(Buffer.from('xlsx'))
     const prisma = { hoSoDangVien: { findMany: vi.fn().mockResolvedValue([{
-      ma: 'profile-1', maHoSoNoiBo: 'HS-001', hoVaTen: '=Nguyễn An', trangThai: 'DANG_HOAT_DONG', trangThaiDangVien: 'DU_BI',
+      ma: 'profile-1', maHoSoNoiBo: 'HS-001', hoVaTen: '\t=Nguyễn An', trangThai: 'DANG_HOAT_DONG', trangThaiDangVien: 'DU_BI',
       ngayVaoDang: new Date('2020-01-02T00:00:00.000Z'), ngayChinhThuc: null, soPhieuLyLich: null, soTheDangVien: null, khoaDangVien: 'D23',
       thongTinCaNhan: { ngaySinh: null, gioiTinh: null, soCccd: '001234567890', ngayCapCccd: null, noiCapCccd: null, quocTich: null, danToc: null, tonGiao: null, soDienThoai: null, emailLienHe: null },
       diaChi: [{ loaiDiaChi: 'NOI_SINH', quocGia: 'Việt Nam', tinhThanhPho: 'Hà Nội', quanHuyen: null, xaPhuong: null, diaChiChiTiet: 'Số 1' }],
@@ -20,11 +21,13 @@ describe('HoSoDangVienService', () => {
       layDonViTrongPhamVi: vi.fn().mockResolvedValue({ coQuyen: true, toanHeThong: true, maDonVi: [] }),
       kiemTra: vi.fn().mockResolvedValue(undefined),
     }
-    const service = new HoSoDangVienService(prisma as never, permissions as never, {} as never, { createWorkbook: () => workbook, write } as never)
+    const sharedTransfer = new DataTransferService()
+    const transfer = { createWorkbook: () => workbook, write, sanitizeCellValue: sharedTransfer.sanitizeCellValue.bind(sharedTransfer) }
+    const service = new HoSoDangVienService(prisma as never, permissions as never, {} as never, transfer as never)
 
     await expect(service.xuatExcel({ maTaiKhoan: 'actor', maPhien: 'session' } as never, { cheDo: 'all', truong: ['hoVaTen', 'soCccd', 'noiSinh', 'ngayVaoDang'] })).resolves.toEqual(Buffer.from('xlsx'))
     expect(addRow).toHaveBeenNthCalledWith(1, ['Họ và tên', 'Số CCCD', 'Nơi sinh', 'Ngày vào Đảng'])
-    expect(addRow).toHaveBeenNthCalledWith(2, ['’=Nguyễn An', '001234567890', 'Số 1, Hà Nội, Việt Nam', new Date('2020-01-02T00:00:00.000Z')])
+    expect(addRow).toHaveBeenNthCalledWith(2, ['’\t=Nguyễn An', '001234567890', 'Số 1, Hà Nội, Việt Nam', new Date('2020-01-02T00:00:00.000Z')])
     expect(prisma.hoSoDangVien.findMany).toHaveBeenCalledOnce()
     expect(permissions.kiemTraQuyenDuocPhanCong).toHaveBeenCalledWith('actor', 'HO_SO_XUAT_DU_LIEU', 'session')
   })
@@ -332,5 +335,17 @@ describe('HoSoDangVienService', () => {
     expect(permissionCheck).toHaveBeenCalledWith('actor', 'SINH_HOAT_XEM_HIEN_TAI', { maHoSo: 'profile-id' }, 'session')
     expect(findUnique).toHaveBeenCalledWith(expect.objectContaining({ select: expect.objectContaining({ lichSuDonVi: false }) }))
     expect(result.lichSuDonVi).toEqual([])
+  })
+
+  it('does not return CCCD when only the edit permission is present', async () => {
+    const row = { ma: 'profile-id', maHoSoNoiBo: 'HS-001', soPhieuLyLich: null, hoVaTen: 'Nguyễn An', trangThai: 'DANG_HOAT_DONG', trangThaiDangVien: 'DU_BI', ngayVaoDang: null, ngayChinhThuc: null, soTheDangVien: null, thongTinCaNhan: { soCccd: '012345678901', ngaySinh: null }, diaChi: false, thongTinSinhVien: false, quaTrinh: [], lichSuDonVi: false }
+    const permissionCheck = vi.fn(async (_account: string, permission: string) => {
+      if (permission === 'HO_SO_CA_NHAN_XEM') throw new ForbiddenException()
+      if (permission.includes('CA_NHAN') && permission !== 'HO_SO_CA_NHAN_SUA') throw new ForbiddenException()
+    })
+    const service = new HoSoDangVienService({ hoSoDangVien: { findUnique: vi.fn().mockResolvedValue(row) } } as never, { kiemTra: permissionCheck } as never, {} as never)
+    const result = await service.chiTiet({ maTaiKhoan: 'actor', maPhien: 'session' } as never, 'profile-id')
+    expect(result.coQuyenXemCccd).toBe(false)
+    expect(result.thongTinCaNhan).not.toHaveProperty('soCccd')
   })
 })

@@ -25,6 +25,21 @@ export const permissionCatalog = [
   'HO_SO_CA_NHAN_XEM_YEU_CAU_CAP_NHAT', 'HO_SO_CA_NHAN_DUYET_CAP_NHAT',
   'CAU_HINH_HE_THONG_XEM', 'CAU_HINH_HE_THONG_SUA', 'VAN_HANH_HE_THONG',
   'NAM_HOC_XEM', 'NAM_HOC_TAO', 'NAM_HOC_SUA', 'NAM_HOC_XOA',
+  'CAU_HINH_DANH_MUC_XEM', 'CAU_HINH_DANH_MUC_TAO', 'CAU_HINH_DANH_MUC_SUA',
+  'HOC_TAP_NGHI_QUYET_DOT_XEM', 'HOC_TAP_NGHI_QUYET_DOT_TAO',
+  'HOC_TAP_NGHI_QUYET_DOT_SUA', 'HOC_TAP_NGHI_QUYET_DOT_KET_THUC',
+  'HOC_TAP_NGHI_QUYET_BUOI_XEM', 'HOC_TAP_NGHI_QUYET_BUOI_TAO',
+  'HOC_TAP_NGHI_QUYET_BUOI_SUA', 'HOC_TAP_NGHI_QUYET_BUOI_QUAN_LY',
+  'HOC_TAP_NGHI_QUYET_DANH_SACH_XEM', 'HOC_TAP_NGHI_QUYET_DANH_SACH_QUAN_LY',
+  'HOC_TAP_NGHI_QUYET_NGOAI_LE_BO_SUNG', 'HOC_TAP_NGHI_QUYET_PHAN_CONG_QUAN_LY',
+  'HOC_TAP_NGHI_QUYET_DIEM_DANH_XEM', 'HOC_TAP_NGHI_QUYET_DIEM_DANH_DONG_MO',
+  'HOC_TAP_NGHI_QUYET_TU_DIEM_DANH',
+  'HOC_TAP_NGHI_QUYET_DIEM_DANH_THU_CONG', 'HOC_TAP_NGHI_QUYET_DIEM_DANH_XAC_MINH',
+  'HOC_TAP_NGHI_QUYET_DIEM_DANH_PHE_DUYET', 'HOC_TAP_NGHI_QUYET_YEU_CAU_DIEM_DANH_XOA', 'HOC_TAP_NGHI_QUYET_DIEM_DANH_CHOT',
+  'HOC_TAP_NGHI_QUYET_DIEM_DANH_DIEU_CHINH', 'HOC_TAP_NGHI_QUYET_THONG_KE_XEM',
+  'HOC_TAP_NGHI_QUYET_BAO_CAO_XUAT',
+  'HOC_TAP_TEP_TAI_LEN', 'HOC_TAP_TEP_XOA', 'HOC_TAP_TEP_TAI_XUONG',
+  'TAO_LIEN_KET_BIEU_MAU', 'HOC_TAP_NGHI_QUYET_CA_NHAN_XEM',
 ] as const
 
 export type MaPermission = (typeof permissionCatalog)[number]
@@ -68,7 +83,7 @@ export const permissionMetadata = ({
     ['HO_SO_DANG_VIEN_TAO', 'Tạo hồ sơ Đảng viên', 'Lập hồ sơ Đảng viên mới theo quy trình tiếp nhận và các trường bắt buộc của hệ thống.', 'DA_CO_API'],
     ['HO_SO_DANG_VIEN_SUA_THONG_TIN_CO_BAN', 'Sửa thông tin cơ bản', 'Cập nhật các thông tin cơ bản được quy trình nghiệp vụ cho phép; quyền này không tự cho phép đổi sinh hoạt, trạng thái hoặc phân quyền.', 'DA_CO_API'],
     ['HO_SO_DANG_VIEN_XOA', 'Xóa hồ sơ Đảng viên', 'Xóa vật lý hồ sơ tạo nhầm cùng các bản ghi ban đầu sau khi kiểm tra Scope và điều kiện bảo toàn lịch sử.', 'DA_CO_API'],
-    ['HO_SO_CA_NHAN_XEM', 'Xem hồ sơ cá nhân', 'Xem hồ sơ được liên kết với chính tài khoản đang đăng nhập; không dùng quyền này để tra cứu hồ sơ người khác.', 'DA_CO_API'],
+    ['HO_SO_CA_NHAN_XEM', 'Xem thông tin cá nhân trong phạm vi', 'Xem nhóm thông tin cá nhân của hồ sơ Đảng viên được Assignment đang chọn bao phủ. Scope CA_NHAN chỉ áp dụng với hồ sơ liên kết của chính tài khoản; quyền này không thay thế quyền xem danh sách hoặc tổng quan hồ sơ.', 'DA_CO_API'],
     ['HO_SO_CA_NHAN_SUA', 'Đề nghị sửa thông tin cá nhân', 'Cho phép Đảng viên gửi đề nghị thay đổi thông tin cá nhân trong đợt còn hiệu lực; dữ liệu chính thức chỉ đổi sau khi được duyệt.', 'DA_CO_API'],
     ['HO_SO_DIA_CHI_XEM', 'Xem địa chỉ', 'Xem các địa chỉ có trong hồ sơ của những Đảng viên nằm trong phạm vi được giao.', 'DA_CO_API'],
     ['HO_SO_DIA_CHI_SUA', 'Đề nghị sửa địa chỉ', 'Cho phép gửi đề nghị thay đổi địa chỉ theo đợt cập nhật và quy trình phê duyệt; không sửa trực tiếp dữ liệu chính thức.', 'DA_CO_API'],
@@ -166,6 +181,55 @@ export const permissionMetadata = ({
     ['NAM_HOC_TAO', 'Tạo năm học', 'Tạo năm học với mã duy nhất và khoảng ngày không chồng lấn.', 'DA_CO_API'],
     ['NAM_HOC_SUA', 'Sửa năm học', 'Cập nhật năm học sau khi kiểm tra điều kiện thời gian và dữ liệu liên quan.', 'DA_CO_API'],
     ['NAM_HOC_XOA', 'Xóa năm học', 'Xóa năm học khi chưa có dữ liệu nghiệp vụ tham chiếu cần bảo toàn.', 'DA_CO_API'],
+  ]),
+  ...nhom('CAU_HINH_DANH_MUC', 'Cấu hình — Danh mục nghiệp vụ dùng chung', 'DA_CO_API', [
+    ['CAU_HINH_DANH_MUC_XEM', 'Xem danh mục nghiệp vụ', 'Xem danh mục dùng chung với Scope tổ chức được cấp; người tạo buổi có thể chỉ đọc hình thức đang hoạt động bằng quyền tạo buổi.'],
+    ['CAU_HINH_DANH_MUC_TAO', 'Tạo nhóm và giá trị danh mục', 'Tạo nhóm hoặc giá trị danh mục toàn hệ thống; yêu cầu Assignment Scope TOAN_HE_THONG.'],
+    ['CAU_HINH_DANH_MUC_SUA', 'Sửa danh mục nghiệp vụ', 'Sửa tên, thứ tự và trạng thái toàn hệ thống; yêu cầu Assignment Scope TOAN_HE_THONG. Giá trị lịch sử ngừng dùng, không xóa vật lý.'],
+  ]),
+  ...nhom('HOC_TAP_NGHI_QUYET_DOT', 'Học tập nghị quyết — Quản lý đợt học', 'DA_CO_API', [
+    ['HOC_TAP_NGHI_QUYET_DOT_XEM', 'Xem đợt học', 'Xem danh sách và chi tiết đợt học trong phạm vi tổ chức được cấp.'],
+    ['HOC_TAP_NGHI_QUYET_DOT_TAO', 'Tạo đợt học', 'Tạo đợt học trong phạm vi tổ chức được cấp; không mặc nhiên cấp quyền cho người tạo.'],
+    ['HOC_TAP_NGHI_QUYET_DOT_SUA', 'Chỉnh sửa đợt học', 'Sửa thông tin đợt học khi trạng thái và phạm vi cho phép.'],
+    ['HOC_TAP_NGHI_QUYET_DOT_KET_THUC', 'Kết thúc hoặc hủy đợt học', 'Kết thúc hoặc hủy đợt theo điều kiện nghiệp vụ và phạm vi được cấp.'],
+  ]),
+  ...nhom('HOC_TAP_NGHI_QUYET_BUOI', 'Học tập nghị quyết — Quản lý buổi học', 'DA_CO_API', [
+    ['HOC_TAP_NGHI_QUYET_BUOI_XEM', 'Xem buổi học', 'Xem buổi thuộc các đợt nằm trong phạm vi được cấp.'],
+    ['HOC_TAP_NGHI_QUYET_BUOI_TAO', 'Tạo buổi học', 'Tạo buổi học trong phạm vi đợt được phép quản lý.'],
+    ['HOC_TAP_NGHI_QUYET_BUOI_SUA', 'Chỉnh sửa buổi học', 'Chỉnh sửa buổi và cấu hình theo trạng thái; cấu hình duyệt bị khóa sau khi nhận yêu cầu.'],
+    ['HOC_TAP_NGHI_QUYET_BUOI_QUAN_LY', 'Quản lý buổi học', 'Thực hiện thao tác quản lý buổi được cho phép; không bao gồm quyền duyệt, chốt hoặc điều chỉnh kết quả.'],
+  ]),
+  ...nhom('HOC_TAP_NGHI_QUYET_DANH_SACH', 'Học tập nghị quyết — Danh sách Đảng viên dự kiến', 'CHUA_CO_API', [
+    ['HOC_TAP_NGHI_QUYET_DANH_SACH_XEM', 'Xem danh sách dự kiến', 'Xem roster theo đơn vị snapshot nằm trong phạm vi được cấp.', 'DA_CO_API'],
+    ['HOC_TAP_NGHI_QUYET_DANH_SACH_QUAN_LY', 'Quản lý danh sách dự kiến', 'Khởi tạo theo phạm vi, loại, khôi phục, xác nhận và xem lịch sử roster theo điều kiện nghiệp vụ.', 'DA_CO_API'],
+    ['HOC_TAP_NGHI_QUYET_NGOAI_LE_BO_SUNG', 'Bổ sung Đảng viên ngoại lệ', 'Bổ sung hồ sơ ngoài phạm vi buổi khi Assignment bao phủ cả buổi và đơn vị sinh hoạt hiệu lực.', 'DA_CO_API'],
+  ]),
+  ...nhom('HOC_TAP_NGHI_QUYET_PHAN_CONG', 'Học tập nghị quyết — Phân công nhiệm vụ', 'DA_CO_API', [
+    ['HOC_TAP_NGHI_QUYET_PHAN_CONG_QUAN_LY', 'Quản lý phân công nhiệm vụ', 'Giao nhiệm vụ cho tài khoản hợp lệ trong buổi; không tự cấp Permission hoặc Scope.'],
+  ]),
+  ...nhom('HOC_TAP_NGHI_QUYET_DIEM_DANH', 'Học tập nghị quyết — Quản lý điểm danh', 'CHUA_CO_API', [
+    ['HOC_TAP_NGHI_QUYET_TU_DIEM_DANH', 'Tự điểm danh bằng QR', 'Cho phép Đảng viên đã đăng nhập tự điểm danh cho hồ sơ liên kết của chính mình bằng QR hợp lệ; yêu cầu Assignment cá nhân đang hiệu lực và Scope CA_NHAN.', 'DA_CO_API'],
+    ['HOC_TAP_NGHI_QUYET_DIEM_DANH_XEM', 'Xem danh sách và kết quả điểm danh', 'Xem dữ liệu điểm danh thuộc phạm vi được cấp.', 'DA_CO_API'],
+    ['HOC_TAP_NGHI_QUYET_DIEM_DANH_DONG_MO', 'Mở hoặc đóng điểm danh trực tuyến', 'Mở hoặc đóng cửa sổ trực tuyến trong phạm vi buổi được cấp và truy xuất QR động.', 'DA_CO_API'],
+    ['HOC_TAP_NGHI_QUYET_DIEM_DANH_THU_CONG', 'Điểm danh thủ công', 'Ghi hoặc điều chỉnh kết quả trực tiếp; nếu buổi bật duyệt thì chỉ tạo yêu cầu chờ.', 'DA_CO_API'],
+    ['HOC_TAP_NGHI_QUYET_DIEM_DANH_XAC_MINH', 'Xác minh yêu cầu điểm danh', 'Xác minh yêu cầu và ghép hồ sơ hiện có trong phạm vi được cấp.', 'DA_CO_API'],
+    ['HOC_TAP_NGHI_QUYET_DIEM_DANH_PHE_DUYET', 'Phê duyệt hoặc từ chối yêu cầu', 'Phê duyệt hoặc từ chối yêu cầu; quyền này tách biệt với quyền xác minh và ghi thủ công.', 'DA_CO_API'],
+    ['HOC_TAP_NGHI_QUYET_YEU_CAU_DIEM_DANH_XOA', 'Xóa yêu cầu điểm danh', 'Xóa vật lý dữ liệu yêu cầu và biểu mẫu tự khai trong phạm vi được cấp; giữ nguyên roster, kết quả chính thức, lịch sử và audit.', 'DA_CO_API'],
+    ['HOC_TAP_NGHI_QUYET_DIEM_DANH_CHOT', 'Chốt danh sách điểm danh', 'Xem điều kiện, chốt một lần sau khi buổi kết thúc và xem snapshot; Scope phải bao phủ toàn roster.', 'DA_CO_API'],
+    ['HOC_TAP_NGHI_QUYET_DIEM_DANH_DIEU_CHINH', 'Điều chỉnh kết quả sau chốt', 'Điều chỉnh kết quả sau chốt; khi bật duyệt, giữ nguyên kết quả cũ trong lúc chờ.', 'DA_CO_API'],
+    ['TAO_LIEN_KET_BIEU_MAU', 'Tạo liên kết biểu mẫu công khai', 'Phát hành hoặc xoay liên kết biểu mẫu độc lập với QR; không cấp quyền xem roster.', 'DA_CO_API'],
+  ]),
+  ...nhom('HOC_TAP_NGHI_QUYET_BAO_CAO', 'Học tập nghị quyết — Thống kê và báo cáo', 'CHUA_CO_API', [
+    ['HOC_TAP_NGHI_QUYET_THONG_KE_XEM', 'Xem kết quả và thống kê', 'Xem số liệu đã được lọc theo Scope trước khi tổng hợp.', 'DA_CO_API'],
+    ['HOC_TAP_NGHI_QUYET_BAO_CAO_XUAT', 'Xuất báo cáo', 'Xuất báo cáo giới hạn theo Scope và các quyền dữ liệu tương ứng.', 'DA_CO_API'],
+  ]),
+  ...nhom('HOC_TAP_NGHI_QUYET_TEP', 'Học tập nghị quyết — Tệp đính kèm', 'CHUA_CO_API', [
+    ['HOC_TAP_TEP_TAI_LEN', 'Tải tệp học tập lên', 'Tải tệp đính kèm lên đợt/buổi theo phạm vi và chính sách tệp được duyệt.', 'DA_CO_API'],
+    ['HOC_TAP_TEP_XOA', 'Xóa tệp học tập', 'Đánh dấu xóa tệp đính kèm theo phạm vi; giữ metadata lịch sử.', 'DA_CO_API'],
+    ['HOC_TAP_TEP_TAI_XUONG', 'Tải tệp học tập xuống', 'Tải tệp đính kèm của đợt/buổi trong phạm vi được cấp.', 'DA_CO_API'],
+  ]),
+  ...nhom('HOC_TAP_NGHI_QUYET_CA_NHAN', 'Học tập nghị quyết — Cá nhân', 'CHUA_CO_API', [
+    ['HOC_TAP_NGHI_QUYET_CA_NHAN_XEM', 'Xem lịch học tập cá nhân', 'Xem lịch và kết quả của hồ sơ gắn với chính tài khoản; chỉ dùng Assignment Scope CA_NHAN.', 'DA_CO_API'],
   ]),
 } satisfies Record<string, PermissionMetadata>) as Record<MaPermission, PermissionMetadata>
 

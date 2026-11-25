@@ -86,6 +86,7 @@ export type HoSoChiTiet = {
   maHoSoNoiBo: string
   hoVaTen: string
   trangThai: string
+  coQuyenXemCccd?: boolean
   trangThaiDangVien: string | null
   ngayVaoDang: string | null
   ngayChinhThuc: string | null

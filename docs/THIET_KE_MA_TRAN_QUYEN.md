@@ -55,7 +55,7 @@
 | `HO_SO_DANG_VIEN_TAO` | Tạo hồ sơ. |
 | `HO_SO_DANG_VIEN_SUA_THONG_TIN_CO_BAN` | Sửa dữ liệu lõi của hồ sơ theo Scope. |
 | `HO_SO_DANG_VIEN_XOA` | Xóa vật lý hồ sơ tạo nhầm sau khi kiểm tra Permission + Scope; chỉ xóa sinh hoạt/quá trình ban đầu được xác minh, từ chối khi có lịch sử phát sinh, phân công chức vụ hoặc yêu cầu cập nhật cần bảo lưu. Tài khoản liên kết được giữ lại nhưng khóa đăng nhập, thu hồi Assignment và phiên đăng nhập. |
-| `HO_SO_CA_NHAN_XEM` | Xem thông tin cá nhân; bao gồm xem CCCD bình thường theo quyền xem hồ sơ, không cần Permission CCCD riêng. |
+| `HO_SO_CA_NHAN_XEM` | Xem nhóm thông tin cá nhân, bao gồm CCCD đầy đủ, trên hồ sơ được Assignment đang chọn bao phủ; không cần Permission CCCD riêng. |
 | `HO_SO_CA_NHAN_SUA` | Sửa thông tin cá nhân thông thường theo Scope. Với SELF, chỉ số điện thoại/email liên hệ và phải qua quy trình mở khóa, gửi yêu cầu, Chi bộ phê duyệt tại mục 4. |
 | `HO_SO_DIA_CHI_XEM` | Xem địa chỉ trong Scope. |
 | `HO_SO_DIA_CHI_SUA` | Sửa địa chỉ trong Scope. |
@@ -65,6 +65,8 @@
 | `HO_SO_XEM_LICH_SU_THAY_DOI` | Xem lịch sử thay đổi hồ sơ được phép truy cập; chỉ đọc. |
 
 Theo quyết định sản phẩm ngày 2026-11-03, CCCD được lưu dạng rõ và hiển thị theo quyền xem hồ sơ thông thường; không cần Permission/audit riêng cho từng lần xem. Không ghi CCCD vào log/audit hoặc dữ liệu xuất; giới hạn quyền truy cập database và backup.
+
+`HO_SO_CA_NHAN_XEM` được kiểm tra cùng Scope trên chính Assignment đang chọn. Scope `CAY_DON_VI`, `DON_VI_CHI_DINH` và `TOAN_HE_THONG` chỉ cho xem hồ sơ thuộc phạm vi tương ứng; Scope `CA_NHAN` chỉ cho xem hồ sơ liên kết với chính tài khoản. Không cộng Permission hoặc Scope giữa các Assignment. Quyền xem tổng quan/danh sách không tự cấp quyền nhóm cá nhân, và quyền sửa không thay thế quyền xem.
 
 ### 3.3. Sinh hoạt và chuyển đơn vị
 

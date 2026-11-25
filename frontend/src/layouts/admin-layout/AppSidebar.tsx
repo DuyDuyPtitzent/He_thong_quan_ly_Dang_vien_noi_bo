@@ -90,7 +90,7 @@ export function AppSidebar() {
                   ...item,
                   children: item.children?.filter((child) => !child.hidden && hasPermission(child.permission)),
                 }))
-                  .filter((item) => !item.hidden && (!item.systemAdministratorOnly || canAccessSystemLogs) && hasPermission(item.permission) && (!item.children || item.children.length > 0))
+                  .filter((item) => !item.hidden && (!item.systemAdministratorOnly || canAccessSystemLogs) && hasPermission(item.permission) && (!item.children || item.children.length > 0 || item.children.some((child) => child.disabled)))
                   .map((item) => {
                     const Icon = item.icon
                     if (!Icon) return null
@@ -104,6 +104,7 @@ export function AppSidebar() {
                         </SidebarMenuItem>
                       )
                     }
+                    const visibleChildren = item.children?.filter((child) => !child.disabled || !child.path)
                     const active =
                       location.pathname === item.path ||
                       Boolean(item.children?.some((child) => child.path === location.pathname))
@@ -127,14 +128,9 @@ export function AppSidebar() {
                               </SidebarMenuButton>
                               <CollapsibleContent>
                                 <SidebarMenuSub id={`sidebar-submenu-${item.id}`}>
-                                  {item.children.map((child) => (
+                                  {visibleChildren?.map((child) => (
                                     <SidebarMenuSubItem key={child.id}>
-                                      <SidebarMenuSubButton
-                                        asChild
-                                        isActive={location.pathname === child.path}
-                                      >
-                                        <Link to={child.path ?? '#'}>{child.title}</Link>
-                                      </SidebarMenuSubButton>
+                                      {child.disabled ? <SidebarMenuSubButton className="pointer-events-none opacity-50" aria-disabled="true"><span>{child.title}</span></SidebarMenuSubButton> : <SidebarMenuSubButton asChild isActive={location.pathname === child.path}><Link to={child.path ?? '#'}>{child.title}</Link></SidebarMenuSubButton>}
                                     </SidebarMenuSubItem>
                                   ))}
                                 </SidebarMenuSub>

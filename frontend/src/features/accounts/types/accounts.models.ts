@@ -9,7 +9,7 @@ export type TaiKhoan = {
   ngayCapNhat: string
   khoaDen: string | null
   doiMatKhauLanDau: boolean
-  hoSoDangVien: { ma: string; maHoSoNoiBo: string; hoVaTen: string; trangThai: string; cccd: string | null; ngaySinh?: string | null; chiBoHienTai: string | null; maChiBoHienTai: string | null; toHienTai?: string | null } | null
+  hoSoDangVien: { ma: string; maHoSoNoiBo: string; hoVaTen: string; trangThai: string; cccd: string | null; coQuyenXemCccd?: boolean; ngaySinh?: string | null; chiBoHienTai: string | null; maChiBoHienTai: string | null; toHienTai?: string | null } | null
   hoVaTen: string | null
   chiBoHienTai: string | null
   maChiBoHienTai: string | null
@@ -35,6 +35,7 @@ export type MemberProfile = {
   code: string
   name: string
   cccd: string | null
+  coQuyenXemCccd?: boolean
   birthDate: string | null
   partyBranch: string
   branchId?: string | null

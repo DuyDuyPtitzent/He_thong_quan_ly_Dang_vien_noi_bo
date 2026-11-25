@@ -22,6 +22,66 @@ const grant = (scope: string, maDonViGoc: string | null = null, permissions = ['
 })
 
 describe('PhanQuyenService', () => {
+  it.each(['CAY_DON_VI', 'DON_VI_CHI_DINH', 'TOAN_HE_THONG'])('allows HO_SO_CA_NHAN_XEM with %s Scope only for profiles covered by that Assignment', async (scope) => {
+    const { service, prisma } = setup([{ ...grant(scope, scope === 'CAY_DON_VI' ? 'root-unit' : null, ['HO_SO_CA_NHAN_XEM']), ma: 'assignment-active' }])
+    prisma.lichSuDonViDangVien.findFirst.mockResolvedValue({ maChiBo: 'unit-1', maTo: 'unit-2' })
+    await expect(service.kiemTra('account-1', 'HO_SO_CA_NHAN_XEM', { maHoSo: 'profile-1' }, 'session-1')).resolves.toBeUndefined()
+  })
+
+  it('limits HO_SO_CA_NHAN_XEM with CA_NHAN Scope to the linked profile and selected Assignment', async () => {
+    const { service, prisma } = setup([{ ...grant('CA_NHAN', null, ['HO_SO_CA_NHAN_XEM']), ma: 'assignment-active' }])
+    prisma.hoSoDangVien.findFirst.mockImplementation(async ({ where }: { where?: { ma?: string } }) => where?.ma === 'profile-1' ? { ma: 'profile-1' } : null)
+    await expect(service.kiemTra('account-1', 'HO_SO_CA_NHAN_XEM', { maHoSo: 'profile-1' }, 'session-1')).resolves.toBeUndefined()
+    await expect(service.kiemTra('account-1', 'HO_SO_CA_NHAN_XEM', { maHoSo: 'other-profile' }, 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+
+    const split = setup([
+      { ...grant('TOAN_HE_THONG', null, ['HO_SO_CA_NHAN_XEM']), ma: 'assignment-other' },
+      { ...grant('CAY_DON_VI', 'root-unit', ['HO_SO_DANG_VIEN_XEM_TONG_QUAN']), ma: 'assignment-active' },
+    ])
+    await expect(split.service.kiemTra('account-1', 'HO_SO_CA_NHAN_XEM', { maHoSo: 'profile-1' }, 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+    expect(split.prisma.phanCongVaiTro.findMany.mock.calls[0]?.[0].where.ma).toBe('assignment-active')
+  })
+
+  it('requires self-attendance Permission and CA_NHAN Scope on the selected Assignment only', async () => {
+    const permission = 'HOC_TAP_NGHI_QUYET_TU_DIEM_DANH'
+    const personal = setup([{ ...grant('CA_NHAN', null, [permission]), ma: 'assignment-active' }])
+    await expect(personal.service.kiemTraQuyenCaNhan('account-1', permission, 'session-1')).resolves.toBeUndefined()
+    for (const scope of ['CAY_DON_VI', 'DON_VI_CHI_DINH', 'TOAN_HE_THONG']) {
+      const organization = setup([{ ...grant(scope, null, [permission]), ma: 'assignment-active' }])
+      await expect(organization.service.kiemTraQuyenCaNhan('account-1', permission, 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+    }
+    const split = setup([
+      { ...grant('CA_NHAN', null, ['OTHER']), ma: 'assignment-active' },
+      { ...grant('TOAN_HE_THONG', null, [permission]), ma: 'assignment-other' },
+    ])
+    await expect(split.service.kiemTraQuyenCaNhan('account-1', permission, 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+    await expect(personal.service.kiemTraQuyenCaNhan('account-1', permission)).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it.each(['CAY_DON_VI', 'DON_VI_CHI_DINH', 'TOAN_HE_THONG'])('allows %s Assignment with the view Permission for global business catalogs', async (scope) => {
+    const { service } = setup([{ ...grant(scope, null, ['CAU_HINH_DANH_MUC_XEM']), ma: 'assignment-active' }])
+    await expect(service.kiemTraQuyenDanhMucChung('account-1', 'CAU_HINH_DANH_MUC_XEM', 'session-1')).resolves.toBeUndefined()
+  })
+
+  it('requires a TOAN_HE_THONG Assignment as well as write Permission to mutate global business catalogs', async () => {
+    const system = setup([{ ...grant('TOAN_HE_THONG', null, ['CAU_HINH_DANH_MUC_SUA']), ma: 'assignment-active' }])
+    await expect(system.service.kiemTraQuyenDanhMucChung('account-1', 'CAU_HINH_DANH_MUC_SUA', 'session-1', ['TOAN_HE_THONG'])).resolves.toBeUndefined()
+    for (const scope of ['CAY_DON_VI', 'DON_VI_CHI_DINH', 'CA_NHAN']) {
+      const local = setup([{ ...grant(scope, 'unit-1', ['CAU_HINH_DANH_MUC_SUA']), ma: 'assignment-active' }])
+      await expect(local.service.kiemTraQuyenDanhMucChung('account-1', 'CAU_HINH_DANH_MUC_SUA', 'session-1', ['TOAN_HE_THONG'])).rejects.toBeInstanceOf(ForbiddenException)
+    }
+  })
+
+  it('rejects CA_NHAN Scope and Permission on a different/non-active Assignment for shared business catalogs', async () => {
+    const personal = setup([{ ...grant('CA_NHAN', null, ['CAU_HINH_DANH_MUC_XEM']), ma: 'assignment-active' }])
+    await expect(personal.service.kiemTraQuyenDanhMucChung('account-1', 'CAU_HINH_DANH_MUC_XEM', 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+    const mismatched = setup([
+      { ...grant('TOAN_HE_THONG', null, ['CAU_HINH_DANH_MUC_TAO']), ma: 'assignment-active' },
+      { ...grant('CAY_DON_VI', 'root', ['CAU_HINH_DANH_MUC_SUA']), ma: 'assignment-other' },
+    ])
+    await expect(mismatched.service.kiemTraQuyenDanhMucChung('account-1', 'CAU_HINH_DANH_MUC_SUA', 'session-1')).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
   it.each(['CAY_DON_VI', 'DON_VI_CHI_DINH', 'TOAN_HE_THONG'])('allows %s Assignment with its NAM_HOC permission for the shared catalog', async (scope) => {
     const { service } = setup([{ ...grant(scope, null, ['NAM_HOC_TAO']), ma: 'assignment-active' }])
     await expect(service.kiemTraQuyenDanhMucNamHoc('account-1', 'NAM_HOC_TAO', 'session-1')).resolves.toBeUndefined()

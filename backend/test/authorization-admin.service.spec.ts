@@ -1,12 +1,12 @@
 import { ForbiddenException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 import { QuanTriPhanQuyenService } from '../src/modules/authorization/authorization-admin.service'
-import { systemAdministratorPermissionCodes } from '../src/modules/authorization/system-administrator.policy'
+import { systemAdministratorManuallyManagedPermissionCodes, systemAdministratorPermissionCodes } from '../src/modules/authorization/system-administrator.policy'
 import { permissionCatalog } from '../src/modules/authorization/permission-catalog'
 
 describe('Chính sách Quản trị viên toàn hệ thống', () => {
-  it('cấp toàn bộ Permission có trong danh mục hệ thống', () => {
-    expect(systemAdministratorPermissionCodes).toEqual(permissionCatalog)
+  it('cấp toàn bộ Permission tự đồng bộ và giữ riêng quyền được quản lý thủ công', () => {
+    expect(systemAdministratorPermissionCodes).toEqual(permissionCatalog.filter((code) => !systemAdministratorManuallyManagedPermissionCodes.includes(code)))
   })
 })
 
